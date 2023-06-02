@@ -1,0 +1,8 @@
+version: "3"
+services:
+  rqlite:
+    image: rqlite/rqlite:latest
+    ports:
+      - 4001:4001
+    environment:
+      HTTP_ADDR_ADV: localhost
