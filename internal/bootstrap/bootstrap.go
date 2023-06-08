@@ -8,43 +8,28 @@ import (
 	"fmt"
 
 	"github.com/sirupsen/logrus"
-	"github.com/tierklinik-dobersberg/cis-userd/internal/repo"
-	"github.com/tierklinik-dobersberg/cis-userd/internal/repo/models"
-	"github.com/tierklinik-dobersberg/cis-userd/internal/repo/stmts"
+	"github.com/tierklinik-dobersberg/cis-idm/internal/config"
+	"github.com/tierklinik-dobersberg/cis-idm/internal/repo"
+	"github.com/tierklinik-dobersberg/cis-idm/internal/repo/models"
+	"github.com/tierklinik-dobersberg/cis-idm/internal/repo/stmts"
 	"golang.org/x/crypto/bcrypt"
 )
 
-func Bootstrap(ctx context.Context, userRepo *repo.UserRepo) (*models.User, error) {
-	// Bootstrap system groups
-	var (
-		group models.Group
-		err   error
-	)
+func Bootstrap(ctx context.Context, cfg config.Config, userRepo *repo.Repo) (*models.User, error) {
+	superuserRoleID, err := bootstrapRole(ctx, userRepo, "idm_superuser", "Super-user management role", true)
+	if err != nil {
+		return nil, err
+	}
 
-	if group, err = userRepo.GetGroupByID(ctx, "idm_superuser"); err != nil {
-		if errors.Is(err, stmts.ErrNoResults) {
-
-			group = models.Group{
-				ID:          "idm_superuser",
-				Name:        "idm_superuser",
-				Description: "Internal management group for super users",
-			}
-
-			group, err = userRepo.CreateGroup(ctx, group)
-			if err != nil {
-				return nil, fmt.Errorf("failed to create idm_superuser group: %w", err)
-			}
-
-			logrus.WithField("id", group.ID).Infof("bootstrap: creating idm_superuser group")
-		} else {
-			return nil, fmt.Errorf("failed to get idm_superuser group: %w", err)
+	// Create all bootstrap roles
+	for _, roleName := range cfg.BootstrapRoles {
+		if _, err := bootstrapRole(ctx, userRepo, roleName, "Automatically bootstrapped role", true); err != nil {
+			return nil, err
 		}
-	} else {
-		logrus.WithFields(logrus.Fields{"id": group.ID}).Infof("bootstrap: idm_superuser group exists")
 	}
 
 	// ensure there is at least one user in idm_superuser
-	users, err := userRepo.GetUsersInGroup(ctx, group.ID)
+	users, err := userRepo.GetUsersByRole(ctx, superuserRoleID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve users in idm_superuser group: %w", err)
 	}
@@ -76,7 +61,7 @@ func Bootstrap(ctx context.Context, userRepo *repo.UserRepo) (*models.User, erro
 			"password": password,
 		}).Infof("bootstrap: created new super user")
 
-		if err := userRepo.AddGroupMembership(ctx, user.ID, group.ID); err != nil {
+		if err := userRepo.AssignRoleToUser(ctx, user.ID, superuserRoleID); err != nil {
 			return nil, fmt.Errorf("failed to add new user to idm_superuser group: %w", err)
 		}
 
@@ -89,6 +74,40 @@ func Bootstrap(ctx context.Context, userRepo *repo.UserRepo) (*models.User, erro
 	}
 
 	return nil, nil
+}
+
+func bootstrapRole(ctx context.Context, repo *repo.Repo, roleName, description string, deleteProtection bool) (string, error) {
+	role, err := repo.GetRoleByID(ctx, roleName)
+	if err != nil {
+		if errors.Is(err, stmts.ErrNoResults) {
+
+			role = models.Role{
+				ID:              roleName,
+				Name:            roleName,
+				Description:     description,
+				DeleteProtected: deleteProtection,
+			}
+
+			role, err = repo.CreateRole(ctx, role)
+			if err != nil {
+				return "", fmt.Errorf("failed to create role %s: %w", roleName, err)
+			}
+
+			logrus.
+				WithField("id", role.ID).
+				WithField("name", role.Name).
+				Infof("bootstrap: successfully created role")
+		} else {
+			return "", fmt.Errorf("failed to get idm_superuser group: %w", err)
+		}
+	} else {
+		logrus.
+			WithField("id", role.ID).
+			WithField("name", role.Name).
+			Infof("bootstrap: role already created")
+	}
+
+	return role.ID, nil
 }
 
 // generateSecret returns a random secret of the given size encoded as hex.

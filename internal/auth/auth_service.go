@@ -8,19 +8,24 @@ import (
 	"time"
 
 	"github.com/bufbuild/connect-go"
+	"github.com/bufbuild/protovalidate-go"
 	"github.com/gofrs/uuid"
 	"github.com/sirupsen/logrus"
-	userdv1 "github.com/tierklinik-dobersberg/apis/gen/go/tkd/userd/v1"
-	"github.com/tierklinik-dobersberg/apis/gen/go/tkd/userd/v1/userdv1connect"
-	"github.com/tierklinik-dobersberg/cis-userd/internal/config"
-	"github.com/tierklinik-dobersberg/cis-userd/internal/jwt"
-	"github.com/tierklinik-dobersberg/cis-userd/internal/repo/models"
+	idmv1 "github.com/tierklinik-dobersberg/apis/gen/go/tkd/idm/v1"
+	"github.com/tierklinik-dobersberg/apis/gen/go/tkd/idm/v1/idmv1connect"
+	"github.com/tierklinik-dobersberg/cis-idm/internal/config"
+	"github.com/tierklinik-dobersberg/cis-idm/internal/conv"
+	"github.com/tierklinik-dobersberg/cis-idm/internal/jwt"
+	"github.com/tierklinik-dobersberg/cis-idm/internal/middleware"
+	"github.com/tierklinik-dobersberg/cis-idm/internal/repo/models"
 	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/exp/slices"
 )
 
 type AuthService struct {
-	userdv1connect.UnimplementedAuthServiceHandler
+	idmv1connect.UnimplementedAuthServiceHandler
+
+	validator *protovalidate.Validator
 
 	repo UserProvider
 	cfg  config.Config
@@ -29,22 +34,41 @@ type AuthService struct {
 type UserProvider interface {
 	GetUserByName(ctx context.Context, name string) (models.User, error)
 	GetUserByID(ctx context.Context, id string) (models.User, error)
-	GetUserGroupMemberships(ctx context.Context, name string) ([]models.Group, error)
+	GetUserRoles(ctx context.Context, name string) ([]models.Role, error)
+	MarkTokenRejected(ctx context.Context, token models.RejectedToken) error
 }
 
 // NewService returns a new authentication service that verifies users using repo.
-func NewService(repo UserProvider, cfg config.Config) *AuthService {
-	return &AuthService{
-		repo: repo,
-		cfg:  cfg,
+func NewService(repo UserProvider, cfg config.Config) (*AuthService, error) {
+	validator, err := protovalidate.New(
+		protovalidate.WithMessages(
+			&idmv1.LoginRequest{},
+			&idmv1.LogoutRequest{},
+			&idmv1.IntrospectRequest{},
+			&idmv1.RefreshTokenRequest{},
+		),
+	)
+
+	if err != nil {
+		return nil, err
 	}
+
+	return &AuthService{
+		repo:      repo,
+		cfg:       cfg,
+		validator: validator,
+	}, nil
 }
 
-func (svc *AuthService) Login(ctx context.Context, req *connect.Request[userdv1.LoginRequest]) (*connect.Response[userdv1.LoginResponse], error) {
+func (svc *AuthService) Login(ctx context.Context, req *connect.Request[idmv1.LoginRequest]) (*connect.Response[idmv1.LoginResponse], error) {
+	if err := svc.validator.Validate(req.Msg); err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+
 	logrus.Infof("received authentication request")
 	r := req.Msg
 
-	if r.AuthType != userdv1.AuthType_AUTH_TYPE_PASSWORD {
+	if r.AuthType != idmv1.AuthType_AUTH_TYPE_PASSWORD {
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("auth type not supported"))
 	}
 
@@ -66,7 +90,7 @@ func (svc *AuthService) Login(ctx context.Context, req *connect.Request[userdv1.
 		}
 	}
 
-	groups, err := svc.repo.GetUserGroupMemberships(ctx, user.ID)
+	roles, err := svc.repo.GetUserRoles(ctx, user.ID)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
@@ -83,16 +107,16 @@ func (svc *AuthService) Login(ctx context.Context, req *connect.Request[userdv1.
 		}
 	}
 
-	accessToken, err := svc.createAccessToken(user, groups)
+	accessToken, err := svc.createAccessToken(user, roles)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
-	resp := connect.NewResponse(&userdv1.LoginResponse{
-		Response: &userdv1.LoginResponse_AccessToken{
-			AccessToken: &userdv1.AccessTokenResponse{
+	resp := connect.NewResponse(&idmv1.LoginResponse{
+		Response: &idmv1.LoginResponse_AccessToken{
+			AccessToken: &idmv1.AccessTokenResponse{
 				Token: accessToken,
-				User: &userdv1.User{
+				User: &idmv1.User{
 					Id:          user.ID,
 					Username:    user.Username,
 					DisplayName: user.DisplayName,
@@ -110,7 +134,7 @@ func (svc *AuthService) Login(ctx context.Context, req *connect.Request[userdv1.
 		cookie := http.Cookie{
 			Name:     svc.cfg.RefreshTokenCookieName,
 			Value:    refreshToken,
-			Path:     "/tkd.userd.v1.AuthService/RefreshToken",
+			Path:     "/tkd.idm.v1.AuthService/RefreshToken",
 			Domain:   svc.cfg.Domain,
 			Expires:  time.Now().Add(time.Hour * 24 * 30),
 			Secure:   true,
@@ -125,23 +149,36 @@ func (svc *AuthService) Login(ctx context.Context, req *connect.Request[userdv1.
 
 }
 
-func (svc *AuthService) Logout(ctx context.Context, req *connect.Request[userdv1.LogoutRequest]) (*connect.Response[userdv1.LogoutResponse], error) {
-	return nil, nil
-}
-
-func (svc *AuthService) RefreshToken(ctx context.Context, req *connect.Request[userdv1.RefreshTokenRequest]) (*connect.Response[userdv1.RefreshTokenResponse], error) {
-	headers := req.Header()
-	dummyReq := http.Request{Header: headers}
-
-	var refreshCookie *http.Cookie
-	cookies := dummyReq.Cookies()
-	for _, cookie := range cookies {
-		if cookie.Name == svc.cfg.RefreshTokenCookieName {
-			refreshCookie = cookie
-			break
-		}
+func (svc *AuthService) Logout(ctx context.Context, req *connect.Request[idmv1.LogoutRequest]) (*connect.Response[idmv1.LogoutResponse], error) {
+	if err := svc.validator.Validate(req.Msg); err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 
+	// get the JWT token claims from the request context
+	claims := middleware.ClaimsFromContext(ctx)
+	if claims == nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("no claims associated with request context"))
+	}
+
+	// mark the token as rejected
+	if err := svc.repo.MarkTokenRejected(ctx, models.RejectedToken{
+		TokenID:  claims.ID,
+		UserID:   claims.Subject,
+		IssuedAt: claims.IssuedAt,
+		ExiresAt: claims.ExpiresAt,
+	}); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to mark token as rejected: %w", err))
+	}
+
+	return connect.NewResponse(new(idmv1.LogoutResponse)), nil
+}
+
+func (svc *AuthService) RefreshToken(ctx context.Context, req *connect.Request[idmv1.RefreshTokenRequest]) (*connect.Response[idmv1.RefreshTokenResponse], error) {
+	if err := svc.validator.Validate(req.Msg); err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+
+	refreshCookie := getRefreshTokenCookie(svc.cfg.RefreshTokenCookieName, req.Header())
 	if refreshCookie == nil {
 		return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("no refresh cookie provided"))
 	}
@@ -164,31 +201,47 @@ func (svc *AuthService) RefreshToken(ctx context.Context, req *connect.Request[u
 		return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("invalid refresh token"))
 	}
 
-	groups, err := svc.repo.GetUserGroupMemberships(ctx, claims.Name)
+	roles, err := svc.repo.GetUserRoles(ctx, claims.Name)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get group memberships: %w", err))
 	}
 
-	token, err := svc.createAccessToken(user, groups)
+	token, err := svc.createAccessToken(user, roles)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
-	return connect.NewResponse(&userdv1.RefreshTokenResponse{
-		AccessToken: &userdv1.AccessTokenResponse{
+	return connect.NewResponse(&idmv1.RefreshTokenResponse{
+		AccessToken: &idmv1.AccessTokenResponse{
 			Token: token,
+			User:  conv.UserProtoFromUser(user),
 		},
-		// TODO(ppacher): populate .User here?
 	}), nil
 }
 
-func (svc *AuthService) Introspect(ctx context.Context, req *connect.Request[userdv1.IntrospectRequest]) (*connect.Response[userdv1.IntrospectResponse], error) {
+func (svc *AuthService) Introspect(ctx context.Context, req *connect.Request[idmv1.IntrospectRequest]) (*connect.Response[idmv1.IntrospectResponse], error) {
+	if err := svc.validator.Validate(req.Msg); err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
 
+	claims := middleware.ClaimsFromContext(ctx)
+	if claims == nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("not jwt token claims found in request context"))
+	}
+
+	user, err := svc.repo.GetUserByID(ctx, claims.Subject)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("invalid user"))
+	}
+
+	return connect.NewResponse(&idmv1.IntrospectResponse{
+		User: conv.UserProtoFromUser(user),
+	}), nil
 }
 
-func (svc *AuthService) createAccessToken(user models.User, groups []models.Group) (string, error) {
+func (svc *AuthService) createAccessToken(user models.User, roles []models.Role) (string, error) {
 	auth := &jwt.Authorization{}
-	for _, g := range groups {
+	for _, g := range roles {
 		auth.Roles = append(auth.Roles, g.ID)
 	}
 
@@ -251,4 +304,20 @@ func (svc *AuthService) createRefreshToken(user models.User) (string, error) {
 	return token, nil
 }
 
-var _ userdv1connect.AuthServiceHandler = new(AuthService)
+func getRefreshTokenCookie(cookieName string, headers http.Header) *http.Cookie {
+	// we create a dummy http request so we can use the cookie parser
+	// from the stdlib which is, unfortunately, not exported for direct
+	// use.
+	dummyReq := http.Request{Header: headers}
+
+	cookies := dummyReq.Cookies()
+	for _, cookie := range cookies {
+		if cookie.Name == cookieName {
+			return cookie
+		}
+	}
+
+	return nil
+}
+
+var _ idmv1connect.AuthServiceHandler = new(AuthService)

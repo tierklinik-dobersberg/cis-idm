@@ -1,6 +1,6 @@
 package stmts
 
-import "github.com/tierklinik-dobersberg/cis-userd/internal/repo/models"
+import "github.com/tierklinik-dobersberg/cis-idm/internal/repo/models"
 
 var (
 	GetUserByName = Statement[models.User]{

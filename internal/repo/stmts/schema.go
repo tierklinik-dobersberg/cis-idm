@@ -21,7 +21,9 @@ var (
 			city_name TEXT,
 			street TEXT,
 			extra TEXT,
-			FOREIGN KEY(user_id) REFERENCES users(id)
+			CONSTRAINT fk_user_address
+				FOREIGN KEY(user_id) REFERENCES users(id)
+				ON DELETE CASCADE
 		)`,
 	}
 
@@ -30,7 +32,9 @@ var (
 			user_id TEXT NOT NULL,
 			address TEXT NOT NULL,
 			verified BOOL,
-			FOREIGN KEY(user_id) REFERENCES users(id)
+			CONSTRAINT fk_user_mail
+				FOREIGN KEY(user_id) REFERENCES users(id)
+				ON DELETE CASCADE
 		)`,
 	}
 
@@ -38,24 +42,43 @@ var (
 		Query: `CREATE TABLE IF NOT EXISTS user_phone_numbers (
 			user_id TEXT NOT NULL,
 			phone_number TEXT NOT NULL,
-			FOREIGN KEY(user_id) REFERENCES users(id)
+			CONSTRAINT fk_user_phone_number
+				FOREIGN KEY(user_id) REFERENCES users(id)
+				ON DELETE CASCADE
 		)`,
 	}
 
-	CreateGroupTable = Statement[any]{
-		Query: `CREATE TABLE IF NOT EXISTS groups (
+	CreateRoleTable = Statement[any]{
+		Query: `CREATE TABLE IF NOT EXISTS roles (
 			id TEXT NOT NULL PRIMARY KEY UNIQUE,
 			name TEXT NOT NULL UNIQUE,
-			description TEXT
+			description TEXT,
+			delete_protected BOOL
 		)`,
 	}
 
-	CreateGroupMembershipTable = Statement[any]{
-		Query: `CREATE TABLE IF NOT EXISTS group_memberships (
+	CreateRoleAssignmentTable = Statement[any]{
+		Query: `CREATE TABLE IF NOT EXISTS role_assignments (
 			user_id TEXT NOT NULL,
-			group_id TEXT NOT NULL,
-			FOREIGN KEY(user_id) REFERENCES users(id),
-			FOREIGN KEY(group_id) REFERENCES groups(id)
+			role_id TEXT NOT NULL,
+			CONSTRAINT fk_user_role_user
+				FOREIGN KEY(user_id) REFERENCES users(id)
+				ON DELETE CASCADE,
+			CONSTRAINT fk_user_role_role
+				FOREIGN KEY(role_id) REFERENCES roles(id)
+				ON DELETE CASCADE
+		)`,
+	}
+
+	CreateTokenInvalidationTable = Statement[any]{
+		Query: `CREATE TABLE IF NOT EXISTS token_invalidation (
+			token_id TEXT NOT NULL PRIMARY KEY UNIQUE,
+			user_id TEXT NOT NULL,
+			issued_at NUMBER NOT NULL,
+			expires_at NUMBER NOT NULL,
+			CONSTRAINT fk_token_user
+				FOREIGN KEY(user_id) REFERENCES users(id)
+				ON DELETE CASCADE
 		)`,
 	}
 )

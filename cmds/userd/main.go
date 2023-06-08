@@ -4,9 +4,9 @@ import (
 	"context"
 
 	"github.com/sirupsen/logrus"
-	"github.com/tierklinik-dobersberg/cis-userd/internal/bootstrap"
-	"github.com/tierklinik-dobersberg/cis-userd/internal/config"
-	"github.com/tierklinik-dobersberg/cis-userd/internal/repo"
+	"github.com/tierklinik-dobersberg/cis-idm/internal/bootstrap"
+	"github.com/tierklinik-dobersberg/cis-idm/internal/config"
+	"github.com/tierklinik-dobersberg/cis-idm/internal/repo"
 )
 
 func main() {
@@ -46,7 +46,7 @@ func main() {
 
 	logrus.Infof("successfully migrated database")
 
-	if _, err := bootstrap.Bootstrap(ctx, userRepo); err != nil {
+	if _, err := bootstrap.Bootstrap(ctx, cfg, userRepo); err != nil {
 		cancel()
 
 		logrus.Fatalf("failed to bootstrap: %s", err)

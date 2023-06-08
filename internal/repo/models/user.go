@@ -9,14 +9,18 @@ type Address struct {
 }
 
 type EMail struct {
-	UserID   string `mapstructure:"user_id"`
-	Address  string `mapstructure:"address"`
-	Verified bool   `mapstructure:"verified"`
+	UserID   string   `mapstructure:"user_id"`
+	Address  string   `mapstructure:"address"`
+	Verified bool     `mapstructure:"verified"`
+	Primary  bool     `mapstructure:"primary"`
+	Tags     []string `mapstructure:"tags"`
 }
 
 type PhoneNumber struct {
-	UserID      string `mapstructure:"user_id"`
-	PhoneNumber string `mapstructure:"phone_number"`
+	UserID      string   `mapstructure:"user_id"`
+	PhoneNumber string   `mapstructure:"phone_number"`
+	Primary     bool     `mapstructure:"primary"`
+	Tags        []string `mapstructure:"tags"`
 }
 
 type User struct {
@@ -30,13 +34,21 @@ type User struct {
 	Password    string `mapstructure:"password"`
 }
 
-type Group struct {
-	ID          string `mapstructure:"id"`
-	Name        string `mapstructure:"name"`
-	Description string `mapstructure:"description"`
+type Role struct {
+	ID              string `mapstructure:"id"`
+	Name            string `mapstructure:"name"`
+	Description     string `mapstructure:"description"`
+	DeleteProtected bool   `mapstructure:"delete_protected"`
 }
 
-type GroupMembership struct {
-	UserID  string `mapstructure:"user_id"`
-	GroupID string `mapstructure:"group_id"`
+type RoleAssignment struct {
+	UserID string `mapstructure:"user_id"`
+	RoleID string `mapstructure:"role_id"`
+}
+
+type RejectedToken struct {
+	TokenID  string `mapstructure:"token_id"`
+	UserID   string `mapstructure:"user_id"`
+	IssuedAt int64  `mapstructure:"issued_at"`
+	ExiresAt int64  `mapstructure:"expires_at"`
 }
