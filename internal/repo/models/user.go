@@ -1,6 +1,7 @@
 package models
 
 type Address struct {
+	ID       string `mapstructure:"id"`
 	UserID   string `mapstructure:"user_id"`
 	CityCode string `mapstructure:"city_code"`
 	CityName string `mapstructure:"city_name"`
@@ -9,6 +10,7 @@ type Address struct {
 }
 
 type EMail struct {
+	ID       string   `mapstructure:"id"`
 	UserID   string   `mapstructure:"user_id"`
 	Address  string   `mapstructure:"address"`
 	Verified bool     `mapstructure:"verified"`
@@ -17,6 +19,7 @@ type EMail struct {
 }
 
 type PhoneNumber struct {
+	ID          string   `mapstructure:"id"`
 	UserID      string   `mapstructure:"user_id"`
 	PhoneNumber string   `mapstructure:"phone_number"`
 	Primary     bool     `mapstructure:"primary"`

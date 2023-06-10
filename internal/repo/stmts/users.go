@@ -39,6 +39,11 @@ var (
 		},
 	}
 
+	SetUserPassword = Statement[any]{
+		Query: `UPDATE users SET password = ? WHERE id = ?`,
+		Args:  []string{"password", "id"},
+	}
+
 	CreatePhoneNumber = Statement[any]{
 		Query: `INSERT INTO user_phone_numbers (
 			user_id,
@@ -48,16 +53,6 @@ var (
 			?, ?
 		)`,
 		Args: []string{"user_id", "phone_number"},
-	}
-
-	CreateEMail = Statement[any]{
-		Query: `INSERT INTO user_emails (
-			user_id,
-			address,
-			verified
-		)
-		VALUES (?, ?, ?)`,
-		Args: []string{"user_id", "address", "verified"},
 	}
 
 	CreateAddress = Statement[any]{

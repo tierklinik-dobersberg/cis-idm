@@ -17,6 +17,8 @@ type Config struct {
 	RefreshTokenTTL        time.Duration `env:"REFRESH_TOKEN_TTL,default=720h"`
 	RefreshTokenCookieName string        `env:"REFRESH_TOKEN_COOKIE_NAME,default=cis-idm-refresh"`
 	BootstrapRoles         []string      `env:"BOOTSTRAP_ROLES"`
+	LoginRedirectURL       string        `env:"LOGIN_REDIRECT_URL"`
+	AllowedDomainRedirects []string      `env:"ALLOWED_DOMAIN_REDIRECTS"`
 }
 
 // FromEnvironment returns a Config object parsed from environment variables.

@@ -17,6 +17,7 @@ import (
 	"github.com/tierklinik-dobersberg/cis-idm/internal/conv"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/jwt"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/middleware"
+	"github.com/tierklinik-dobersberg/cis-idm/internal/repo"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/repo/models"
 	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/exp/slices"
@@ -27,19 +28,12 @@ type AuthService struct {
 
 	validator *protovalidate.Validator
 
-	repo UserProvider
+	repo *repo.Repo
 	cfg  config.Config
 }
 
-type UserProvider interface {
-	GetUserByName(ctx context.Context, name string) (models.User, error)
-	GetUserByID(ctx context.Context, id string) (models.User, error)
-	GetUserRoles(ctx context.Context, name string) ([]models.Role, error)
-	MarkTokenRejected(ctx context.Context, token models.RejectedToken) error
-}
-
 // NewService returns a new authentication service that verifies users using repo.
-func NewService(repo UserProvider, cfg config.Config) (*AuthService, error) {
+func NewService(repo *repo.Repo, cfg config.Config) (*AuthService, error) {
 	validator, err := protovalidate.New(
 		protovalidate.WithMessages(
 			&idmv1.LoginRequest{},
@@ -234,8 +228,28 @@ func (svc *AuthService) Introspect(ctx context.Context, req *connect.Request[idm
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("invalid user"))
 	}
 
+	emails, err := svc.repo.GetUserEmails(ctx, user.ID)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to load emails: %w", err))
+	}
+
+	addresses, err := svc.repo.GetUserAddresses(ctx, user.ID)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to load user addresses: %w", err))
+	}
+
+	phoneNumbers, err := svc.repo.GetUserPhoneNumbers(ctx, user.ID)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to load user phone numbers: %w", err))
+	}
+
 	return connect.NewResponse(&idmv1.IntrospectResponse{
-		User: conv.UserProtoFromUser(user),
+		Profile: conv.ProfileProtoFromUser(
+			user,
+			conv.WithEmailAddresses(emails...),
+			conv.WithAddresses(addresses...),
+			conv.WithPhoneNumbers(phoneNumbers...),
+		),
 	}), nil
 }
 

@@ -12,42 +12,70 @@ import (
 	"github.com/tierklinik-dobersberg/cis-idm/internal/middleware"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/middleware/acl"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/repo"
+	"github.com/tierklinik-dobersberg/cis-idm/internal/selfservice"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/reflect/protoregistry"
 )
 
-func startServer(repo *repo.Repo, cfg config.Config) error {
+func getProtoRegistry() (*protoregistry.Files, error) {
 	reg := new(protoregistry.Files)
-
 	for _, file := range []protoreflect.FileDescriptor{
 		idmv1.File_tkd_idm_v1_auth_service_proto,
-		idmv1.File_tkd_idm_v1_descriptor_proto,
 		idmv1.File_tkd_idm_v1_self_service_proto,
 		idmv1.File_tkd_idm_v1_user_proto,
 		idmv1.File_tkd_idm_v1_user_service_proto,
 	} {
 		if err := reg.RegisterFile(file); err != nil {
-			return fmt.Errorf("failed to register %s at protoregistry: %w", file.Name(), err)
+			return nil, fmt.Errorf("failed to register %s at protoregistry: %w", file.Name(), err)
 		}
 	}
 
+	return reg, nil
+}
+
+func startServer(repo *repo.Repo, cfg config.Config) error {
+	reg, err := getProtoRegistry()
+	if err != nil {
+		return err
+	}
+
+	// prepare middlewares and interceptors
 	loggingInterceptor := middleware.NewLoggingInterceptor()
 	authInterceptor := middleware.NewAuthInterceptor(cfg, reg)
 	aclInterceptor := acl.NewInterceptor(reg)
+	privacyInterceptor := middleware.NewPrivacyFilterInterceptor()
 
+	interceptors := connect.WithInterceptors(
+		loggingInterceptor,
+		authInterceptor,
+		aclInterceptor,
+		privacyInterceptor,
+	)
+
+	mux := http.NewServeMux()
+
+	// Setup Auth
 	authService, err := auth.NewService(repo, cfg)
 	if err != nil {
 		return fmt.Errorf("failed to initialize auth service: %w", err)
 	}
-
-	mux := http.NewServeMux()
 	path, handler := idmv1connect.NewAuthServiceHandler(
 		authService,
-		connect.WithInterceptors(loggingInterceptor, authInterceptor, aclInterceptor),
+		interceptors,
 	)
+	mux.Handle(path, handler)
 
+	// Setup Self-Service
+	selfserviceService, err := selfservice.NewService(repo)
+	if err != nil {
+		return fmt.Errorf("failed to initialize self-service service: %w", err)
+	}
+	path, handler = idmv1connect.NewSelfServiceServiceHandler(
+		selfserviceService,
+		interceptors,
+	)
 	mux.Handle(path, handler)
 
 	return http.ListenAndServe(

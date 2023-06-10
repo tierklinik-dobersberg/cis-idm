@@ -34,3 +34,10 @@ func (repo *Repo) CreateUser(ctx context.Context, user models.User) (models.User
 
 	return user, nil
 }
+
+func (repo *Repo) SetUserPassword(ctx context.Context, userID string, password string) error {
+	return stmts.SetUserPassword.Write(ctx, repo.Conn, models.User{
+		ID:       userID,
+		Password: password,
+	})
+}

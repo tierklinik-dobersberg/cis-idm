@@ -5,9 +5,9 @@ import (
 	"github.com/tierklinik-dobersberg/cis-idm/internal/repo/models"
 )
 
-type UserOption func(u *idmv1.User)
+type UserOption func(u *idmv1.Profile)
 
-func UserProtoFromUser(user models.User, useropts ...UserOption) *idmv1.User {
+func UserProtoFromUser(user models.User) *idmv1.User {
 	usr := &idmv1.User{
 		Id:          user.ID,
 		Username:    user.Username,
@@ -16,15 +16,41 @@ func UserProtoFromUser(user models.User, useropts ...UserOption) *idmv1.User {
 		LastName:    user.LastName,
 	}
 
-	for _, fn := range useropts {
-		fn(usr)
-	}
-
 	return usr
 }
 
+func ProfileProtoFromUser(user models.User, useropts ...UserOption) *idmv1.Profile {
+	profile := &idmv1.Profile{
+		User: UserProtoFromUser(user),
+	}
+
+	for _, fn := range useropts {
+		fn(profile)
+	}
+
+	return profile
+}
+
+func EmailProtoFromEmail(email models.EMail) *idmv1.EMail {
+	return &idmv1.EMail{
+		Id:       email.ID,
+		Address:  email.Address,
+		Verified: email.Verified,
+		Primary:  email.Primary,
+	}
+}
+
+func EmailProtosFromEmails(emails ...models.EMail) []*idmv1.EMail {
+	result := make([]*idmv1.EMail, len(emails))
+	for idx, e := range emails {
+		result[idx] = EmailProtoFromEmail(e)
+	}
+
+	return result
+}
+
 func WithAddresses(addresses ...models.Address) UserOption {
-	return func(u *idmv1.User) {
+	return func(u *idmv1.Profile) {
 		for _, addr := range addresses {
 			u.Addresses = append(u.Addresses, &idmv1.Address{
 				CityCode: addr.CityCode,
@@ -37,7 +63,7 @@ func WithAddresses(addresses ...models.Address) UserOption {
 }
 
 func WithPhoneNumbers(phoneNumbers ...models.PhoneNumber) UserOption {
-	return func(u *idmv1.User) {
+	return func(u *idmv1.Profile) {
 		for _, nbr := range phoneNumbers {
 			u.PhoneNumbers = append(u.PhoneNumbers, nbr.PhoneNumber)
 		}
@@ -45,12 +71,7 @@ func WithPhoneNumbers(phoneNumbers ...models.PhoneNumber) UserOption {
 }
 
 func WithEmailAddresses(emails ...models.EMail) UserOption {
-	return func(u *idmv1.User) {
-		for _, mail := range emails {
-			u.EmailAddresses = append(u.EmailAddresses, &idmv1.EMail{
-				Address:  mail.Address,
-				Verified: mail.Verified,
-			})
-		}
+	return func(u *idmv1.Profile) {
+		u.EmailAddresses = EmailProtosFromEmails(emails...)
 	}
 }
