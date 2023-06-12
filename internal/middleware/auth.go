@@ -46,7 +46,8 @@ func NewAuthInterceptor(cfg config.Config, reg *protoregistry.Files) connect.Una
 			claims := ClaimsFromContext(ctx)
 
 			opts, ok := proto.GetExtension(methodDesc.Options(), commonv1.E_Auth).(*commonv1.AuthDecorator)
-			if ok {
+			if ok && opts != nil {
+				L(ctx).Infof("checking authentication requirement: %#v", opts)
 				switch opts.Require {
 				case commonv1.AuthRequirement_AUTH_REQ_REQUIRED:
 					l.Infof("service method requires authentication")

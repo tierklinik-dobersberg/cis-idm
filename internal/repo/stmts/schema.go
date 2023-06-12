@@ -10,6 +10,7 @@ var (
 			last_name TEXT,
 			extra BLOB,
 			avatar TEXT,
+			birthday TEXT,
 			password TEXT NOT NULL
 		)`,
 	}

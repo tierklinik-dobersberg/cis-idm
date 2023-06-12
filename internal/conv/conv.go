@@ -14,6 +14,7 @@ func UserProtoFromUser(user models.User) *idmv1.User {
 		DisplayName: user.DisplayName,
 		FirstName:   user.FirstName,
 		LastName:    user.LastName,
+		Birthday:    user.Birthday,
 	}
 
 	return usr
@@ -49,16 +50,27 @@ func EmailProtosFromEmails(emails ...models.EMail) []*idmv1.EMail {
 	return result
 }
 
+func AddressProtoFromAddress(addr models.Address) *idmv1.Address {
+	return &idmv1.Address{
+		Id:       addr.ID,
+		CityCode: addr.CityCode,
+		CityName: addr.CityName,
+		Street:   addr.Street,
+		Extra:    addr.Extra,
+	}
+}
+func AddressProtosFromAddresses(addrs ...models.Address) []*idmv1.Address {
+	result := make([]*idmv1.Address, len(addrs))
+	for idx, a := range addrs {
+		result[idx] = AddressProtoFromAddress(a)
+	}
+
+	return result
+}
+
 func WithAddresses(addresses ...models.Address) UserOption {
 	return func(u *idmv1.Profile) {
-		for _, addr := range addresses {
-			u.Addresses = append(u.Addresses, &idmv1.Address{
-				CityCode: addr.CityCode,
-				CityName: addr.CityName,
-				Street:   addr.Street,
-				Extra:    addr.Extra,
-			})
-		}
+		u.Addresses = AddressProtosFromAddresses(addresses...)
 	}
 }
 

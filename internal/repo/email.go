@@ -31,7 +31,7 @@ func (repo *Repo) CreateUserEmail(ctx context.Context, mail models.EMail) (model
 	return mail, nil
 }
 
-func (repo *Repo) DeleteEMailFromUser(ctx context.Context, mailID string, userID string) error {
+func (repo *Repo) DeleteEMailFromUser(ctx context.Context, userID string, mailID string) error {
 	return stmts.DeleteEMailFromUser.Write(ctx, repo.Conn, map[string]any{
 		"user_id": userID,
 		"id":      mailID,

@@ -22,10 +22,11 @@ var (
 			last_name,
 			extra,
 			avatar,
+			birthday,
 			password
 		)
 		VALUES (
-			?, ?, ?, ?, ?, ?, ?, ?
+			?, ?, ?, ?, ?, ?, ?, ?, ?
 		)`,
 		Args: []string{
 			"id",
@@ -35,7 +36,31 @@ var (
 			"last_name",
 			"extra",
 			"avatar",
+			"birthday",
 			"password",
+		},
+	}
+
+	UpdateUser = Statement[any]{
+		Query: `UPDATE users SET
+			username = ?,
+			display_name = ?,
+			first_name = ?,
+			last_name = ?,
+			extra = ?,
+			avatar = ?,
+			birthday = ?
+		WHERE id = ?
+			`,
+		Args: []string{
+			"username",
+			"display_name",
+			"first_name",
+			"last_name",
+			"extra",
+			"avatar",
+			"birthday",
+			"id",
 		},
 	}
 
@@ -53,17 +78,5 @@ var (
 			?, ?
 		)`,
 		Args: []string{"user_id", "phone_number"},
-	}
-
-	CreateAddress = Statement[any]{
-		Query: `INSERT INTO user_addresses (
-			user_id,
-			city_code,
-			city_name,
-			street,
-			extra,
-		)
-		VALUES (?, ?, ?, ?, ?)`,
-		Args: []string{"user_id", "city_code", "city_name", "street", "extra"},
 	}
 )

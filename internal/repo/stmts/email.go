@@ -10,7 +10,7 @@ var (
 			address,
 			verified
 		)
-		VALUES (?, ?, ?)`,
+		VALUES (?, ?, ?, ?)`,
 		Args: []string{"id", "user_id", "address", "verified"},
 	}
 

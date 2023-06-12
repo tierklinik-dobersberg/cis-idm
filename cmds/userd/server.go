@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/bufbuild/connect-go"
+	"github.com/bufbuild/protovalidate-go"
 	idmv1 "github.com/tierklinik-dobersberg/apis/gen/go/tkd/idm/v1"
 	"github.com/tierklinik-dobersberg/apis/gen/go/tkd/idm/v1/idmv1connect"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/auth"
@@ -41,16 +42,23 @@ func startServer(repo *repo.Repo, cfg config.Config) error {
 		return err
 	}
 
+	validator, err := protovalidate.New()
+	if err != nil {
+		return err
+	}
+
 	// prepare middlewares and interceptors
 	loggingInterceptor := middleware.NewLoggingInterceptor()
 	authInterceptor := middleware.NewAuthInterceptor(cfg, reg)
 	aclInterceptor := acl.NewInterceptor(reg)
+	validatorInterceptor := middleware.NewValidationInterceptor(validator)
 	privacyInterceptor := middleware.NewPrivacyFilterInterceptor()
 
 	interceptors := connect.WithInterceptors(
 		loggingInterceptor,
 		authInterceptor,
 		aclInterceptor,
+		validatorInterceptor,
 		privacyInterceptor,
 	)
 

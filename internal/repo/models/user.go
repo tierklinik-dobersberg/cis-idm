@@ -35,6 +35,7 @@ type User struct {
 	Extra       []byte `mapstructure:"extra"`
 	Avatar      string `mapstructure:"avatar"`
 	Password    string `mapstructure:"password"`
+	Birthday    string `mapstructure:"birthday"`
 }
 
 type Role struct {

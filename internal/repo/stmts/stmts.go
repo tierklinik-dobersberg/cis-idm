@@ -19,6 +19,7 @@ var (
 	ErrInvalidArgCount = errors.New("invalid number of arguments")
 	ErrMissingArgument = errors.New("missing argument value")
 	ErrNoResults       = errors.New("no results")
+	ErrNoRowsAffected  = errors.New("no rows affected")
 )
 
 func (stmt Statement[R]) Prepare(args any) (gorqlite.ParameterizedStatement, error) {
@@ -66,6 +67,10 @@ func (stmt Statement[R]) Write(ctx context.Context, conn *gorqlite.Connection, a
 
 	if writeResult.Err != nil {
 		return writeResult.Err
+	}
+
+	if writeResult.RowsAffected == 0 {
+		return ErrNoRowsAffected
 	}
 
 	return nil
