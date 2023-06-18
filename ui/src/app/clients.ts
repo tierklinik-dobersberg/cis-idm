@@ -1,4 +1,4 @@
-import { InjectionToken } from "@angular/core";
+import { InjectionToken, resolveForwardRef } from "@angular/core";
 import { Code, ConnectError, Interceptor, PromiseClient, Transport, createPromiseClient } from "@bufbuild/connect";
 import { createConnectTransport } from "@bufbuild/connect-web";
 import { AuthService } from "@tkd/apis/gen/es/tkd/idm/v1/auth_service_connect.js";
@@ -20,39 +20,67 @@ const authHeader: Interceptor = (next) => async (req) => {
   return await next(req)
 }
 
-const retryRefreshToken: (transport: Transport) => Interceptor = (transport) => (next) => async (req) => {
-  try {
-    const result = await next(req)
-    return result;
+const retryRefreshToken: (transport: Transport) => Interceptor = (transport) => {
+  let pendingRefresh: Promise<void> | null = null;
 
-  } catch (err) {
-    const connectErr = ConnectError.from(err);
+  return (next) => async (req) => {
+    try {
+      const result = await next(req)
+      return result;
 
-    // don't retry the request if it was a Login.
-    if (req.service.typeName === AuthService.typeName && req.method.name === 'Login') {
-      throw err
-    }
+    } catch (err) {
+      const connectErr = ConnectError.from(err);
 
-    if (connectErr.code === Code.Unauthenticated && (connectErr.details as any) === 'Expired') {
-      const cli = createPromiseClient(AuthService, transport);
-
-      console.log(`[DEBUG] call to ${req.service.typeName}/${req.method.name} not authenticated, trying to refresh token`)
-      try {
-        const token = await cli.refreshToken({})
-        if (!!token.accessToken) {
-          localStorage.setItem('access_token', token.accessToken.token);
-        }
-      } catch (refreshErr) {
-        console.error("failed to refresh token", refreshErr)
-
-        throw err;
+      // don't retry the request if it was a Login.
+      if (req.service.typeName === AuthService.typeName && (req.method.name === 'Login' || req.method.name === 'Logout')) {
+        throw err
       }
 
-      // retry with a new access token.
-      return await next(req);
-    }
+      if (connectErr.code === Code.Unauthenticated) {
+        if (pendingRefresh === null) {
+          let _resolve: any;
+          let _reject: any;
+          pendingRefresh = new Promise((resolve, reject) => {
+            _resolve = resolve;
+            _reject = reject;
+          })
 
-    throw err;
+          pendingRefresh
+            .catch(() => {})
+            .then(() => pendingRefresh = null)
+
+          const cli = createPromiseClient(AuthService, transport);
+
+          console.log(`[DEBUG] call to ${req.service.typeName}/${req.method.name} not authenticated, trying to refresh token`)
+          try {
+            const token = await cli.refreshToken({})
+            if (!!token.accessToken) {
+              localStorage.setItem('access_token', token.accessToken.token);
+            }
+
+            _resolve();
+          } catch (refreshErr) {
+            console.error("failed to refresh token", refreshErr)
+
+            _reject(err);
+
+            throw err;
+          } 
+        } else {
+          // wait for the pending refresh to finish
+          try {
+            await pendingRefresh;
+          } catch (_) {
+            throw err;
+          }
+        }
+
+        // retry with a new access token.
+        return await next(req);
+      }
+
+      throw err;
+    }
   }
 }
 
