@@ -1,0 +1,8 @@
+<form (ngSubmit)="submit()">
+  <div class="flex flex-col w-48 gap-2 m-auto">
+    <h1 class="text-xl font-thin text-black">Login</h1>
+    <input placeholder="Username" class="px-2 py-1 text-sm border border-gray-400 rounded-sm" type="text" name="username" [(ngModel)]="username">
+    <input placeholder="Password" class="px-2 py-1 text-sm border border-gray-400 rounded-sm" type="password" name="password" [(ngModel)]="password">
+    <button type="submit">Login</button>
+  </div>
+</form>

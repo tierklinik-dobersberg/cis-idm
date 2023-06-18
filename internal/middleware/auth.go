@@ -7,9 +7,10 @@ import (
 	"strings"
 
 	"github.com/bufbuild/connect-go"
-	idmv1 "github.com/tierklinik-dobersberg/apis/gen/go/tkd/idm/v1"
+	commonv1 "github.com/tierklinik-dobersberg/apis/gen/go/tkd/common/v1"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/config"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/jwt"
+	"golang.org/x/exp/slices"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/reflect/protoregistry"
@@ -45,16 +46,34 @@ func NewAuthInterceptor(cfg config.Config, reg *protoregistry.Files) connect.Una
 
 			claims := ClaimsFromContext(ctx)
 
-			opts, ok := proto.GetExtension(methodDesc.Options(), idmv1.E_Auth).(idmv1.AuthRequirement)
-			if ok {
-				switch opts {
-				case idmv1.AuthRequirement_AUTH_REQ_REQUIRED:
+			opts, ok := proto.GetExtension(methodDesc.Options(), commonv1.E_Auth).(*commonv1.AuthDecorator)
+
+			if ok && opts != nil {
+				L(ctx).Infof("checking authentication requirement: %#v", opts)
+				switch opts.Require {
+				case commonv1.AuthRequirement_AUTH_REQ_REQUIRED:
 					l.Infof("service method requires authentication")
 					if claims == nil {
 						return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("not access token provided"))
 					}
 
-				case idmv1.AuthRequirement_AUTH_REQ_UNSPECIFIED:
+					// make sure the user has at least one of the required roles assigned
+					if len(opts.AllowedRoles) > 0 {
+						isAllowed := false
+
+						for _, allowedRole := range opts.AllowedRoles {
+							if slices.Contains(claims.AppMetadata.Authorization.Roles, allowedRole) {
+								isAllowed = true
+								break
+							}
+						}
+
+						if !isAllowed {
+							return nil, connect.NewError(connect.CodePermissionDenied, fmt.Errorf("access token does not include one of the required roles"))
+						}
+					}
+
+				case commonv1.AuthRequirement_AUTH_REQ_UNSPECIFIED:
 					// nothing to do
 				default:
 					l.WithField("requirement", opts.String()).Infof("unhandeled authentication requirement")

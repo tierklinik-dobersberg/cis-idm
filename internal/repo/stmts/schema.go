@@ -10,12 +10,14 @@ var (
 			last_name TEXT,
 			extra BLOB,
 			avatar TEXT,
+			birthday TEXT,
 			password TEXT NOT NULL
 		)`,
 	}
 
 	CreateAddressTable = Statement[any]{
 		Query: `CREATE TABLE IF NOT EXISTS user_addresses (
+			id TEXT NOT NULL PRIMARY KEY,
 			user_id TEXT NOT NULL,
 			city_code TEXT,
 			city_name TEXT,
@@ -29,6 +31,7 @@ var (
 
 	CreateEMailTable = Statement[any]{
 		Query: `CREATE TABLE IF NOT EXISTS user_emails (
+			id TEXT NOT NULL PRIMARY KEY,
 			user_id TEXT NOT NULL,
 			address TEXT NOT NULL,
 			verified BOOL,
@@ -40,6 +43,7 @@ var (
 
 	CreatePhoneNumberTable = Statement[any]{
 		Query: `CREATE TABLE IF NOT EXISTS user_phone_numbers (
+			id TEXT NOT NULL PRIMARY KEY,
 			user_id TEXT NOT NULL,
 			phone_number TEXT NOT NULL,
 			CONSTRAINT fk_user_phone_number

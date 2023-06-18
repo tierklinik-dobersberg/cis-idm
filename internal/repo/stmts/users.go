@@ -13,6 +13,15 @@ var (
 		Args:  []string{"id"},
 	}
 
+	GetAllUsers = Statement[models.User]{
+		Query: `SELECT * FROM users`,
+	}
+
+	DeleteUser = Statement[any]{
+		Query: `DELETE FROM users WHERE id = ?`,
+		Args:  []string{"id"},
+	}
+
 	CreateUser = Statement[any]{
 		Query: `INSERT INTO users (
 			id,
@@ -22,10 +31,11 @@ var (
 			last_name,
 			extra,
 			avatar,
+			birthday,
 			password
 		)
 		VALUES (
-			?, ?, ?, ?, ?, ?, ?, ?
+			?, ?, ?, ?, ?, ?, ?, ?, ?
 		)`,
 		Args: []string{
 			"id",
@@ -35,8 +45,37 @@ var (
 			"last_name",
 			"extra",
 			"avatar",
+			"birthday",
 			"password",
 		},
+	}
+
+	UpdateUser = Statement[any]{
+		Query: `UPDATE users SET
+			username = ?,
+			display_name = ?,
+			first_name = ?,
+			last_name = ?,
+			extra = ?,
+			avatar = ?,
+			birthday = ?
+		WHERE id = ?
+			`,
+		Args: []string{
+			"username",
+			"display_name",
+			"first_name",
+			"last_name",
+			"extra",
+			"avatar",
+			"birthday",
+			"id",
+		},
+	}
+
+	SetUserPassword = Statement[any]{
+		Query: `UPDATE users SET password = ? WHERE id = ?`,
+		Args:  []string{"password", "id"},
 	}
 
 	CreatePhoneNumber = Statement[any]{
@@ -48,27 +87,5 @@ var (
 			?, ?
 		)`,
 		Args: []string{"user_id", "phone_number"},
-	}
-
-	CreateEMail = Statement[any]{
-		Query: `INSERT INTO user_emails (
-			user_id,
-			address,
-			verified
-		)
-		VALUES (?, ?, ?)`,
-		Args: []string{"user_id", "address", "verified"},
-	}
-
-	CreateAddress = Statement[any]{
-		Query: `INSERT INTO user_addresses (
-			user_id,
-			city_code,
-			city_name,
-			street,
-			extra,
-		)
-		VALUES (?, ?, ?, ?, ?)`,
-		Args: []string{"user_id", "city_code", "city_name", "street", "extra"},
 	}
 )

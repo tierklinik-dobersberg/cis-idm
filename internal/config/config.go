@@ -13,10 +13,12 @@ type Config struct {
 	Domain                 string        `env:"DOMAIN,required"`
 	DatabaseURL            string        `env:"RQLITE_URL,required"`
 	SecureCookie           bool          `env:"SECURE_COOKIE,default=true"`
-	AccessTokenTTL         time.Duration `env:"ACCESS_TOKEN_TTL,default=24h"`
+	AccessTokenTTL         time.Duration `env:"ACCESS_TOKEN_TTL,default=1m"`
 	RefreshTokenTTL        time.Duration `env:"REFRESH_TOKEN_TTL,default=720h"`
-	RefreshTokenCookieName string        `env:"REFRESH_TOKEN_COOKIE_NAME,default=cis-idm-refresh"`
+	RefreshTokenCookieName string        `env:"REFRESH_TOKEN_COOKIE_NAME,default=cis_idm_refresh"`
 	BootstrapRoles         []string      `env:"BOOTSTRAP_ROLES"`
+	LoginRedirectURL       string        `env:"LOGIN_REDIRECT_URL"`
+	AllowedDomainRedirects []string      `env:"ALLOWED_DOMAIN_REDIRECTS"`
 }
 
 // FromEnvironment returns a Config object parsed from environment variables.

@@ -1,0 +1,5 @@
+<ng-container *ngIf="(profile | async) as profile">
+  <h1 class="text-md">Hi {{ profile.user?.displayName || profile.user?.username }}</h1>
+</ng-container>
+
+<button type="button" (click)="logout()">Logout</button>
