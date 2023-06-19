@@ -15,6 +15,7 @@ type Config struct {
 	SecureCookie           bool          `env:"SECURE_COOKIE,default=true"`
 	AccessTokenTTL         time.Duration `env:"ACCESS_TOKEN_TTL,default=1m"`
 	RefreshTokenTTL        time.Duration `env:"REFRESH_TOKEN_TTL,default=720h"`
+	AccessTokenCookieName  string        `env:"ACCESS_TOKEN_COOKIE_NAME,default=cis_idm_access"`
 	RefreshTokenCookieName string        `env:"REFRESH_TOKEN_COOKIE_NAME,default=cis_idm_refresh"`
 	BootstrapRoles         []string      `env:"BOOTSTRAP_ROLES"`
 	LoginRedirectURL       string        `env:"LOGIN_REDIRECT_URL"`

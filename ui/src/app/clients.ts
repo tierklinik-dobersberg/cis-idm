@@ -1,4 +1,4 @@
-import { InjectionToken, resolveForwardRef } from "@angular/core";
+import { InjectionToken } from "@angular/core";
 import { Code, ConnectError, Interceptor, PromiseClient, Transport, createPromiseClient } from "@bufbuild/connect";
 import { createConnectTransport } from "@bufbuild/connect-web";
 import { AuthService } from "@tkd/apis/gen/es/tkd/idm/v1/auth_service_connect.js";
@@ -10,15 +10,6 @@ export const SELF_SERVICE = new InjectionToken<SelfServiceClient>('SELF_SERVICE'
 
 export type AuthServiceClient = PromiseClient<typeof AuthService>;
 export type SelfServiceClient = PromiseClient<typeof SelfServiceService>;
-
-const authHeader: Interceptor = (next) => async (req) => {
-  const token = localStorage.getItem("access_token")
-  if (!!token) {
-    req.header.set("Authentication", `Bearer ${token}`)
-  }
-
-  return await next(req)
-}
 
 const retryRefreshToken: (transport: Transport) => Interceptor = (transport) => {
   let pendingRefresh: Promise<void> | null = null;
@@ -65,7 +56,7 @@ const retryRefreshToken: (transport: Transport) => Interceptor = (transport) => 
             _reject(err);
 
             throw err;
-          } 
+          }
         } else {
           // wait for the pending refresh to finish
           try {
@@ -92,7 +83,6 @@ export function transportFactory(): Transport {
     credentials: 'include',
     interceptors: [
       retryRefreshToken(retryTransport),
-      authHeader
     ],
   })
 }

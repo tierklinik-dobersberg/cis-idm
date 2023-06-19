@@ -24,11 +24,20 @@ func NewJWTMiddleware(cfg config.Config, repo TokenRejector, next http.Handler) 
 		header := r.Header.Get("Authentication")
 
 		var (
-			token  string
-			claims *jwt.Claims
+			token       string
+			claims      *jwt.Claims
+			tokenSource string
 		)
 		if strings.HasPrefix(header, "Bearer ") {
 			token = strings.Replace(header, "Bearer ", "", 1)
+			tokenSource = "header"
+		} else {
+			// try to get the access token from a cookie
+			cookie := FindCookie(cfg.AccessTokenCookieName, r.Header)
+			if cookie != nil {
+				token = cookie.Value
+				tokenSource = "cookie"
+			}
 		}
 
 		if token != "" {
@@ -56,8 +65,9 @@ func NewJWTMiddleware(cfg config.Config, repo TokenRejector, next http.Handler) 
 
 			ctx = ContextWithClaims(ctx, claims)
 			ctx = WithLogger(ctx, L(ctx).WithFields(logrus.Fields{
-				"jwt:sub":  claims.Subject,
-				"jwt:name": claims.Name,
+				"jwt:sub":         claims.Subject,
+				"jwt:name":        claims.Name,
+				"jwt:tokenSource": tokenSource,
 			}))
 		}
 

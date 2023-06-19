@@ -1,8 +1,18 @@
-<form (ngSubmit)="submit()">
-  <div class="flex flex-col w-48 gap-2 m-auto">
-    <h1 class="text-xl font-thin text-black">Login</h1>
-    <input placeholder="Username" class="px-2 py-1 text-sm border border-gray-400 rounded-sm" type="text" name="username" [(ngModel)]="username">
-    <input placeholder="Password" class="px-2 py-1 text-sm border border-gray-400 rounded-sm" type="password" name="password" [(ngModel)]="password">
-    <button type="submit">Login</button>
+<form #loginForm="ngForm" (ngSubmit)="submit()" class="mt-32">
+  <div class="flex flex-col gap-4 p-8 bg-white border border-blue-100 rounded-md shadow-sm w-96">
+    <h1 class="w-full mt-2 text-xl font-medium text-black">Anmeldung</h1>
+    <span class="mb-4 -mt-4 text-base font-light text-gray-600">mit deinem
+      <a class="font-medium text-blue-500 underline" href="https://tierklinikdobersberg.at">Tierklinik-Dobersberg</a>
+      Account.
+    </span>
+
+    <span class="text-base text-gray-700">Bitte melde dich mit deinem Benutzernamen und deinem Passwort an:</span>
+    <input required placeholder="Username" class="px-2 py-1.5 text-sm border hover:border-blue-400 focus:ring-1 rounded-md focus:border-blue-400 border-gray-300 outline-none" type="text" name="username" [(ngModel)]="username">
+    <input required placeholder="Password" class="px-2 py-1.5 text-sm border hover:border-blue-400 focus:ring-1 rounded-md focus:border-blue-400 border-gray-300 outline-none" type="password" name="password" [(ngModel)]="password">
+    <span *ngIf="loginErrorMessage" class="text-sm font-medium text-red-700">
+      Anmeldung fehlgeschlagen: <br />
+      {{ loginErrorMessage }}
+    </span>
+    <button [disabled]="!loginForm.valid" type="submit" class="disabled:cursor-not-allowed disabled:opacity-50 bg-teal-500 font-medium uppercase focus:font-semibold hover:bg-teal-600 px-2 py-1.5 rounded-md text-white outline-none border border-teal-500 focus:border-blue-400">Login</button>
   </div>
 </form>

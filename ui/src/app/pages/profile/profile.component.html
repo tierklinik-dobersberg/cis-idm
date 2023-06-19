@@ -1,5 +1,30 @@
-<ng-container *ngIf="(profile | async) as profile">
-  <h1 class="text-md">Hi {{ profile.user?.displayName || profile.user?.username }}</h1>
-</ng-container>
+<div class="flex flex-col gap-4">
+    <ng-container *ngIf="(profile | async) as profile">
+  <div
+    class="flex flex-col self-stretch w-screen max-w-xl gap-4 p-8 bg-white border border-blue-100 rounded-md shadow-sm">
+      <h1 class="text-xl font-light">Hallo
+        <span class="font-medium text-black">{{ profile.user?.displayName || profile.user?.username }}</span>,
+      </h1>
 
-<button type="button" (click)="logout()">Logout</button>
+    <button type="button"
+      class="w-full text-center bg-white font-medium uppercase focus:font-semibold px-2 py-1.5 hover:bg-teal-100 rounded-md text-teal-500 outline-none border border-teal-300 focus:border-blue-400">Passwort ändern</button>
+
+    <button type="button" (click)="logout()"
+      class="w-full text-center bg-teal-500 font-medium uppercase focus:font-semibold px-2 py-1.5 hover:bg-teal-600 rounded-md text-white outline-none border border-teal-500 focus:border-blue-400">Abmelden</button>
+
+  </div>
+
+  <div
+    class="flex flex-col self-stretch w-screen max-w-xl gap-4 p-8 bg-white border border-blue-100 rounded-md shadow-sm">
+    <h1 class="text-base font-medium">Addressen</h1>
+    <div *ngFor="let addr of profile.addresses">
+      {{ addr.cityCode }}
+    </div>
+  </div>
+
+  <div
+    class="flex flex-col self-stretch w-screen max-w-xl gap-4 p-8 bg-white border border-blue-100 rounded-md shadow-sm">
+    <h1 class="text-base font-medium">Kontakt</h1>
+  </div>
+    </ng-container>
+</div>

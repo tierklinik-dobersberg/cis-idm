@@ -119,6 +119,19 @@ func (svc *AuthService) Login(ctx context.Context, req *connect.Request[idmv1.Lo
 		},
 	})
 
+	// add the access token as a cookie.
+	accessCookie := http.Cookie{
+		Name:     svc.cfg.AccessTokenCookieName,
+		Value:    accessToken,
+		Domain:   svc.cfg.Domain,
+		Path:     "/",
+		Expires:  time.Now().Add(svc.cfg.AccessTokenTTL),
+		Secure:   svc.cfg.SecureCookie,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+	}
+	resp.Header().Add("Set-Cookie", accessCookie.String())
+
 	if !r.GetNoRefreshToken() {
 		refreshToken, err := svc.createRefreshToken(user)
 		if err != nil {
@@ -130,10 +143,10 @@ func (svc *AuthService) Login(ctx context.Context, req *connect.Request[idmv1.Lo
 			Value:    refreshToken,
 			Path:     "/tkd.idm.v1.AuthService/RefreshToken",
 			Domain:   svc.cfg.Domain,
-			Expires:  time.Now().Add(time.Hour * 24 * 30),
-			Secure:   false, // FIXME
-			HttpOnly: false,
-			SameSite: http.SameSiteLaxMode,
+			Expires:  time.Now().Add(svc.cfg.RefreshTokenTTL),
+			Secure:   svc.cfg.SecureCookie,
+			HttpOnly: true,
+			SameSite: http.SameSiteStrictMode,
 		}
 
 		resp.Header().Add("Set-Cookie", cookie.String())
@@ -164,7 +177,33 @@ func (svc *AuthService) Logout(ctx context.Context, req *connect.Request[idmv1.L
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to mark token as rejected: %w", err))
 	}
 
-	return connect.NewResponse(new(idmv1.LogoutResponse)), nil
+	resp := connect.NewResponse(new(idmv1.LogoutResponse))
+
+	// clear the refresh token cookie
+	clearRefreshCookie := http.Cookie{
+		Name:     svc.cfg.RefreshTokenCookieName,
+		Value:    "",
+		Domain:   svc.cfg.Domain,
+		MaxAge:   -1,
+		SameSite: http.SameSiteLaxMode,
+		Path:     "/tkd.idm.v1.AuthService/RefreshToken",
+		HttpOnly: true,
+	}
+
+	clearAccessCookie := http.Cookie{
+		Name:     svc.cfg.AccessTokenCookieName,
+		Value:    "",
+		Domain:   svc.cfg.Domain,
+		MaxAge:   -1,
+		SameSite: http.SameSiteLaxMode,
+		Path:     "/",
+		HttpOnly: true,
+	}
+
+	resp.Header().Add("Set-Cookie", clearRefreshCookie.String())
+	resp.Header().Add("Set-Cookie", clearAccessCookie.String())
+
+	return resp, nil
 }
 
 func (svc *AuthService) RefreshToken(ctx context.Context, req *connect.Request[idmv1.RefreshTokenRequest]) (*connect.Response[idmv1.RefreshTokenResponse], error) {
@@ -172,7 +211,7 @@ func (svc *AuthService) RefreshToken(ctx context.Context, req *connect.Request[i
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 
-	refreshCookie := getRefreshTokenCookie(svc.cfg.RefreshTokenCookieName, req.Header())
+	refreshCookie := middleware.FindCookie(svc.cfg.RefreshTokenCookieName, req.Header())
 	if refreshCookie == nil {
 		return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("no refresh cookie provided"))
 	}
@@ -205,12 +244,27 @@ func (svc *AuthService) RefreshToken(ctx context.Context, req *connect.Request[i
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
-	return connect.NewResponse(&idmv1.RefreshTokenResponse{
+	resp := connect.NewResponse(&idmv1.RefreshTokenResponse{
 		AccessToken: &idmv1.AccessTokenResponse{
 			Token: token,
 			User:  conv.UserProtoFromUser(user),
 		},
-	}), nil
+	})
+
+	// add the access token as a cookie.
+	accessCookie := http.Cookie{
+		Name:     svc.cfg.AccessTokenCookieName,
+		Value:    token,
+		Path:     "/",
+		Domain:   svc.cfg.Domain,
+		Expires:  time.Now().Add(svc.cfg.AccessTokenTTL),
+		Secure:   svc.cfg.SecureCookie,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+	}
+	resp.Header().Add("Set-Cookie", accessCookie.String())
+
+	return resp, nil
 }
 
 func (svc *AuthService) Introspect(ctx context.Context, req *connect.Request[idmv1.IntrospectRequest]) (*connect.Response[idmv1.IntrospectResponse], error) {
@@ -316,22 +370,6 @@ func (svc *AuthService) createRefreshToken(user models.User) (string, error) {
 	}
 
 	return token, nil
-}
-
-func getRefreshTokenCookie(cookieName string, headers http.Header) *http.Cookie {
-	// we create a dummy http request so we can use the cookie parser
-	// from the stdlib which is, unfortunately, not exported for direct
-	// use.
-	dummyReq := http.Request{Header: headers}
-
-	cookies := dummyReq.Cookies()
-	for _, cookie := range cookies {
-		if cookie.Name == cookieName {
-			return cookie
-		}
-	}
-
-	return nil
 }
 
 var _ idmv1connect.AuthServiceHandler = new(AuthService)

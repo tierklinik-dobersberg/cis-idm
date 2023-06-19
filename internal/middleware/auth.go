@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/bufbuild/connect-go"
@@ -113,4 +114,20 @@ func getMethodDesc(reg *protoregistry.Files, fqServiceName string, methodName st
 	})
 
 	return methodDesc
+}
+
+func FindCookie(cookieName string, headers http.Header) *http.Cookie {
+	// we create a dummy http request so we can use the cookie parser
+	// from the stdlib which is, unfortunately, not exported for direct
+	// use.
+	dummyReq := http.Request{Header: headers}
+
+	cookies := dummyReq.Cookies()
+	for _, cookie := range cookies {
+		if cookie.Name == cookieName {
+			return cookie
+		}
+	}
+
+	return nil
 }

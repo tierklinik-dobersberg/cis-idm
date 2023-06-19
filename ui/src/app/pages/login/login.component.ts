@@ -22,6 +22,7 @@ export class LoginComponent implements OnInit {
 
   username = '';
   password = '';
+  loginErrorMessage = '';
 
   ngOnInit() {
 
@@ -42,15 +43,24 @@ export class LoginComponent implements OnInit {
 
       if (result.response.case === "accessToken") {
         localStorage.setItem("access_token", result.response.value.token);
+        /*
+        if (result.response.value.redirectTo) {
+          window.location(result.response.redirectTo)
+        }
+        */
+
       } else {
         throw new Error("unexpected response")
       }
+
 
       await this.profile.loadProfile();
       await this.router.navigate(['/profile'])
 
     } catch(err) {
-      console.error(ConnectError.from(err));
+      const connectErr = ConnectError.from(err);
+
+      this.loginErrorMessage = connectErr.rawMessage;
     }
   }
 }
