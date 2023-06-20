@@ -163,11 +163,12 @@ func (svc *Service) CreateUser(ctx context.Context, req *connect.Request[idmv1.C
 	// Create phone number records
 	var userPhoneNumbers []models.PhoneNumber
 	if phoneNumbers := req.Msg.GetProfile().PhoneNumbers; len(phoneNumbers) > 0 {
-		for idx, nbr := range phoneNumbers {
+		for _, nbr := range phoneNumbers {
 			nbrModel := models.PhoneNumber{
 				UserID:      userModel.ID,
-				PhoneNumber: nbr,
-				Primary:     idx == 0,
+				PhoneNumber: nbr.Number,
+				Verified:    nbr.Verified,
+				Primary:     nbr.Primary,
 			}
 
 			if phone, err := svc.repo.AddUserPhoneNumber(ctx, nbrModel); err != nil {

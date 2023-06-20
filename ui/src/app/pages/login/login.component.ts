@@ -3,7 +3,7 @@ import { Component, OnInit, inject } from "@angular/core";
 import { FormsModule } from "@angular/forms";
 import { Router } from "@angular/router";
 import { ConnectError } from "@bufbuild/connect";
-import { AuthType } from "@tkd/apis/gen/es/tkd/idm/v1/auth_service_pb.js";
+import { AuthType } from "@tkd/apis";
 import { AUTH_SERVICE } from "src/app/clients";
 import { ConfigService } from "src/app/config.service";
 import { ProfileService } from "src/services/profile.service";

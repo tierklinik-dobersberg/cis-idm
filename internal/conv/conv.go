@@ -59,6 +59,25 @@ func AddressProtoFromAddress(addr models.Address) *idmv1.Address {
 		Extra:    addr.Extra,
 	}
 }
+
+func PhoneNumberProtoFromPhoneNumber(nbr models.PhoneNumber) *idmv1.PhoneNumber {
+	return &idmv1.PhoneNumber{
+		Id:       nbr.ID,
+		Number:   nbr.PhoneNumber,
+		Verified: false,
+		Primary:  nbr.Primary,
+	}
+}
+
+func PhoneNumberProtosFromPhoneNumbers(nbrs ...models.PhoneNumber) []*idmv1.PhoneNumber {
+	result := make([]*idmv1.PhoneNumber, len(nbrs))
+	for idx, n := range nbrs {
+		result[idx] = PhoneNumberProtoFromPhoneNumber(n)
+	}
+
+	return result
+}
+
 func AddressProtosFromAddresses(addrs ...models.Address) []*idmv1.Address {
 	result := make([]*idmv1.Address, len(addrs))
 	for idx, a := range addrs {
@@ -76,14 +95,32 @@ func WithAddresses(addresses ...models.Address) UserOption {
 
 func WithPhoneNumbers(phoneNumbers ...models.PhoneNumber) UserOption {
 	return func(u *idmv1.Profile) {
-		for _, nbr := range phoneNumbers {
-			u.PhoneNumbers = append(u.PhoneNumbers, nbr.PhoneNumber)
-		}
+		u.PhoneNumbers = PhoneNumberProtosFromPhoneNumbers(phoneNumbers...)
 	}
 }
 
 func WithEmailAddresses(emails ...models.EMail) UserOption {
 	return func(u *idmv1.Profile) {
 		u.EmailAddresses = EmailProtosFromEmails(emails...)
+	}
+}
+
+func WithPrimaryMail(mail *models.EMail) UserOption {
+	return func(u *idmv1.Profile) {
+		if mail == nil {
+			return
+		}
+
+		u.User.PrimaryMail = EmailProtoFromEmail(*mail)
+	}
+}
+
+func WithPrimaryPhone(phone *models.PhoneNumber) UserOption {
+	return func(u *idmv1.Profile) {
+		if phone == nil {
+			return
+		}
+
+		u.User.PrimaryPhoneNumber = PhoneNumberProtoFromPhoneNumber(*phone)
 	}
 }

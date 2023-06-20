@@ -3,10 +3,12 @@ package repo
 import (
 	"context"
 	"fmt"
+	"os"
 	"reflect"
 
 	"github.com/mitchellh/mapstructure"
 	"github.com/rqlite/gorqlite"
+	"github.com/tierklinik-dobersberg/cis-idm/internal/middleware"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/repo/stmts"
 )
 
@@ -32,6 +34,13 @@ func Query[T any](ctx context.Context, stmt stmts.Statement[T], conn *gorqlite.C
 		m, err := queryResult.Map()
 		if err != nil {
 			return results, err
+		}
+
+		if os.Getenv("DEBUG") != "" {
+			middleware.L(ctx).
+				WithField("query", pStmt.Query).
+				WithField("response", m).
+				Infof("DEBUG: got for query")
 		}
 
 		obj := reflect.New(typeOf).Interface().(*T)

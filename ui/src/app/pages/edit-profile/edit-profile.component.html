@@ -1,6 +1,6 @@
 <div class="tkd-card">
     <header class="flex !flex-row w-full items-center">
-        <a routerLink="../">
+        <a routerLink="/profile">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
                 stroke="currentColor" class="w-6 h-6">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
@@ -13,7 +13,7 @@
         <section>
             <form (ngSubmit)="saveProfile()" class="flex flex-col gap-4">
                 <ul class="flex flex-col gap-4 list-none">
-                    <li class="flex flex-row justify-between items-center" *ngIf="config.features.allowUsernameChange">
+                    <li class="flex flex-row items-center justify-between" *ngIf="config.features.allowUsernameChange">
                         <div class="flex flex-col gap-0.5 w-full">
                             <span
                                 class="text-xs text-gray-500 uppercase dark:text-emerald-200 dark:text-opacity-70">Benutzername</span>
@@ -22,7 +22,7 @@
                         </div>
                     </li>
 
-                    <li class="flex flex-row gap-4 justify-between items-center">
+                    <li class="flex flex-row items-center justify-between gap-4">
                         <div class="flex flex-col gap-0.5 w-full">
                             <span
                                 class="text-xs text-gray-500 uppercase dark:text-emerald-200 dark:text-opacity-70">Vorname</span>
@@ -37,7 +37,7 @@
                         </div>
                     </li>
 
-                    <li class="flex flex-row justify-between items-center">
+                    <li class="flex flex-row items-center justify-between">
                         <div class="flex flex-col gap-0.5 w-full">
                             <span
                                 class="text-xs text-gray-500 uppercase dark:text-emerald-200 dark:text-opacity-70">Anzeige
@@ -47,7 +47,7 @@
                         </div>
                     </li>
 
-                    <li class="flex flex-row justify-between items-center">
+                    <li class="flex flex-row items-center justify-between">
                         <div class="flex flex-col gap-0.5 w-full">
                             <span
                                 class="text-xs text-gray-500 uppercase dark:text-emerald-200 dark:text-opacity-70">Geburtsdatum</span>

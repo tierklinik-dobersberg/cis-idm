@@ -1,8 +1,7 @@
 import { InjectionToken } from "@angular/core";
 import { Code, ConnectError, Interceptor, PromiseClient, Transport, createPromiseClient } from "@bufbuild/connect";
 import { createConnectTransport } from "@bufbuild/connect-web";
-import { AuthService } from "@tkd/apis/gen/es/tkd/idm/v1/auth_service_connect.js";
-import { SelfServiceService } from '@tkd/apis/gen/es/tkd/idm/v1/self_service_connect.js';
+import { AuthService, SelfServiceService } from "@tkd/apis";
 
 export const TRANSPORT = new InjectionToken<Transport>('TRANSPORT');
 export const AUTH_SERVICE = new InjectionToken<AuthServiceClient>('AUTH_SERVICE');

@@ -24,9 +24,23 @@ func (repo *Repo) AddUserPhoneNumber(ctx context.Context, model models.PhoneNumb
 		model.ID = id.String()
 	}
 
-	if err := stmts.CreatePhoneNumber.Write(ctx, repo.Conn, model); err != nil {
+	if err := stmts.CreateUserPhoneNumber.Write(ctx, repo.Conn, model); err != nil {
 		return model, err
 	}
 
 	return model, nil
+}
+
+func (repo *Repo) DeleteUserPhoneNumber(ctx context.Context, userID string, phoneNumberID string) error {
+	return stmts.DeleteUserPhoneNumber.Write(ctx, repo.Conn, map[string]any{
+		"id":      phoneNumberID,
+		"user_id": userID,
+	})
+}
+
+func (repo *Repo) MarkPhoneNumberAsPrimary(ctx context.Context, userID string, phoneNumberID string) error {
+	return stmts.MarkPhoneNumberAsPrimary.Write(ctx, repo.Conn, map[string]any{
+		"user_id": userID,
+		"id":      phoneNumberID,
+	})
 }

@@ -7,4 +7,24 @@ var (
 		Query: `SELECT * FROM user_phone_numbers WHERE user_id = ?`,
 		Args:  []string{"user_id"},
 	}
+
+	CreateUserPhoneNumber = Statement[any]{
+		Query: `INSERT INTO user_phone_numbers (id, user_id, phone_number, is_primary, verified) VALUES (?, ?, ?, ?, ?)`,
+		Args:  []string{"id", "user_id", "phone_number", "is_primary", "verified"},
+	}
+
+	DeleteUserPhoneNumber = Statement[any]{
+		Query: `DELETE FROM user_phone_numbers WHERE user_id = ? AND id = ?`,
+		Args:  []string{"user_id", "id"},
+	}
+
+	MarkPhoneNumberVerified = Statement[any]{
+		Query: `UPDATE user_phone_numbers SET verified = ? WHERE id = ? AND user_id = ?`,
+		Args:  []string{"verified", "id", "user_id"},
+	}
+
+	MarkPhoneNumberAsPrimary = Statement[any]{
+		Query: `UPDATE user_phone_numbers SET is_primary = (id == ?) WHERE user_id = ?`,
+		Args:  []string{"id", "user_id"},
+	}
 )

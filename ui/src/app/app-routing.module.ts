@@ -10,6 +10,10 @@ const routes: Routes = [
   { path: "profile/edit", canActivate: [authGuard], loadComponent: () => import('./pages/edit-profile/edit-profile.component').then(m => m.EditProfileComponent)},
   { path: "profile/edit-address", canActivate: [authGuard], loadComponent: () => import('./pages/add-edit-address/add-edit-address.component').then(m => m.AddEditAddressComponent)},
   { path: "profile/edit-address/:id", canActivate: [authGuard], loadComponent: () => import('./pages/add-edit-address/add-edit-address.component').then(m => m.AddEditAddressComponent)},
+  { path: "profile/edit-mail", canActivate: [authGuard], loadComponent: () => import('./pages/add-edit-mail/add-edit-mail.component').then(m => m.AddEditMailComponent)},
+  { path: "profile/edit-mail/:id", canActivate: [authGuard], loadComponent: () => import('./pages/add-edit-mail/add-edit-mail.component').then(m => m.AddEditMailComponent)},
+  { path: "profile/edit-phone", canActivate: [authGuard], loadComponent: () => import('./pages/add-edit-phone/add-edit-phone.component').then(m => m.AddEditPhoneComponent)},
+  { path: "profile/edit-phone/:id", canActivate: [authGuard], loadComponent: () => import('./pages/add-edit-phone/add-edit-phone.component').then(m => m.AddEditPhoneComponent)},
 ];
 
 @NgModule({

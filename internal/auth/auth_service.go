@@ -79,7 +79,12 @@ func (svc *AuthService) Login(ctx context.Context, req *connect.Request[idmv1.Lo
 	if err != nil {
 		if svc.cfg.FeatureEnabled(config.FeatureLoginByMail) {
 			if errors.Is(err, stmts.ErrNoResults) {
-				user, err = svc.repo.GetUserByEMail(ctx, passwordAuth.GetUsername())
+				var verified bool
+				user, verified, err = svc.repo.GetUserByEMail(ctx, passwordAuth.GetUsername())
+
+				if err == nil && verified == false {
+					return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("e-mail address has not been verified"))
+				}
 			}
 		}
 
@@ -307,12 +312,34 @@ func (svc *AuthService) Introspect(ctx context.Context, req *connect.Request[idm
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to load user phone numbers: %w", err))
 	}
 
+	var primaryMail *models.EMail
+	for _, mail := range emails {
+		if mail.Primary {
+			primaryMail = new(models.EMail)
+			*primaryMail = mail
+
+			break
+		}
+	}
+
+	var primaryPhone *models.PhoneNumber
+	for _, phone := range phoneNumbers {
+		if phone.Primary {
+			primaryPhone = new(models.PhoneNumber)
+			*primaryPhone = phone
+
+			break
+		}
+	}
+
 	return connect.NewResponse(&idmv1.IntrospectResponse{
 		Profile: conv.ProfileProtoFromUser(
 			user,
 			conv.WithEmailAddresses(emails...),
 			conv.WithAddresses(addresses...),
 			conv.WithPhoneNumbers(phoneNumbers...),
+			conv.WithPrimaryMail(primaryMail),
+			conv.WithPrimaryPhone(primaryPhone),
 		),
 	}), nil
 }
@@ -331,7 +358,7 @@ func (svc *AuthService) createAccessToken(user models.User, roles []models.Role)
 	expiresAt := time.Now().Add(svc.cfg.AccessTokenTTL)
 
 	claims := jwt.Claims{
-		Audience:  "dobersberg.vet",
+		Audience:  svc.cfg.Audience,
 		ExpiresAt: expiresAt.Unix(),
 		ID:        tokenID.String(),
 		IssuedAt:  time.Now().Unix(),
@@ -363,7 +390,7 @@ func (svc *AuthService) createRefreshToken(user models.User) (string, error) {
 	expiresAt := time.Now().Add(svc.cfg.RefreshTokenTTL)
 
 	claims := jwt.Claims{
-		Audience:  "dobersberg.vet",
+		Audience:  svc.cfg.Audience,
 		ExpiresAt: expiresAt.Unix(),
 		ID:        tokenID.String(),
 		IssuedAt:  time.Now().Unix(),

@@ -8,9 +8,12 @@ var (
 		Args:  []string{"username"},
 	}
 
-	GetUserByEMail = Statement[models.User]{
-		Query: `SELECT * FROM users
-			JOIN user_emails ON user_emails.user_id = users.id WHERE user_emails.address = ? AND verified = true`,
+	GetUserByEMail = Statement[struct {
+		models.User  `mapstructure:",squash"`
+		MailVerified bool `mapstructure:"verified"`
+	}]{
+		Query: `SELECT users.*, user_emails.verified FROM users
+			JOIN user_emails ON user_emails.user_id = users.id WHERE user_emails.address = ?`,
 		Args: []string{"mail"},
 	}
 
@@ -82,16 +85,5 @@ var (
 	SetUserPassword = Statement[any]{
 		Query: `UPDATE users SET password = ? WHERE id = ?`,
 		Args:  []string{"password", "id"},
-	}
-
-	CreatePhoneNumber = Statement[any]{
-		Query: `INSERT INTO user_phone_numbers (
-			user_id,
-			phone_number,
-		)
-		VALUES (
-			?, ?
-		)`,
-		Args: []string{"user_id", "phone_number"},
 	}
 )

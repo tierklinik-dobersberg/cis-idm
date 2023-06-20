@@ -14,7 +14,7 @@ type EMail struct {
 	UserID   string   `mapstructure:"user_id"`
 	Address  string   `mapstructure:"address"`
 	Verified bool     `mapstructure:"verified"`
-	Primary  bool     `mapstructure:"primary"`
+	Primary  bool     `mapstructure:"is_primary"`
 	Tags     []string `mapstructure:"tags"`
 }
 
@@ -22,7 +22,8 @@ type PhoneNumber struct {
 	ID          string   `mapstructure:"id"`
 	UserID      string   `mapstructure:"user_id"`
 	PhoneNumber string   `mapstructure:"phone_number"`
-	Primary     bool     `mapstructure:"primary"`
+	Primary     bool     `mapstructure:"is_primary"`
+	Verified    bool     `mapstructure:"verified"`
 	Tags        []string `mapstructure:"tags"`
 }
 

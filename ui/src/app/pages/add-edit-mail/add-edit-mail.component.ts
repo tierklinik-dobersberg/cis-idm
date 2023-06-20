@@ -4,25 +4,24 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { ConnectError } from '@bufbuild/connect';
-import { Address } from '@tkd/apis';
 import { combineLatest } from 'rxjs';
 import { SELF_SERVICE } from 'src/app/clients';
 import { ProfileService } from 'src/services/profile.service';
 
 @Component({
-  selector: 'app-add-edit-address',
+  selector: 'app-add-edit-mail',
   standalone: true,
   imports: [
     CommonModule,
     FormsModule,
-    ReactiveFormsModule,
     RouterModule,
+    ReactiveFormsModule,
   ],
-  templateUrl: './add-edit-address.component.html',
-  styleUrls: ['./add-edit-address.component.css'],
-  changeDetection: ChangeDetectionStrategy.OnPush,
+  templateUrl: './add-edit-mail.component.html',
+  styleUrls: ['./add-edit-mail.component.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class AddEditAddressComponent implements OnInit {
+export class AddEditMailComponent implements OnInit {
   isNew = true;
 
   profileService = inject(ProfileService);
@@ -32,14 +31,12 @@ export class AddEditAddressComponent implements OnInit {
   router = inject(Router);
   cdr = inject(ChangeDetectorRef);
 
+  id: string | null = null;
   saveAddrError: string | null = null;
 
-  id: string | null = null;
-  cityCode = new FormControl('');
-  cityName = new FormControl('');
-  countryName = new FormControl('');
-  street = new FormControl('');
-  extra = new FormControl('');
+  address = new FormControl('');
+  primary = new FormControl(false);
+  verified = false;
 
   ngOnInit(): void {
     combineLatest([
@@ -53,16 +50,16 @@ export class AddEditAddressComponent implements OnInit {
         this.id = params.get("id");
         this.isNew = !this.id;
         this.saveAddrError = null;
+        this.verified = false;
         if (!!this.id) {
-          const address = (profile?.addresses || []).find(addr => addr.id === this.id);
+          const address = (profile?.emailAddresses || []).find(addr => addr.id === this.id);
 
           if (!address) {
             this.router.navigate(['../'])
           } else {
-            this.cityCode.setValue(address.cityCode);
-            this.cityName.setValue(address.cityName);
-            this.street.setValue(address.street);
-            this.extra.setValue(address.extra);
+            this.address.setValue(address.address);
+            this.primary.setValue(address.primary);
+            this.verified = address.verified;
 
             this.cdr.markForCheck();
           }
@@ -71,39 +68,8 @@ export class AddEditAddressComponent implements OnInit {
   }
 
   async save() {
-    const addr: Partial<Address> = {
-      cityCode: this.cityCode.value!,
-      cityName: this.cityName.value!,
-      street: this.street.value!,
-      extra: this.extra.value!,
-    };
-
     try {
-
-      if (this.isNew) {
-        await this.selfService.addAddress({ ...addr })
-      } else {
-        const paths: string[] = [];
-        if (this.cityCode.dirty) {
-          paths.push("city_code");
-        }
-        if (this.cityName.dirty) {
-          paths.push("city_name")
-        }
-        if (this.street.dirty) {
-          paths.push("street")
-        }
-        if (this.extra.dirty) {
-          paths.push("extra")
-        }
-
-        await this.selfService.updateAddress({
-          id: this.id!,
-          fieldMask: { paths },
-          ...addr
-        })
-      }
-
+      await this.selfService.addEmailAddress({ email: this.address.value! })
       await this.profileService.loadProfile();
       this.router.navigate(['../'])
 
@@ -118,9 +84,23 @@ export class AddEditAddressComponent implements OnInit {
       return
     }
 
-    await this.selfService.deleteAddress({ id: this.id! })
+    await this.selfService.deleteEmailAddress({ id: this.id! })
     await this.profileService.loadProfile();
     this.router.navigate(['../'])
   }
-}
 
+  async markAsPrimary() {
+    if (this.isNew) {
+      return
+    }
+
+    try {
+      await this.selfService.markEmailAsPrimary({ id: this.id! })
+      await this.profileService.loadProfile();
+      this.router.navigate(['../'])
+    } catch (err) {
+      this.saveAddrError = ConnectError.from(err).rawMessage;
+      this.cdr.markForCheck();
+    }
+  }
+}

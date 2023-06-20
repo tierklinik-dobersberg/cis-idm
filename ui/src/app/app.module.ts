@@ -21,7 +21,7 @@ const loadConfigFactory = (client: HttpClient) => {
 
 @NgModule({
   declarations: [
-    AppComponent
+    AppComponent,
   ],
   imports: [
     BrowserModule,

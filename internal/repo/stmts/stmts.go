@@ -31,10 +31,6 @@ func (stmt Statement[R]) Prepare(args any) (gorqlite.ParameterizedStatement, err
 		}
 	}
 
-	if len(argMap) < len(stmt.Args) {
-		return gorqlite.ParameterizedStatement{}, ErrInvalidArgCount
-	}
-
 	argList := make([]any, 0, len(argMap))
 	for _, argName := range stmt.Args {
 		argValue, ok := argMap[argName]
@@ -43,6 +39,10 @@ func (stmt Statement[R]) Prepare(args any) (gorqlite.ParameterizedStatement, err
 		}
 		argList = append(argList, argValue)
 
+	}
+
+	if len(argList) < len(stmt.Args) {
+		return gorqlite.ParameterizedStatement{}, ErrInvalidArgCount
 	}
 
 	return gorqlite.ParameterizedStatement{

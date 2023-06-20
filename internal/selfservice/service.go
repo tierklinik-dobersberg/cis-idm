@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/bufbuild/connect-go"
+	"github.com/bufbuild/protovalidate-go"
 	"github.com/hashicorp/go-multierror"
 	idmv1 "github.com/tierklinik-dobersberg/apis/gen/go/tkd/idm/v1"
 	"github.com/tierklinik-dobersberg/apis/gen/go/tkd/idm/v1/idmv1connect"
@@ -184,6 +185,40 @@ func (svc *Service) DeleteEmailAddress(ctx context.Context, req *connect.Request
 	return res, nil
 }
 
+func (svc *Service) MarkEmailAsPrimary(ctx context.Context, req *connect.Request[idmv1.MarkEmailAsPrimaryRequest]) (*connect.Response[idmv1.MarkEmailAsPrimaryResponse], error) {
+	if !svc.cfg.FeatureEnabled(config.FeatureEMails) {
+		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("addresses: %w", config.ErrFeatureDisabled))
+	}
+
+	claims := middleware.ClaimsFromContext(ctx)
+	if claims == nil {
+		return nil, fmt.Errorf("no token claims associated with request context")
+	}
+
+	mails, err := svc.repo.GetUserEmails(ctx, claims.Subject)
+	if err != nil {
+		return nil, err
+	}
+
+	found := false
+	for _, mail := range mails {
+		if mail.ID == req.Msg.Id {
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("email with id %s not found", req.Msg.Id))
+	}
+
+	if err := svc.repo.MarkEmailAsPrimary(ctx, claims.Subject, req.Msg.Id); err != nil {
+		return nil, err
+	}
+
+	return connect.NewResponse(&idmv1.MarkEmailAsPrimaryResponse{}), nil
+}
+
 func (svc *Service) AddAddress(ctx context.Context, req *connect.Request[idmv1.AddAddressRequest]) (*connect.Response[idmv1.AddAddressResponse], error) {
 	if !svc.cfg.FeatureEnabled(config.FeatureAddresses) {
 		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("addresses: %w", config.ErrFeatureDisabled))
@@ -260,19 +295,41 @@ func (svc *Service) UpdateAddress(ctx context.Context, req *connect.Request[idmv
 		}
 	}
 
+	// create a "add-address-request" that we can use to validate the update
+	// operation.
+	protoAddr := &idmv1.AddAddressRequest{
+		CityCode: addr.CityCode,
+		CityName: addr.CityName,
+		Extra:    addr.Extra,
+		Street:   addr.Street,
+	}
+
 	for _, p := range paths {
 		switch p {
 		case "city_code":
 			addr.CityCode = req.Msg.CityCode
+			protoAddr.CityCode = req.Msg.CityCode
 		case "city_name":
 			addr.CityName = req.Msg.CityName
+			protoAddr.CityName = req.Msg.CityName
 		case "street":
 			addr.Street = req.Msg.Street
+			protoAddr.Street = req.Msg.Street
 		case "extra":
 			addr.Extra = req.Msg.Extra
+			protoAddr.Extra = req.Msg.Extra
 		default:
 			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid field_mask for update operation: invalid path %q", p))
 		}
+	}
+
+	validator, err := protovalidate.New()
+	if err != nil {
+		return nil, err
+	}
+
+	if err := validator.Validate(protoAddr); err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 
 	if err := svc.repo.UpdateUserAddress(ctx, addr); err != nil {
@@ -287,4 +344,65 @@ func (svc *Service) UpdateAddress(ctx context.Context, req *connect.Request[idmv
 	return connect.NewResponse(&idmv1.UpdateAddressResponse{
 		Addresses: conv.AddressProtosFromAddresses(addrs...),
 	}), nil
+}
+
+func (svc *Service) AddPhoneNumber(ctx context.Context, req *connect.Request[idmv1.AddPhoneNumberRequest]) (*connect.Response[idmv1.AddPhoneNumberResponse], error) {
+	if !svc.cfg.FeatureEnabled(config.FeaturePhoneNumbers) {
+		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("phone-numbers: %w", config.ErrFeatureDisabled))
+	}
+
+	claims := middleware.ClaimsFromContext(ctx)
+	if claims == nil {
+		return nil, fmt.Errorf("no token claims associated with request context")
+	}
+
+	m := models.PhoneNumber{
+		UserID:      claims.Subject,
+		PhoneNumber: req.Msg.Number,
+		Verified:    false,
+		Primary:     false,
+	}
+
+	m, err := svc.repo.AddUserPhoneNumber(ctx, m)
+	if err != nil {
+		return nil, err
+	}
+
+	return connect.NewResponse(&idmv1.AddPhoneNumberResponse{
+		PhoneNumber: conv.PhoneNumberProtoFromPhoneNumber(m),
+	}), nil
+}
+
+func (svc *Service) DeletePhoneNumber(ctx context.Context, req *connect.Request[idmv1.DeletePhoneNumberRequest]) (*connect.Response[idmv1.DeletePhoneNumberResponse], error) {
+	if !svc.cfg.FeatureEnabled(config.FeaturePhoneNumbers) {
+		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("phone-numbers: %w", config.ErrFeatureDisabled))
+	}
+
+	claims := middleware.ClaimsFromContext(ctx)
+	if claims == nil {
+		return nil, fmt.Errorf("no token claims associated with request context")
+	}
+
+	if err := svc.repo.DeleteUserPhoneNumber(ctx, claims.Subject, req.Msg.Id); err != nil {
+		return nil, err
+	}
+
+	return connect.NewResponse(&idmv1.DeletePhoneNumberResponse{}), nil
+}
+
+func (svc *Service) MarkPhoneNumberAsPrimary(ctx context.Context, req *connect.Request[idmv1.MarkPhoneNumberAsPrimaryRequest]) (*connect.Response[idmv1.MarkPhoneNumberAsPrimaryResponse], error) {
+	if !svc.cfg.FeatureEnabled(config.FeaturePhoneNumbers) {
+		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("phone-numbers: %w", config.ErrFeatureDisabled))
+	}
+
+	claims := middleware.ClaimsFromContext(ctx)
+	if claims == nil {
+		return nil, fmt.Errorf("no token claims associated with request context")
+	}
+
+	if err := svc.repo.MarkPhoneNumberAsPrimary(ctx, claims.Subject, req.Msg.Id); err != nil {
+		return nil, err
+	}
+
+	return connect.NewResponse(&idmv1.MarkPhoneNumberAsPrimaryResponse{}), nil
 }

@@ -35,6 +35,7 @@ var (
 			user_id TEXT NOT NULL,
 			address TEXT UNIQUE NOT NULL,
 			verified BOOL,
+			is_primary BOOL,
 			CONSTRAINT fk_user_mail
 				FOREIGN KEY(user_id) REFERENCES users(id)
 				ON DELETE CASCADE
@@ -46,6 +47,8 @@ var (
 			id TEXT NOT NULL PRIMARY KEY,
 			user_id TEXT NOT NULL,
 			phone_number TEXT NOT NULL,
+			is_primary BOOL,
+			verified BOOL,
 			CONSTRAINT fk_user_phone_number
 				FOREIGN KEY(user_id) REFERENCES users(id)
 				ON DELETE CASCADE
