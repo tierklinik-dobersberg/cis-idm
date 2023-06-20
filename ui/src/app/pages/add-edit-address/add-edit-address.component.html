@@ -1,0 +1,41 @@
+<div class="tkd-card">
+    <header>
+        <h1>{{ isNew ? 'Adresse hinzufügen' : 'Adresse bearbeiten'}}</h1>
+    </header>
+    <content>
+        <section>
+            <div class="flex flex-col gap-4">
+                <div class="flex flex-row gap-4">
+                    <div class="flex flex-col gap-0.5 w-36">
+                        <span
+                            class="text-xs text-gray-500 uppercase dark:text-emerald-200 dark:text-opacity-70">PLZ</span>
+                        <input class="w-full tkd-input" type="text" name="displayName" [formControl]="cityCode"
+                            placeholder="PLZ">
+                    </div>
+                    <div class="flex flex-col flex-grow gap-0.5 w-full">
+                        <span
+                            class="text-xs text-gray-500 uppercase dark:text-emerald-200 dark:text-opacity-70">Ort</span>
+                        <input class="w-full tkd-input" type="text" name="displayName" [formControl]="cityName"
+                            placeholder="Ort">
+                    </div>
+                </div>
+
+                <div class="flex flex-col gap-0.5 w-full">
+                    <span
+                        class="text-xs text-gray-500 uppercase dark:text-emerald-200 dark:text-opacity-70">Straße</span>
+                    <input class="w-full tkd-input" type="text" name="displayName" [formControl]="street"
+                        placeholder="Straße">
+                </div>
+
+                <div class="flex flex-col gap-0.5 w-full">
+                    <span
+                        class="text-xs text-gray-500 uppercase dark:text-emerald-200 dark:text-opacity-70">Zusatz</span>
+                    <input class="w-full tkd-input" type="text" name="displayName" [formControl]="extra"
+                        placeholder="Zusatz">
+                </div>
+
+                <button type="button" class="tkd-btn">Speichern</button>
+            </div>
+        </section>
+    </content>
+</div>

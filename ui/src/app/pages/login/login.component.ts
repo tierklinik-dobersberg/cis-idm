@@ -5,6 +5,7 @@ import { Router } from "@angular/router";
 import { ConnectError } from "@bufbuild/connect";
 import { AuthType } from "@tkd/apis/gen/es/tkd/idm/v1/auth_service_pb.js";
 import { AUTH_SERVICE } from "src/app/clients";
+import { ConfigService } from "src/app/config.service";
 import { ProfileService } from "src/services/profile.service";
 
 @Component({
@@ -19,6 +20,7 @@ export class LoginComponent implements OnInit {
   client = inject(AUTH_SERVICE);
   profile = inject(ProfileService);
   router = inject(Router);
+  config = inject(ConfigService).config;
 
   username = '';
   password = '';

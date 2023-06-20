@@ -1,30 +1,137 @@
-<div class="flex flex-col gap-4">
-    <ng-container *ngIf="(profile | async) as profile">
-  <div
-    class="flex flex-col self-stretch w-screen max-w-xl gap-4 p-8 bg-white border border-blue-100 rounded-md shadow-sm">
-      <h1 class="text-xl font-light">Hallo
-        <span class="font-medium text-black">{{ profile.user?.displayName || profile.user?.username }}</span>,
+<ng-container *ngIf="(profile | async) as profile">
+  <div class="tkd-card">
+    <header>
+      <h3>Willkommen zurück!</h3>
+      <h1>
+        Hallo <span class="font-medium">{{ profile.user?.displayName || profile.user?.username }}</span>
       </h1>
+    </header>
 
-    <button type="button"
-      class="w-full text-center bg-white font-medium uppercase focus:font-semibold px-2 py-1.5 hover:bg-teal-100 rounded-md text-teal-500 outline-none border border-teal-300 focus:border-blue-400">Passwort ändern</button>
+    <content>
+      <section>
+        <span class="">Willkommen in deinem {{ config.siteName }} Account. Hier kannst du deine Persönlichen
+          Daten ändern, Kontaktdaten und Adressen verwalten.</span>
+      </section>
+      <section>
+        <h2 class="flex flex-row justify-between items-center">
+          Persönliche Daten
+          <a routerLink="./edit">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+              stroke="currentColor" class="w-6 h-6">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" />
+            </svg>
+          </a>
+        </h2>
+        <ul class="flex flex-col gap-4 list-none">
+          <li class="flex flex-row justify-between items-center">
+            <div class="flex flex-col gap-0.5">
+              <span class="text-xs text-gray-500 uppercase dark:text-emerald-200 dark:text-opacity-70">Benutzername</span>
+              <span>{{ profile.user?.username || 'N/A'}}</span>
+            </div>
+          </li>
 
-    <button type="button" (click)="logout()"
-      class="w-full text-center bg-teal-500 font-medium uppercase focus:font-semibold px-2 py-1.5 hover:bg-teal-600 rounded-md text-white outline-none border border-teal-500 focus:border-blue-400">Abmelden</button>
+          <li class="flex flex-row justify-between items-center">
+            <div class="flex flex-col gap-0.5">
+              <span class="text-xs text-gray-500 uppercase dark:text-emerald-200 dark:text-opacity-70">Name</span>
+              <span>{{ (profile.user?.firstName || profile.user?.lastName) ? profile.user?.firstName + ' ' +
+                profile.user?.lastName : 'N/A' }}</span>
+            </div>
+          </li>
 
+          <li class="flex flex-row justify-between items-center">
+            <div class="flex flex-col gap-0.5">
+              <span class="text-xs text-gray-500 uppercase dark:text-emerald-200 dark:text-opacity-70">Anzeige
+                Name</span>
+              <span>{{ profile.user?.displayName || 'N/A'}}</span>
+            </div>
+          </li>
+
+          <li class="flex flex-row justify-between items-center">
+            <div class="flex flex-col gap-0.5">
+              <span
+                class="text-xs text-gray-500 uppercase dark:text-emerald-200 dark:text-opacity-70">Geburtsdatum</span>
+              <span>{{ profile.user?.birthday || 'N/A'}}</span>
+            </div>
+          </li>
+
+        </ul>
+      </section>
+
+      <section>
+        <button routerLink="./change-password" type="button" class="self-stretch tkd-btn-outline">Passwort
+          ändern</button>
+        <button type="button" (click)="logout()" class="self-stretch tkd-btn">Abmelden</button>
+      </section>
+
+    </content>
   </div>
 
-  <div
-    class="flex flex-col self-stretch w-screen max-w-xl gap-4 p-8 bg-white border border-blue-100 rounded-md shadow-sm">
-    <h1 class="text-base font-medium">Addressen</h1>
-    <div *ngFor="let addr of profile.addresses">
-      {{ addr.cityCode }}
-    </div>
+  <div class="tkd-card" *ngIf="config.features.addresses">
+    <header>
+      <h3>Wo wohnst oder arbeitest du?</h3>
+      <h1>Addressen</h1>
+    </header>
+    <content>
+      <section>
+        <div *ngFor="let addr of profile.addresses">
+          {{ addr.cityCode }}
+        </div>
+        <div *ngIf="!profile.addresses?.length">
+          <span class="inline-flex flex-row gap-2 justify-center items-center w-full text-sm font-medium text-center">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+              stroke="currentColor" class="w-6 h-6 text-emerald-600 rounded-full dark:text-emerald-400">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+            </svg>
+            Es wurden noch keine Adressen hinterlegt.
+          </span>
+        </div>
+
+        <button class="tkd-btn-outline" routerLink="./edit-address">Adresse hinzufügen</button>
+      </section>
+    </content>
   </div>
 
-  <div
-    class="flex flex-col self-stretch w-screen max-w-xl gap-4 p-8 bg-white border border-blue-100 rounded-md shadow-sm">
-    <h1 class="text-base font-medium">Kontakt</h1>
+  <div class="tkd-card">
+    <header>
+      <h3>Wie bist du zu erreichen?</h3>
+      <h1>Kontaktdaten</h1>
+    </header>
+    <content>
+      <section *ngIf="config.features.phoneNumbers">
+        <h2 class="flex flex-row justify-between items-center">
+          Telefonnummer
+        </h2>
+
+        <div *ngIf="!profile.phoneNumbers?.length">
+          <span class="inline-flex flex-row gap-2 justify-center items-center w-full text-sm font-medium text-center">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+              stroke="currentColor" class="w-6 h-6 text-emerald-600 rounded-full dark:text-emerald-400">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+            </svg>
+            Es wurden noch keine Telefonnummern hinterlegt.
+          </span>
+        </div>
+        <button class="tkd-btn-outline">Telefonnummer hinzufügen</button>
+      </section>
+      <section *ngIf="config.features.emails">
+        <h2 class="flex flex-row justify-between items-center">
+          E-Mail Addressen
+        </h2>
+        <div *ngIf="!profile.emailAddresses?.length">
+          <span class="inline-flex flex-row gap-2 justify-center items-center w-full text-sm font-medium text-center">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+              stroke="currentColor" class="w-6 h-6 text-emerald-600 rounded-full dark:text-emerald-400">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+            </svg>
+            Es wurden noch keine E-Mail Adressen hinterlegt.
+          </span>
+        </div>
+        <button class="tkd-btn-outline">E-Mail Adresse hinzufügen</button>
+      </section>
+    </content>
   </div>
-    </ng-container>
-</div>
+</ng-container>

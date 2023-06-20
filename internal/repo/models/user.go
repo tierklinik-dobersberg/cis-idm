@@ -51,8 +51,18 @@ type RoleAssignment struct {
 }
 
 type RejectedToken struct {
-	TokenID  string `mapstructure:"token_id"`
-	UserID   string `mapstructure:"user_id"`
-	IssuedAt int64  `mapstructure:"issued_at"`
-	ExiresAt int64  `mapstructure:"expires_at"`
+	TokenID   string `mapstructure:"token_id"`
+	UserID    string `mapstructure:"user_id"`
+	IssuedAt  int64  `mapstructure:"issued_at"`
+	ExpiresAt int64  `mapstructure:"expires_at"`
+}
+
+type Feature struct {
+	Name        string `mapstructure:"name"`
+	Description string `mapstructure:"description"`
+}
+
+type UserEnabledFeature struct {
+	FeatureName string `mapstructure:"feature_name"`
+	UserID      string `mapstructure:"user_id"`
 }

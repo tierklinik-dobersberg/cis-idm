@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -78,7 +79,7 @@ func startServer(repo *repo.Repo, cfg config.Config) error {
 	mux.Handle(path, handler)
 
 	// Setup Self-Service
-	selfserviceService, err := selfservice.NewService(repo)
+	selfserviceService, err := selfservice.NewService(cfg, repo)
 	if err != nil {
 		return fmt.Errorf("failed to initialize self-service service: %w", err)
 	}
@@ -99,8 +100,17 @@ func startServer(repo *repo.Repo, cfg config.Config) error {
 	)
 	mux.Handle(path, handler)
 
+	mux.Handle("/config.json", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		enc := json.NewEncoder(w)
+		enc.SetIndent("", "  ")
+
+		if err := enc.Encode(cfg); err != nil {
+			middleware.L(r.Context()).Errorf("failed to encode service config: %s", err)
+		}
+	}))
+
 	c := cors.New(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:8080", "http://localhost:4200"},
+		AllowedOrigins:   []string{"http://localhost:8080", "http://localhost:4200", ""},
 		AllowCredentials: true,
 		AllowedHeaders:   []string{"Connect-Protocol-Version", "Content-Type", "Authentication"},
 		Debug:            true,

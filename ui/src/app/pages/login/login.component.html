@@ -1,18 +1,28 @@
 <form #loginForm="ngForm" (ngSubmit)="submit()" class="mt-32">
-  <div class="flex flex-col gap-4 p-8 bg-white border border-blue-100 rounded-md shadow-sm w-96">
-    <h1 class="w-full mt-2 text-xl font-medium text-black">Anmeldung</h1>
-    <span class="mb-4 -mt-4 text-base font-light text-gray-600">mit deinem
-      <a class="font-medium text-blue-500 underline" href="https://tierklinikdobersberg.at">Tierklinik-Dobersberg</a>
-      Account.
-    </span>
+  <div class="m-auto w-96 tkd-card">
+    <content>
+      <section>
 
-    <span class="text-base text-gray-700">Bitte melde dich mit deinem Benutzernamen und deinem Passwort an:</span>
-    <input required placeholder="Username" class="px-2 py-1.5 text-sm border hover:border-blue-400 focus:ring-1 rounded-md focus:border-blue-400 border-gray-300 outline-none" type="text" name="username" [(ngModel)]="username">
-    <input required placeholder="Password" class="px-2 py-1.5 text-sm border hover:border-blue-400 focus:ring-1 rounded-md focus:border-blue-400 border-gray-300 outline-none" type="password" name="password" [(ngModel)]="password">
-    <span *ngIf="loginErrorMessage" class="text-sm font-medium text-red-700">
-      Anmeldung fehlgeschlagen: <br />
-      {{ loginErrorMessage }}
-    </span>
-    <button [disabled]="!loginForm.valid" type="submit" class="disabled:cursor-not-allowed disabled:opacity-50 bg-teal-500 font-medium uppercase focus:font-semibold hover:bg-teal-600 px-2 py-1.5 rounded-md text-white outline-none border border-teal-500 focus:border-blue-400">Login</button>
+        <h1 class="mt-2 w-full text-2xl font-medium">Anmeldung</h1>
+        <span class="-mt-4 mb-4 text-sm font-light">mit deinem
+          <a [attr.href]="config.siteNameUrl">{{ config.siteName }}</a>
+          Account.
+        </span>
+
+        <span class="text-base">Bitte melde dich mit deinem Benutzernamen und deinem Passwort an:</span>
+        <input required placeholder="Username"
+          class="tkd-input"
+          type="text" name="username" [(ngModel)]="username">
+        <input required placeholder="Password"
+          class="tkd-input"
+          type="password" name="password" [(ngModel)]="password">
+        <span *ngIf="loginErrorMessage" class="text-sm font-medium text-red-300">
+          Anmeldung fehlgeschlagen: <br />
+          {{ loginErrorMessage }}
+        </span>
+        <button [disabled]="!loginForm.valid" type="submit" class="tkd-btn">Anmelden</button>
+        <a class="inline-block -mt-2 w-full text-center" href="#">Password vergessen?</a>
+      </section>
+    </content>
   </div>
 </form>

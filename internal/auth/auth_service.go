@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -19,6 +20,7 @@ import (
 	"github.com/tierklinik-dobersberg/cis-idm/internal/middleware"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/repo"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/repo/models"
+	"github.com/tierklinik-dobersberg/cis-idm/internal/repo/stmts"
 	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/exp/slices"
 )
@@ -75,7 +77,15 @@ func (svc *AuthService) Login(ctx context.Context, req *connect.Request[idmv1.Lo
 
 	user, err := svc.repo.GetUserByName(ctx, passwordAuth.GetUsername())
 	if err != nil {
-		return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("user not found: %w", err))
+		if svc.cfg.FeatureEnabled(config.FeatureLoginByMail) {
+			if errors.Is(err, stmts.ErrNoResults) {
+				user, err = svc.repo.GetUserByEMail(ctx, passwordAuth.GetUsername())
+			}
+		}
+
+		if err != nil {
+			return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("user not found: %w", err))
+		}
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(passwordAuth.GetPassword())); err != nil {
@@ -169,10 +179,10 @@ func (svc *AuthService) Logout(ctx context.Context, req *connect.Request[idmv1.L
 
 	// mark the token as rejected
 	if err := svc.repo.MarkTokenRejected(ctx, models.RejectedToken{
-		TokenID:  claims.ID,
-		UserID:   claims.Subject,
-		IssuedAt: claims.IssuedAt,
-		ExiresAt: claims.ExpiresAt,
+		TokenID:   claims.ID,
+		UserID:    claims.Subject,
+		IssuedAt:  claims.IssuedAt,
+		ExpiresAt: claims.ExpiresAt,
 	}); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to mark token as rejected: %w", err))
 	}

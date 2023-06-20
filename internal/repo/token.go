@@ -31,5 +31,5 @@ func (repo *Repo) IsTokenRejected(ctx context.Context, tokenID string) (bool, er
 }
 
 func (repo *Repo) DeleteRejectedTokens(ctx context.Context, threshold time.Time) error {
-	return stmts.DeleteExpiredTokens.Write(ctx, repo.Conn, models.RejectedToken{ExiresAt: threshold.Unix()})
+	return stmts.DeleteExpiredTokens.Write(ctx, repo.Conn, models.RejectedToken{ExpiresAt: threshold.Unix()})
 }

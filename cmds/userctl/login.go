@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 
 	"github.com/bufbuild/connect-go"
@@ -31,7 +32,9 @@ func getLoginCommand() *cobra.Command {
 				passwordAuth.Password = string(pwd)
 			}
 
-			cli := idmv1connect.NewAuthServiceClient(httpClient, baseURL)
+			// we use http.DefaultClient here so we don't get an error if the access token
+			// provided by the custom httpClient transport is invalid
+			cli := idmv1connect.NewAuthServiceClient(http.DefaultClient, baseURL)
 
 			res, err := cli.Login(context.Background(), connect.NewRequest(&idmv1.LoginRequest{
 				AuthType: idmv1.AuthType_AUTH_TYPE_PASSWORD,

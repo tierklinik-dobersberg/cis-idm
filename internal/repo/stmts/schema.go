@@ -33,7 +33,7 @@ var (
 		Query: `CREATE TABLE IF NOT EXISTS user_emails (
 			id TEXT NOT NULL PRIMARY KEY,
 			user_id TEXT NOT NULL,
-			address TEXT NOT NULL,
+			address TEXT UNIQUE NOT NULL,
 			verified BOOL,
 			CONSTRAINT fk_user_mail
 				FOREIGN KEY(user_id) REFERENCES users(id)

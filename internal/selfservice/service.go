@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/go-multierror"
 	idmv1 "github.com/tierklinik-dobersberg/apis/gen/go/tkd/idm/v1"
 	"github.com/tierklinik-dobersberg/apis/gen/go/tkd/idm/v1/idmv1connect"
+	"github.com/tierklinik-dobersberg/cis-idm/internal/config"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/conv"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/middleware"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/repo"
@@ -18,12 +19,14 @@ import (
 type Service struct {
 	idmv1connect.UnimplementedSelfServiceServiceHandler
 
+	cfg  config.Config
 	repo *repo.Repo
 }
 
-func NewService(repo *repo.Repo) (*Service, error) {
+func NewService(cfg config.Config, repo *repo.Repo) (*Service, error) {
 	svc := &Service{
 		repo: repo,
+		cfg:  cfg,
 	}
 
 	return svc, nil
@@ -45,12 +48,24 @@ func (svc *Service) UpdateProfile(ctx context.Context, req *connect.Request[idmv
 		paths = []string{"username", "display_name", "first_name", "last_name", "avatar", "birthday"}
 	}
 
+	merr := new(multierror.Error)
 	for _, p := range paths {
 		switch p {
 		case "username":
+			if !svc.cfg.FeatureEnabled(config.FeatureAllowUsernameChange) {
+				return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("username changes are not allowed"))
+			}
+
 			user.Username = req.Msg.Username
+
+			if len(user.Username) < 3 {
+				merr.Errors = append(merr.Errors, fmt.Errorf("invalid username"))
+			}
 		case "display_name":
 			user.DisplayName = req.Msg.DisplayName
+			if len(user.DisplayName) < 3 {
+				merr.Errors = append(merr.Errors, fmt.Errorf("invalid display-name"))
+			}
 		case "first_name":
 			user.FirstName = req.Msg.FirstName
 		case "last_name":
@@ -62,14 +77,6 @@ func (svc *Service) UpdateProfile(ctx context.Context, req *connect.Request[idmv
 		default:
 			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid field mask for update operation: invalid field name %q", p))
 		}
-	}
-
-	merr := new(multierror.Error)
-	if len(user.Username) < 3 {
-		merr.Errors = append(merr.Errors, fmt.Errorf("invalid username"))
-	}
-	if len(user.DisplayName) < 3 {
-		merr.Errors = append(merr.Errors, fmt.Errorf("invalid display-name"))
 	}
 
 	if err := merr.ErrorOrNil(); err != nil {
@@ -114,6 +121,10 @@ func (svc *Service) ChangePassword(ctx context.Context, req *connect.Request[idm
 }
 
 func (svc *Service) AddEmailAddress(ctx context.Context, req *connect.Request[idmv1.AddEmailAddressRequest]) (*connect.Response[idmv1.AddEmailAddressResponse], error) {
+	if !svc.cfg.FeatureEnabled(config.FeatureEMails) {
+		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("email: %w", config.ErrFeatureDisabled))
+	}
+
 	claims := middleware.ClaimsFromContext(ctx)
 	if claims == nil {
 		return nil, fmt.Errorf("no token claims associated with request context")
@@ -146,6 +157,10 @@ func (svc *Service) AddEmailAddress(ctx context.Context, req *connect.Request[id
 }
 
 func (svc *Service) DeleteEmailAddress(ctx context.Context, req *connect.Request[idmv1.DeleteEmailAddressRequest]) (*connect.Response[idmv1.DeleteEmailAddressResponse], error) {
+	if !svc.cfg.FeatureEnabled(config.FeatureEMails) {
+		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("email: %w", config.ErrFeatureDisabled))
+	}
+
 	claims := middleware.ClaimsFromContext(ctx)
 	if claims == nil {
 		return nil, fmt.Errorf("no token claims associated with request context")
@@ -170,6 +185,10 @@ func (svc *Service) DeleteEmailAddress(ctx context.Context, req *connect.Request
 }
 
 func (svc *Service) AddAddress(ctx context.Context, req *connect.Request[idmv1.AddAddressRequest]) (*connect.Response[idmv1.AddAddressResponse], error) {
+	if !svc.cfg.FeatureEnabled(config.FeatureAddresses) {
+		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("addresses: %w", config.ErrFeatureDisabled))
+	}
+
 	claims := middleware.ClaimsFromContext(ctx)
 	if claims == nil {
 		return nil, fmt.Errorf("no token claims associated with request context")
@@ -196,6 +215,10 @@ func (svc *Service) AddAddress(ctx context.Context, req *connect.Request[idmv1.A
 }
 
 func (svc *Service) DeleteAddress(ctx context.Context, req *connect.Request[idmv1.DeleteAddressRequest]) (*connect.Response[idmv1.DeleteAddressResponse], error) {
+	if !svc.cfg.FeatureEnabled(config.FeatureAddresses) {
+		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("addresses: %w", config.ErrFeatureDisabled))
+	}
+
 	claims := middleware.ClaimsFromContext(ctx)
 	if claims == nil {
 		return nil, fmt.Errorf("no token claims associated with request context")
@@ -216,6 +239,10 @@ func (svc *Service) DeleteAddress(ctx context.Context, req *connect.Request[idmv
 }
 
 func (svc *Service) UpdateAddress(ctx context.Context, req *connect.Request[idmv1.UpdateAddressRequest]) (*connect.Response[idmv1.UpdateAddressResponse], error) {
+	if !svc.cfg.FeatureEnabled(config.FeatureAddresses) {
+		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("addresses: %w", config.ErrFeatureDisabled))
+	}
+
 	claims := middleware.ClaimsFromContext(ctx)
 	if claims == nil {
 		return nil, fmt.Errorf("no token claims associated with request context")

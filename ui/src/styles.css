@@ -2,3 +2,89 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@200;300;400;500;700&display=swap');
+
+body {
+    -webkit-text-size-adjust: 100%;
+    tab-size: 4;
+    font-variation-settings: normal;
+    font-feature-settings: "lnum";
+    font-family: "Source Sans 3", sans-serif;
+}
+
+a {
+    @apply dark:text-blue-400 text-blue-500 font-normal tracking-wide hover:text-blue-300 focus:text-blue-300 outline-none;
+}
+
+@layer utilities {
+}
+
+@layer components {
+    .tkd-input {
+        @apply px-2 py-1.5 text-sm  rounded-md border  outline-none  hover:border-blue-400 focus:ring-1 focus:border-blue-400;
+        @apply text-gray-800 bg-gray-50 border-gray-100;
+        @apply dark:text-white dark:border-gray-600 dark:bg-slate-700;
+    }
+
+    .tkd-card {
+        @apply flex flex-col rounded-xl shadow-sm;
+        @apply bg-white text-gray-700;
+        @apply dark:text-gray-300 dark:bg-slate-600 dark:bg-opacity-30;
+    }
+
+    .tkd-card header h1 {
+        @apply font-light text-xl;
+        @apply text-gray-700;
+        @apply dark:text-white;
+    }
+
+    .tkd-card header h3 {
+        @apply text-sm uppercase;
+        @apply text-emerald-600;
+        @apply dark:text-emerald-50 dark:text-opacity-100 mt-1.5 -mb-2 font-medium tracking-wider;
+    }
+
+    .tkd-card header {
+        @apply w-full flex-col gap-2 py-1.5 rounded-t-xl min-h-[5rem] flex justify-center px-8;
+        @apply bg-slate-100 border border-slate-200;
+        @apply dark:bg-slate-600 dark:bg-opacity-100 dark:text-white dark:border dark:border-slate-600;
+    }
+
+    .tkd-card content {
+        @apply flex flex-col border rounded-xl;
+        @apply border-slate-200;
+        @apply dark:border-slate-600;
+    }
+
+    .tkd-card header+content {
+        @apply border-t-0 rounded-t-none;
+    }
+
+    .tkd-card content section:not(:first-child) {
+        @apply border-t;
+    }
+    .tkd-card content section {
+        @apply px-8 py-4 flex flex-col gap-4 items-stretch;
+        @apply dark:border-slate-600;
+    }
+
+    .tkd-card content section h2 {
+        @apply uppercase tracking-wider text-sm dark:text-emerald-50;
+    }
+
+    .tkd-base-btn {
+        @apply px-2 py-1.5 text-sm font-semibold rounded-md border outline-none focus:ring-1; 
+        @apply disabled:cursor-not-allowed disabled:opacity-50 ;
+    }
+
+    .tkd-btn {
+        @apply tkd-base-btn;
+        @apply text-white bg-blue-500 border-blue-500 hover:bg-blue-600 focus:border-blue-600;
+    }
+
+    .tkd-btn-outline {
+        @apply tkd-base-btn;
+        @apply text-gray-500 dark:text-white bg-transparent border-blue-300 border-opacity-30 hover:bg-blue-300 hover:bg-opacity-10 focus:border-blue-300;
+    }
+}

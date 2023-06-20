@@ -23,7 +23,7 @@ const retryRefreshToken: (transport: Transport) => Interceptor = (transport) => 
       const connectErr = ConnectError.from(err);
 
       // don't retry the request if it was a Login.
-      if (req.service.typeName === AuthService.typeName && (req.method.name === 'Login' || req.method.name === 'Logout')) {
+      if (req.service.typeName === AuthService.typeName && req.method.name === 'Login') {
         throw err
       }
 

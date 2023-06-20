@@ -12,6 +12,10 @@ func (repo *Repo) GetUserByName(ctx context.Context, name string) (models.User, 
 	return QueryOne(ctx, stmts.GetUserByName, repo.Conn, map[string]any{"username": name})
 }
 
+func (repo *Repo) GetUserByEMail(ctx context.Context, name string) (models.User, error) {
+	return QueryOne(ctx, stmts.GetUserByEMail, repo.Conn, map[string]any{"mail": name})
+}
+
 func (repo *Repo) GetRoleByName(ctx context.Context, name string) (models.Role, error) {
 	return QueryOne(ctx, stmts.GetRoleByName, repo.Conn, map[string]any{
 		"name": name,

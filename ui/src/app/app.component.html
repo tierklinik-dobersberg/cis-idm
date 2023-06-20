@@ -1,4 +1,8 @@
-<div class="flex flex-col items-center w-screen h-screen max-h-screen pt-16 bg-blue-50">
-    <router-outlet></router-outlet>
+<div class="flex flex-col items-center pt-16 pb-8 w-screen min-h-screen dark:bg-slate-700 bg-slate-50">
+    <div class="flex flex-col gap-4 items-stretch w-screen max-w-2xl">
+        <router-outlet></router-outlet>
+        <span class="relative bottom-1 mt-8 text-xs text-center uppercase dark:text-emerald-50 dark:text-opacity-50">
+            (C) 2023 Pacher Patrick
+        </span>
+    </div>
 </div>
-

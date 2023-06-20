@@ -8,6 +8,12 @@ var (
 		Args:  []string{"username"},
 	}
 
+	GetUserByEMail = Statement[models.User]{
+		Query: `SELECT * FROM users
+			JOIN user_emails ON user_emails.user_id = users.id WHERE user_emails.address = ? AND verified = true`,
+		Args: []string{"mail"},
+	}
+
 	GetUserByID = Statement[models.User]{
 		Query: `SELECT * FROM users WHERE id = ?`,
 		Args:  []string{"id"},
