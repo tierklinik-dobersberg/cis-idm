@@ -6,6 +6,8 @@ import { SELF_SERVICE } from 'src/app/clients';
 import { ActivatedRoute, Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { combineLatest } from 'rxjs';
+import { AddAddressRequest } from '@tkd/apis/gen/es/tkd/idm/v1/self_service_pb.js';
+import { Address } from '@tkd/apis/gen/es/tkd/idm/v1/user_pb';
 
 @Component({
   selector: 'app-add-edit-address',
@@ -29,6 +31,7 @@ export class AddEditAddressComponent implements OnInit {
   router = inject(Router);
   cdr = inject(ChangeDetectorRef);
 
+  id: string | null = null;
   cityCode = new FormControl('');
   cityName = new FormControl('');
   countryName = new FormControl('');
@@ -44,9 +47,10 @@ export class AddEditAddressComponent implements OnInit {
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe(([params, profile]) => {
-        const addressID = params.get("id");
-        if (!!addressID) {
-          const address = (profile?.addresses || []).find(addr => addr.id === addressID);
+        this.id = params.get("id");
+        this.isNew = !this.id;
+        if (!!this.id) {
+          const address = (profile?.addresses || []).find(addr => addr.id === this.id);
 
           if (!address) {
             this.router.navigate(['../'])
@@ -60,6 +64,42 @@ export class AddEditAddressComponent implements OnInit {
           }
         }
       })
+  }
+
+  async save() {
+      const addr: Partial<Address> = {
+        cityCode:  this.cityCode.value!,
+        cityName: this.cityName.value!,
+        street: this.street.value!,
+        extra: this.extra.value!,
+      };
+
+    if (this.isNew) {
+      await this.selfService.addAddress({...addr})
+    } else {
+      const paths: string[] = [];
+      if (this.cityCode.dirty) {
+        paths.push("city_code");
+      }
+      if (this.cityName.dirty) {
+        paths.push("city_name")
+      }
+      if (this.street.dirty) {
+        paths.push("street")
+      }
+      if (this.extra.dirty) {
+        paths.push("extra")
+      }
+
+      await this.selfService.updateAddress({
+        id: this.id!,
+        fieldMask: {paths},
+        ...addr
+      })
+    }
+
+    await this.profileService.loadProfile();
+    this.router.navigate(['../'])
   }
 }
 

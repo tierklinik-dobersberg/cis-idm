@@ -74,7 +74,7 @@
     </header>
     <content>
       <section>
-        <div *ngFor="let addr of profile.addresses">
+        <div *ngFor="let addr of profile.addresses" [routerLink]="['./edit-address', addr.id]">
           {{ addr.cityCode }}
         </div>
         <div *ngIf="!profile.addresses?.length">
