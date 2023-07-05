@@ -11,6 +11,7 @@ Please note that cisidm is being actively developed and is not yet complete or r
 - Support for **WebAuthN** and **Passkeys**
 - A public listener (which requires authentication)
 - A admin/internal listener for un-authenticated use by other micro-services
+- A role based authentication system (`in-development`)
 - Privacy (access to user profile fields) backed into Protobuf (see tierklinik-dobersberg/apis)
 - Stateless (uses [rqlite](https://rqlite.io) for storage) so it can be deployed
   multiple times for load-balancing.
@@ -27,6 +28,7 @@ Please note that cisidm is being actively developed and is not yet complete or r
   - Manage phone numbers
     - Verification of phone numbers is `in-development` (will use Twilio)
   - Manage addresses (delivery/billing/...)
+  - Dark and Light mode :)
 
 ## Quick-Start
 
