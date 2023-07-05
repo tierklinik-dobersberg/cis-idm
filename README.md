@@ -7,11 +7,10 @@ Please note that cisidm is being actively developed and is not yet complete or r
 ## Features
 
 - Protobuf defined API using [Connect](https://buf.build/blog/connect-a-better-grpc) for interoperability with browsers and gRPC.
-- Support for **2FA using TOTP**
+- Support for **2FA using TOTP** with **Recovery Codes**
 - Support for **WebAuthN** and **Passkeys**
 - A public listener (which requires authentication)
 - A admin/internal listener for un-authenticated use by other micro-services
-- A role based authentication system (`in-development`)
 - Privacy (access to user profile fields) backed into Protobuf (see tierklinik-dobersberg/apis)
 - Stateless (uses [rqlite](https://rqlite.io) for storage) so it can be deployed
   multiple times for load-balancing.
@@ -22,13 +21,25 @@ Please note that cisidm is being actively developed and is not yet complete or r
   - Enroll 2FA
   - Enroll WebAuthN/Passkeys
   - Self registration (may optionally require a registration token) with either Password or WebAuthN
-  - Change privacy settings (`in-development`)
   - Manage E-Mail addresses
-    - Verification of E-Mail addresses is `in-development`
   - Manage phone numbers
-    - Verification of phone numbers is `in-development` (will use Twilio)
   - Manage addresses (delivery/billing/...)
   - Dark and Light mode :)
+
+### Upcoming / Planned
+
+The following features are on our roadmap and will be finished before cisidm
+will be released as a v1:
+
+- A role based authentication system (`in-development`)
+- Change privacy settings (`in-development`)
+- Verification of phone numbers is `in-development` (will use Twilio)
+- Verification of E-Mail addresses is `in-development`
+- 2FA authentication using SMS
+- 2FA authentication using E-Mail
+- E-Mail magic-link authentication
+- Feature-Flag management on a per-user basis
+- Password recovery using E-Mail or SMS
 
 ## Quick-Start
 
