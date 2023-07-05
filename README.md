@@ -61,6 +61,8 @@ Finally, just launch:
 docker-compose build && docker-compose up
 ```
 
+A full reference of all available configuration keys can be found in [./internal/config/config.go](./internal/config/config.go).
+
 ### Important Warning
 
 For the time being cisidm depends on tierklinik-dobersberg/apis (for Go) and on '@tkd/apis' (for JS/TypeScript). These are not yet released! The Dockerfile provided in this repository expected a `tkd/apis:latest` image on your machine.

@@ -35,7 +35,7 @@ services:
       - "traefik.http.routers.idm.rule=Host(`account.dobersberg.dev`)"
       - "traefik.http.routers.idm.entrypoints=web"
       - "traefik.http.routers.idm.tls=true"
-      - "traefik.http.middlewares.auth.forwardauth.address=http://cisidm:8080/validate"
+      - "traefik.http.middlewares.auth.forwardauth.address=http://cisidm:8081/validate"
       - "traefik.http.middlewares.auth.forwardauth.authResponseHeaders=X-Remote-User,X-Remote-User-ID,X-Remote-Mail,X-Remote-Mail-Verified,X-Remote-Avatar-URL"
     environment:
       IDM_CONFIG_FILE: "/etc/config.yml"

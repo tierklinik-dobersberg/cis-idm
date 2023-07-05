@@ -601,7 +601,7 @@ func (svc *AuthService) AddAccessTokenCookie(resp http.Header, token string, ttl
 		Path:     "/",
 		Domain:   svc.cfg.Domain,
 		Expires:  time.Now().Add(ttl),
-		Secure:   svc.cfg.SecureCookie,
+		Secure:   *svc.cfg.SecureCookie,
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
 	}
@@ -615,7 +615,7 @@ func (svc *AuthService) AddRefreshTokenCookie(resp http.Header, token string, tt
 		Path:     "/tkd.idm.v1.AuthService/RefreshToken",
 		Domain:   svc.cfg.Domain,
 		Expires:  time.Now().Add(ttl),
-		Secure:   svc.cfg.SecureCookie,
+		Secure:   *svc.cfg.SecureCookie,
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
 	}

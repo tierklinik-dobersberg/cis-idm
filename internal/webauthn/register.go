@@ -119,7 +119,7 @@ func beginRegistrationHandler(cfg config.Config, auth *auth.AuthService, web *we
 		http.SetCookie(w, &http.Cookie{
 			Name:     "registration_session",
 			Value:    sessionID,
-			Secure:   cfg.SecureCookie,
+			Secure:   *cfg.SecureCookie,
 			HttpOnly: true,
 			SameSite: http.SameSiteLaxMode,
 			Path:     "/",
@@ -254,7 +254,7 @@ func beginLoginHandler(cfg config.Config, web *webauthn.WebAuthn, datastore *rep
 		http.SetCookie(w, &http.Cookie{
 			Name:     "login_session",
 			Value:    sessionID,
-			Secure:   cfg.SecureCookie,
+			Secure:   *cfg.SecureCookie,
 			HttpOnly: true,
 			SameSite: http.SameSiteLaxMode,
 			Expires:  time.Now().Add(time.Minute * 5),
