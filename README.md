@@ -24,24 +24,26 @@ Please note that cisidm is being actively developed and is not yet complete or r
   - Manage E-Mail addresses
   - Manage phone numbers
   - Manage addresses (delivery/billing/...)
-  - Dark and Light mode :)
+  - Dark and Light mode :rocket:
 
 ### Upcoming / Planned
 
 The following features are on our roadmap and will be finished before cisidm
 will be released as a v1:
 
-- Support to send Mails (required by items below)
-- Support to send SMS via Twilio (required by items below)
-- A role based authentication system
-- Change privacy settings
-- Verification of phone numbers
-- Verification of E-Mail addresses
-- 2FA authentication using SMS
-- 2FA authentication using E-Mail
-- E-Mail magic-link authentication
+- Self-Service: Manage your active user-sessions and revoke refresh/access tokens
+- UI: i18n support (UI is currently in German Only)
+- Internal: Support to send Mails (required by items below)
+- Internal: Support to send SMS via Twilio (required by items below)
+- Authz: A role based authentication system
+- Self-Service: Change privacy settings
+- Self-Service: Verification of phone numbers
+- Self-Service: Verification of E-Mail addresses
+- Auth: 2FA authentication using SMS
+- Auth: 2FA authentication using E-Mail
+- Auth: E-Mail magic-link authentication
+- Auth: Password recovery using E-Mail or SMS
 - Feature-Flag management on a per-user basis
-- Password recovery using E-Mail or SMS
 
 ## Quick-Start
 
