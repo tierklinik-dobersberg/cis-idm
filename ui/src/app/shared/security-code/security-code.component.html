@@ -1,0 +1,5 @@
+<div class="flex flex-row items-center gap-4">
+  <input #codeInput type="text" *ngFor="let _ of inputs; let index=index"
+    (input)="onInput($event, index)" (keydown)="onKeyDown($event, index)" [disabled]="isDisabled" (blur)="_onTouch()" autocomplete="off"
+    name="code" class="w-8 py-1.5 px-2 text-xl font-medium text-center text-black bg-gray-200 border border-gray-300 rounded dark:text-white dark:bg-slate-700 dark:border-slate-600" required>
+</div>

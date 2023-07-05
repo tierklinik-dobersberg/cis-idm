@@ -20,7 +20,7 @@ var (
 	}
 
 	GetPrimaryEmailForUserByID = Statement[models.EMail]{
-		Query: `SELECT * FROM user_emails WHERE user_id = ? and primary = true LIMIT 1`,
+		Query: `SELECT * FROM user_emails WHERE user_id = ? and is_primary = true LIMIT 1`,
 		Args:  []string{"user_id"},
 	}
 

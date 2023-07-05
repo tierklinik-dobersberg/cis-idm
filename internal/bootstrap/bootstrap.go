@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -12,68 +13,57 @@ import (
 	"github.com/tierklinik-dobersberg/cis-idm/internal/repo"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/repo/models"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/repo/stmts"
-	"golang.org/x/crypto/bcrypt"
 )
 
-func Bootstrap(ctx context.Context, cfg config.Config, userRepo *repo.Repo) (*models.User, error) {
+func Bootstrap(ctx context.Context, cfg config.Config, userRepo *repo.Repo) error {
 	superuserRoleID, err := bootstrapRole(ctx, userRepo, "idm_superuser", "Super-user management role", true)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	// Create all bootstrap roles
 	for _, roleName := range cfg.BootstrapRoles {
 		if _, err := bootstrapRole(ctx, userRepo, roleName, "Automatically bootstrapped role", true); err != nil {
-			return nil, err
+			return err
 		}
 	}
 
 	// ensure there is at least one user in idm_superuser
 	users, err := userRepo.GetUsersByRole(ctx, superuserRoleID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve users in idm_superuser group: %w", err)
+		return fmt.Errorf("failed to retrieve users in idm_superuser group: %w", err)
 	}
 
+	// if there are not users with the idm_superuser role create a new registration token
 	if len(users) == 0 {
-		password, err := generateSecret(16)
+		tokenValue, err := GenerateSecret(8)
 		if err != nil {
-			return nil, fmt.Errorf("failed to generate secure password: %w", err)
+			return err
+		}
+		blobs, _ := json.Marshal([]string{"idm_superuser"})
+
+		token := models.RegistrationToken{
+			Token:        tokenValue,
+			InitialRoles: string(blobs),
+			AllowedUsage: new(int64),
+		}
+		*token.AllowedUsage = 1
+
+		if err := userRepo.CreateRegistrationToken(ctx, token); err != nil {
+			return err
 		}
 
-		hashed, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-		if err != nil {
-			return nil, fmt.Errorf("failed to generate hashed password: %w", err)
-		}
+		logrus.WithField("token", tokenValue).Infof("Please bootstrap the superuser account using the provided registration token.")
 
-		user := models.User{
-			ID:       "admin",
-			Username: "admin",
-			Password: string(hashed),
-		}
-
-		user, err = userRepo.CreateUser(ctx, user)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create new super user: %w", err)
-		}
-		logrus.WithFields(logrus.Fields{
-			"id":       user.ID,
-			"name":     user.Username,
-			"password": password,
-		}).Infof("bootstrap: created new super user")
-
-		if err := userRepo.AssignRoleToUser(ctx, user.ID, superuserRoleID); err != nil {
-			return nil, fmt.Errorf("failed to add new user to idm_superuser group: %w", err)
-		}
-
-		return &user, nil
-	} else {
-		logrus.WithFields(logrus.Fields{"count": len(users)}).Infof("bootstrap: found users in idm_superuser group")
-		for _, user := range users {
-			logrus.WithField("id", user.ID).Infof("idm_superuser: %s", user.Username)
-		}
+		return nil
 	}
 
-	return nil, nil
+	logrus.WithFields(logrus.Fields{"count": len(users)}).Infof("bootstrap: found users in idm_superuser group")
+	for _, user := range users {
+		logrus.WithField("id", user.ID).Infof("idm_superuser: %s", user.Username)
+	}
+
+	return nil
 }
 
 func bootstrapRole(ctx context.Context, repo *repo.Repo, roleName, description string, deleteProtection bool) (string, error) {
@@ -110,8 +100,8 @@ func bootstrapRole(ctx context.Context, repo *repo.Repo, roleName, description s
 	return role.ID, nil
 }
 
-// generateSecret returns a random secret of the given size encoded as hex.
-func generateSecret(size int) (string, error) {
+// GenerateSecret returns a random secret of the given size encoded as hex.
+func GenerateSecret(size int) (string, error) {
 	nonce := make([]byte, size)
 	if _, err := rand.Read(nonce); err != nil {
 		return "", err

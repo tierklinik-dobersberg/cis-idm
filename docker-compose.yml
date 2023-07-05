@@ -6,3 +6,39 @@ services:
       - 4001:4001
     environment:
       HTTP_ADDR_ADV: localhost
+
+  traefik:
+    image: "traefik:v2.10"
+    container_name: "traefik"
+    command:
+      #- "--log.level=DEBUG"
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:443"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+
+  cisidm:
+    build:
+      context: .
+    image: cis-idm:latest
+    restart: unless-stopped
+    volumes:
+      - ./config.test.yml:/etc/config.yml:ro
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.idm.rule=Host(`account.dobersberg.dev`)"
+      - "traefik.http.routers.idm.entrypoints=web"
+      - "traefik.http.routers.idm.tls=true"
+      - "traefik.http.middlewares.auth.forwardauth.address=http://cisidm:8080/validate"
+      - "traefik.http.middlewares.auth.forwardauth.authResponseHeaders=X-Remote-User,X-Remote-User-ID,X-Remote-Mail,X-Remote-Mail-Verified,X-Remote-Avatar-URL"
+    environment:
+      IDM_CONFIG_FILE: "/etc/config.yml"
+      DEBUG: "true"
+    depends_on:
+      - rqlite

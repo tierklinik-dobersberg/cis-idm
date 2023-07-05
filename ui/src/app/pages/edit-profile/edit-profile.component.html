@@ -18,7 +18,7 @@
                             <span
                                 class="text-xs text-gray-500 uppercase dark:text-emerald-200 dark:text-opacity-70">Benutzername</span>
                             <input class="w-full tkd-input" type="text" name="displayName" [formControl]="username"
-                                placeholder="Benutzername">
+                                placeholder="Benutzername" autocomplete="username">
                         </div>
                     </li>
 
@@ -27,13 +27,13 @@
                             <span
                                 class="text-xs text-gray-500 uppercase dark:text-emerald-200 dark:text-opacity-70">Vorname</span>
                             <input class="w-full tkd-input" type="text" name="firstname" [formControl]="firstName"
-                                placeholder="Vorname">
+                                placeholder="Vorname" autocomplete="given-name">
                         </div>
                         <div class="flex flex-col gap-0.5 w-full">
                             <span
                                 class="text-xs text-gray-500 uppercase dark:text-emerald-200 dark:text-opacity-70">Nachname</span>
                             <input class="w-full tkd-input" type="text" name="lastname" [formControl]="lastName"
-                                placeholder="Nachname">
+                                placeholder="Nachname" autocomplete="family-name">
                         </div>
                     </li>
 
@@ -43,7 +43,7 @@
                                 class="text-xs text-gray-500 uppercase dark:text-emerald-200 dark:text-opacity-70">Anzeige
                                 Name</span>
                             <input class="w-full tkd-input" type="text" name="displayName" [formControl]="displayName"
-                                placeholder="Anzeige Name">
+                                placeholder="Anzeige Name" autocomplete="name">
                         </div>
                     </li>
 
@@ -52,7 +52,7 @@
                             <span
                                 class="text-xs text-gray-500 uppercase dark:text-emerald-200 dark:text-opacity-70">Geburtsdatum</span>
                             <input class="w-full tkd-input" type="date" name="birthday" [formControl]="birthday"
-                                placeholder="Geburtsdatum">
+                                placeholder="Geburtsdatum" autocomplete="bday">
                         </div>
                     </li>
                 </ul>

@@ -11,7 +11,8 @@ var (
 			extra BLOB,
 			avatar TEXT,
 			birthday TEXT,
-			password TEXT NOT NULL
+			password TEXT NOT NULL,
+			totp_secret TEXT NULL
 		)`,
 	}
 
@@ -84,6 +85,63 @@ var (
 			issued_at NUMBER NOT NULL,
 			expires_at NUMBER NOT NULL,
 			CONSTRAINT fk_token_user
+				FOREIGN KEY(user_id) REFERENCES users(id)
+				ON DELETE CASCADE
+		)`,
+	}
+
+	CreateRegistrationTokenTable = Statement[any]{
+		Query: `CREATE TABLE IF NOT EXISTS registration_tokens (
+			token TEXT NOT NULL PRIMARY KEY,
+			expires NUMBER NULL,
+			allowed_usage NUMBER NULL,
+			initial_roles TEXT NULL,
+			created_by STRING,
+			created_at NUMBER
+		)`,
+	}
+
+	CreateRegistrationTokenCleanupTrigger = Statement[any]{
+		Query: `CREATE TRIGGER IF NOT EXISTS registration_token_cleanup AFTER UPDATE ON registration_tokens
+		BEGIN
+			DELETE FROM registration_tokens
+			WHERE
+				allowed_usage IS NOT NULL
+				AND allowed_usage = 0;
+		END;`,
+	}
+
+	Create2FABackupCodeTable = Statement[any]{
+		Query: `CREATE TABLE IF NOT EXISTS mfa_backup_codes (
+			code TEXT NOT NULL,
+			user_id TEXT,
+			CONSTRAINT fk_mfa_backup_codes_user
+				FOREIGN KEY(user_id) REFERENCES users(id)
+				ON DELETE CASCADE
+		)`,
+	}
+
+	CreateWebauthnCredsTable = Statement[any]{
+		Query: `CREATE TABLE IF NOT EXISTS webauthn_creds (
+			id TEXT PRIMARY KEY,
+			user_id TEXT NOT NULL,
+			cred TEXT,
+			cred_type TEXT,
+			client_name TEXT,
+			client_os TEXT,
+			client_device TEXT,
+			CONSTRAINT fk_webauth_creds_user
+				FOREIGN KEY(user_id) REFERENCES users(id)
+				ON DELETE CASCADE
+		)`,
+	}
+
+	CreateWebauthnSessionTable = Statement[any]{
+		Query: `CREATE TABLE IF NOT EXISTS webauthn_sessions (
+			id TEXT PRIMARY KEY,
+			user_id TEXT,
+			session TEXT,
+			CONSTRAINT fk_webauthn_session_user
 				FOREIGN KEY(user_id) REFERENCES users(id)
 				ON DELETE CASCADE
 		)`,

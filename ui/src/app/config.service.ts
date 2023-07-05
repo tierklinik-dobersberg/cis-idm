@@ -7,7 +7,8 @@ export enum FeatureFlags {
 	FeaturePhoneNumbers= "phoneNumbers",
 	FeatureEMailInvite = "emailInvite",
 	FeatureLoginByMail = "loginByMail",
-    FeatureAllowUsernameChange = "allowUsernameChange"
+  FeatureAllowUsernameChange = "allowUsernameChange",
+  FeatureSelfRegistration = "registration"
 }
 
 export interface RemoteConfig {
@@ -15,6 +16,7 @@ export interface RemoteConfig {
     loginURL: string;
     siteName: string;
     siteNameUrl: string;
+    registrationRequiresToken: boolean;
     features: {
         [key in FeatureFlags]: boolean
     };

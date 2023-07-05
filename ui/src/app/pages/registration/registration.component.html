@@ -1,0 +1,54 @@
+<form #loginForm="ngForm" (ngSubmit)="submit()" class="mt-32">
+  <div class="m-auto w-96 tkd-card">
+    <content>
+      <section>
+
+        <h1 class="w-full mt-2 text-2xl font-medium">Registrierung</h1>
+        <span class="mb-4 -mt-4 text-sm font-light">Erstelle einen neuen
+          <a [attr.href]="config.siteNameUrl">{{ config.siteName }}</a>
+          Account.
+        </span>
+
+        <ng-container *ngIf="config.registrationRequiresToken">
+          <span class="text-base">Für die Registrierung benötigst du einen Sicherheits-Schlüssel:</span>
+
+          <input required placeholder="Token"
+            class="tkd-input"
+            type="text" name="token" [(ngModel)]="token">
+        </ng-container>
+
+        <span class="text-base">Bitte wähle einen neuen Benutzernamen und ein neues Passwort:</span>
+
+        <input required placeholder="Username"
+          class="tkd-input"
+          type="text" name="username" [(ngModel)]="username">
+
+        <ng-container *ngIf="usePassword">
+          <input required placeholder="Password"
+            class="tkd-input"
+            type="password" name="password" [(ngModel)]="password">
+
+          <input required placeholder="Password wiederholen"
+            class="tkd-input"
+            type="password" name="password" [(ngModel)]="passwordRepeat">
+        </ng-container>
+
+        <span *ngIf="errorMessage" class="w-full overflow-hidden text-sm font-medium text-red-300 break-before-all">
+          Registrierung fehlgeschlagen: <br />
+          <pre class="text-xs font-normal">{{ errorMessage }}</pre>
+        </span>
+
+        <button [disabled]="!loginForm.valid || password != passwordRepeat" type="submit" class="tkd-btn">
+          {{ usePassword ? 'Registrieren': 'Mit diesem Gerät registrieren' }}
+        </button>
+        <a class="text-sm" *ngIf="!usePassword" (click)="usePassword = true">
+          Passwort anstatt der sicheren WebAuthN Passkeys verwenden.
+        </a>
+        <a class="text-sm" *ngIf="usePassword" (click)="usePassword = false">
+          Sicherere WebAuthN Passkeys anstelle eines Passworts verwenden.
+        </a>
+
+      </section>
+    </content>
+  </div>
+</form>

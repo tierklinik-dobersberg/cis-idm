@@ -19,6 +19,7 @@ import (
 
 var (
 	claimsContextKey = struct{ s string }{s: "claims-context-key"}
+	tokenContextKey  = struct{ s string }{s: "token-context-key"}
 )
 
 // ContextWithClaims returns a new context.Context with claims attached.
@@ -31,6 +32,15 @@ func ContextWithClaims(ctx context.Context, claims *jwt.Claims) context.Context 
 func ClaimsFromContext(ctx context.Context) *jwt.Claims {
 	claims, _ := ctx.Value(claimsContextKey).(*jwt.Claims)
 	return claims
+}
+
+func ContextWithToken(ctx context.Context, token string) context.Context {
+	return context.WithValue(ctx, tokenContextKey, token)
+}
+
+func TokenFromContext(ctx context.Context) string {
+	token, _ := ctx.Value(tokenContextKey).(string)
+	return token
 }
 
 func NewAuthInterceptor(cfg config.Config, reg *protoregistry.Files) connect.UnaryInterceptorFunc {

@@ -50,5 +50,26 @@ func (repo *Repo) Migrate(ctx context.Context) error {
 	if err := stmts.CreateTokenInvalidationTable.Write(ctx, repo.Conn, nil); err != nil && !errors.Is(err, stmts.ErrNoRowsAffected) {
 		return fmt.Errorf("failed to create token invalidation table: %w", err)
 	}
+
+	if err := stmts.CreateRegistrationTokenTable.Write(ctx, repo.Conn, nil); err != nil && !errors.Is(err, stmts.ErrNoRowsAffected) {
+		return fmt.Errorf("failed to create registration_token table: %w", err)
+	}
+
+	if err := stmts.CreateRegistrationTokenCleanupTrigger.Write(ctx, repo.Conn, nil); err != nil && !errors.Is(err, stmts.ErrNoRowsAffected) {
+		return fmt.Errorf("failed to create registration_token_cleanup trigger: %w", err)
+	}
+
+	if err := stmts.Create2FABackupCodeTable.Write(ctx, repo.Conn, nil); err != nil && !errors.Is(err, stmts.ErrNoRowsAffected) {
+		return fmt.Errorf("failed to create mfa_backup_codes table: %w", err)
+	}
+
+	if err := stmts.CreateWebauthnCredsTable.Write(ctx, repo.Conn, nil); err != nil && !errors.Is(err, stmts.ErrNoRowsAffected) {
+		return fmt.Errorf("failed to create webauthn_creds table: %w", err)
+	}
+
+	if err := stmts.CreateWebauthnSessionTable.Write(ctx, repo.Conn, nil); err != nil && !errors.Is(err, stmts.ErrNoRowsAffected) {
+		return fmt.Errorf("failed to create webauthn_sessions table: %w", err)
+	}
+
 	return nil
 }

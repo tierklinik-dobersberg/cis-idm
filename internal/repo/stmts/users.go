@@ -82,8 +82,54 @@ var (
 		},
 	}
 
+	EnrollUserTOTPSecret = Statement[any]{
+		Query: `UPDATE users SET totp_secret = ? WHERE id = ? AND totp_secret IS NULL`,
+		Args:  []string{"totp_secret", "id"},
+	}
+
+	RemoveUserTOTPSecret = Statement[any]{
+		Query: `UPDATE users SET totp_secret = NULL WHERE id = ? AND totp_secret IS NOT NULL`,
+		Args:  []string{"id"},
+	}
+
 	SetUserPassword = Statement[any]{
 		Query: `UPDATE users SET password = ? WHERE id = ?`,
 		Args:  []string{"password", "id"},
 	}
+
+	AddWebauthnCred = Statement[any]{
+		Query: `INSERT INTO webauthn_creds (id, user_id, cred, client_name, client_os, client_device, cred_type) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		Args:  []string{"id", "user_id", "cred", "client_name", "client_os", "client_device", "cred_type"},
+	}
+
+	GetWebauthnCreds = Statement[models.Passkey]{
+		Query: `SELECT * FROM webauthn_creds WHERE user_id = ?`,
+		Args:  []string{"user_id"},
+	}
+
+	RemoveWebauthnCred = Statement[any]{
+		Query: `DELETE FROM webauthn_creds WHERE user_id = ? AND id = ?`,
+		Args:  []string{"user_id", "id"},
+	}
+
+	SaveWebauthnSession = Statement[any]{
+		Query: `INSERT INTO webauthn_sessions (id, user_id, session) VALUES (?, ?, ?)`,
+		Args:  []string{"id", "user_id", "session"},
+	}
+
+	GetWebauthnSession = Statement[struct {
+		ID      string `mapstructure:"id"`
+		UserID  string `mapstructure:"user_id"`
+		Session string `mapstructure:"session"`
+	}]{
+		Query: `SELECT * FROM webauthn_sessions WHERE id = ?`,
+		Args:  []string{"id"},
+	}
+
+	DeleteWebauthnSession = Statement[any]{
+		Query: `DELETE FROM webauthn_sessions WHERE id = ?`,
+		Args:  []string{"id"},
+	}
+
+	// FIXME(ppacher): create trigger that removes stale session entries ...
 )

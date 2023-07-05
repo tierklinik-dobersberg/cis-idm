@@ -1,4 +1,5 @@
 import { InjectionToken } from "@angular/core";
+import { ActivatedRoute } from "@angular/router";
 import { Code, ConnectError, Interceptor, PromiseClient, Transport, createPromiseClient } from "@bufbuild/connect";
 import { createConnectTransport } from "@bufbuild/connect-web";
 import { AuthService, SelfServiceService } from "@tkd/apis";
@@ -10,7 +11,7 @@ export const SELF_SERVICE = new InjectionToken<SelfServiceClient>('SELF_SERVICE'
 export type AuthServiceClient = PromiseClient<typeof AuthService>;
 export type SelfServiceClient = PromiseClient<typeof SelfServiceService>;
 
-const retryRefreshToken: (transport: Transport) => Interceptor = (transport) => {
+const retryRefreshToken: (transport: Transport, activatedRoute: ActivatedRoute) => Interceptor = (transport, activatedRoute) => {
   let pendingRefresh: Promise<void> | null = null;
 
   return (next) => async (req) => {
@@ -21,8 +22,10 @@ const retryRefreshToken: (transport: Transport) => Interceptor = (transport) => 
     } catch (err) {
       const connectErr = ConnectError.from(err);
 
-      // don't retry the request if it was a Login.
-      if (req.service.typeName === AuthService.typeName && req.method.name === 'Login') {
+      // don't retry the request if it was a Login or RefreshToken.
+      if (req.service.typeName === AuthService.typeName && (req.method.name === 'Login' || req.method.name == 'RefreshToken')) {
+        console.log("skipping retry as requested service is " + `${req.service.typeName}/${req.method.name}`)
+
         throw err
       }
 
@@ -43,10 +46,7 @@ const retryRefreshToken: (transport: Transport) => Interceptor = (transport) => 
 
           console.log(`[DEBUG] call to ${req.service.typeName}/${req.method.name} not authenticated, trying to refresh token`)
           try {
-            const token = await cli.refreshToken({})
-            if (!!token.accessToken) {
-              localStorage.setItem('access_token', token.accessToken.token);
-            }
+            const res = await cli.refreshToken({})
 
             _resolve();
           } catch (refreshErr) {
@@ -74,14 +74,14 @@ const retryRefreshToken: (transport: Transport) => Interceptor = (transport) => 
   }
 }
 
-export function transportFactory(): Transport {
-  const retryTransport = createConnectTransport({baseUrl: 'http://localhost:8080', credentials: 'include'})
+export function transportFactory(route: ActivatedRoute): Transport {
+  const retryTransport = createConnectTransport({baseUrl: '', credentials: 'include'})
 
   return createConnectTransport({
-    baseUrl: 'http://localhost:8080',
+    baseUrl: '',
     credentials: 'include',
     interceptors: [
-      retryRefreshToken(retryTransport),
+      retryRefreshToken(retryTransport, route),
     ],
   })
 }

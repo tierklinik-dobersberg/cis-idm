@@ -1,0 +1,36 @@
+<div class="tkd-card">
+  <header class="flex !flex-row w-full items-center">
+    <a routerLink="/profile">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
+        class="w-6 h-6">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+      </svg>
+    </a>
+
+    <h1 class="flex-grow">Avatar bearbeiten</h1>
+  </header>
+  <content>
+    <section>
+      <div class="cropper-wrapper">
+        <div class="loading-block" *ngIf="isLoading">
+          <div class="spinner"></div>
+        </div>
+        <div class="alert alert-warning" *ngIf="loadError">{{ loadImageErrorText }}</div>
+        <div class="cropper">
+          <img #image alt="image" [src]="imageUrl" (load)="imageLoaded($event)" (error)="imageLoadError($event)" />
+        </div>
+      </div>
+    </section>
+    <section>
+
+      <label class="block tkd-btn-outline" for="avatarInput">
+        Neues Bild auswählen
+      </label>
+
+      <button class="tkd-btn" type="button" (click)="save()">Speichern</button>
+
+      <input name="avatarInput" id="avatarInput" class="hidden" type="file" (change)="loadImage($event)">
+    </section>
+
+  </content>
+</div>

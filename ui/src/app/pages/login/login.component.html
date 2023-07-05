@@ -2,26 +2,86 @@
   <div class="m-auto w-96 tkd-card">
     <content>
       <section>
-
-        <h1 class="mt-2 w-full text-2xl font-medium">Anmeldung</h1>
-        <span class="-mt-4 mb-4 text-sm font-light">mit deinem
+        <h1 class="w-full mt-2 text-2xl font-medium">Anmeldung</h1>
+        <span class="mb-4 -mt-4 text-sm font-light">mit deinem
           <a [attr.href]="config.siteNameUrl">{{ config.siteName }}</a>
           Account.
         </span>
 
-        <span class="text-base">Bitte melde dich mit deinem Benutzernamen und deinem Passwort an:</span>
-        <input required placeholder="Username"
-          class="tkd-input"
-          type="text" name="username" [(ngModel)]="username">
-        <input required placeholder="Password"
-          class="tkd-input"
-          type="password" name="password" [(ngModel)]="password">
+        <ng-container [ngSwitch]="display">
+          <ng-container *ngSwitchCase="'user-select'">
+            Bitte wähle deinen Account:
+
+            <input type="text" class="hidden" autocomplete="username webauthn" [(ngModel)]="username" name="username">
+            <input type="password" class="hidden" autocomplete="current-password webauthn" [(ngModel)]="password" name="password">
+
+            <ul class="space-y-2 list-none">
+              <li *ngFor="let user of loggedInUsers; trackBy: trackLoggedInUsers" (click)="selectKnownAccount(user)"
+                class="flex flex-row items-center justify-start gap-4 p-1 rounded cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-600">
+                <img class="w-10 h-10 rounded-full shadow" [attr.src]="user.avatarUrl">
+                <span class="flex-grow">{{ user.displayName }}</span>
+
+                <a (click)="removeAccount(user)">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </a>
+              </li>
+            </ul>
+
+            <a (click)="chooseDifferentAccount()" class="inline-block w-full text-sm text-center">Nicht dein Account? Verwende einen anderen.</a>
+          </ng-container>
+
+          <ng-container *ngSwitchCase="'username-input'">
+            <span class="-mb-2 text-sm">Benutzername oder E-Mail:</span>
+            <input required placeholder="Username" autocomplete="username webauthn" class="tkd-input" type="text" name="username"
+              [(ngModel)]="username">
+
+            <div class="flex items-center mb-4">
+              <input id="default-checkbox" type="checkbox" [(ngModel)]="rememberMe" name="rememberMe"
+                class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+
+              <label for="default-checkbox" class="ml-2 text-sm font-medium text-gray-900 dark:text-gray-300">
+                Account auf diesen Gerät speichern
+              </label>
+            </div>
+          </ng-container>
+
+          <ng-container *ngSwitchCase="'password-input'">
+            <div class="flex flex-row items-center gap-4" *ngIf="selectedUser">
+                <img class="w-10 h-10 rounded-full shadow" [attr.src]="selectedUser.avatarUrl">
+                <span class="flex-grow">{{ selectedUser.displayName }}</span>
+            </div>
+
+            <button type="button" class="tkd-btn" *ngIf="webauthnSupport && !autofillSupported" (click)="loginUsingWebAuthn()">Mit deinem Gerät anmelden</button>
+
+            <span class="-mb-2 text-sm">Passwort:</span>
+            <input required placeholder="Password" autocomplete="current-password webauthn" class="tkd-input" type="password"
+              name="password" [(ngModel)]="password">
+
+            <a (click)="chooseDifferentAccount()" class="inline-block w-full text-sm text-center">Nicht dein Account? Verwende einen anderen.</a>
+            <a class="inline-block w-full -mt-2 text-sm text-center" href="#">Password vergessen?</a>
+
+          </ng-container>
+
+          <ng-container *ngSwitchCase="'totp-input'">
+            <div class="flex flex-col items-center justify-center gap-4">
+              <span class="text-base">Bitte gib deinen Sicherheits-Code ein:</span>
+              <app-security-code [(ngModel)]="code" name="code" required></app-security-code>
+            </div>
+          </ng-container>
+        </ng-container>
+
+
         <span *ngIf="loginErrorMessage" class="text-sm font-medium text-red-300">
           Anmeldung fehlgeschlagen: <br />
           {{ loginErrorMessage }}
         </span>
-        <button [disabled]="!loginForm.valid" type="submit" class="tkd-btn">Anmelden</button>
-        <a class="inline-block -mt-2 w-full text-center" href="#">Password vergessen?</a>
+        <button [disabled]="!loginForm.valid" type="submit" class="tkd-btn">Weiter</button>
+        <a *ngIf="config.features.registration" class="inline-block w-full -mt-2 text-xs text-center"
+          routerLink="/registration">Noch keine Account? Registriere dich!</a>
+
+
       </section>
     </content>
   </div>

@@ -1,0 +1,6 @@
+/fakes3
+/outline.env
+/docker-compose-dev.yml
+/config.test.yml
+/cmds/userd/static
+node_modules

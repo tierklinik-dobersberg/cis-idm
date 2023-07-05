@@ -17,7 +17,7 @@ type TokenRejector interface {
 	IsTokenRejected(context.Context, string) (bool, error)
 }
 
-func NewJWTMiddleware(cfg config.Config, repo TokenRejector, next http.Handler) http.HandlerFunc {
+func NewJWTMiddleware(cfg config.Config, repo TokenRejector, next http.Handler, skipVerifyFunc func(r *http.Request) bool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 
@@ -41,34 +41,46 @@ func NewJWTMiddleware(cfg config.Config, repo TokenRejector, next http.Handler) 
 		}
 
 		if token != "" {
+			ctx = ContextWithToken(ctx, token)
+
 			var err error
 			claims, err = jwt.ParseAndVerify([]byte(cfg.JWTSecret), token)
-			if err == nil {
-				var isRejected bool
-				isRejected, err = repo.IsTokenRejected(ctx, claims.ID)
 
-				if err == nil && isRejected {
-					err = fmt.Errorf("access token has been rejected")
+			if skipVerifyFunc != nil && !skipVerifyFunc(r) {
+
+				if err == nil {
+					var isRejected bool
+					isRejected, err = repo.IsTokenRejected(ctx, claims.ID)
+
+					if err == nil && !isRejected && claims.AppMetadata != nil && claims.AppMetadata.ParentTokenID != "" {
+						isRejected, err = repo.IsTokenRejected(ctx, claims.AppMetadata.ParentTokenID)
+					}
+
+					if err == nil && isRejected {
+						err = fmt.Errorf("token has been rejected")
+					}
+				}
+
+				if err != nil {
+					w.Header().Set("Content-Type", "application/json;encoding=utf-8")
+					w.WriteHeader(http.StatusForbidden)
+					blob, _ := json.Marshal(map[string]any{"code": connect.CodeUnauthenticated, "message": "invalid access token", "details": err.Error()})
+					if _, err := w.Write(blob); err != nil {
+						L(ctx).WithError(err).Errorf("failed to write response to client")
+					}
+
+					return
 				}
 			}
 
-			if err != nil {
-				w.Header().Set("Content-Type", "application/json;encoding=utf-8")
-				w.WriteHeader(http.StatusForbidden)
-				blob, _ := json.Marshal(map[string]any{"code": connect.CodeUnauthenticated, "message": "invalid access token", "details": err.Error()})
-				if _, err := w.Write(blob); err != nil {
-					L(ctx).WithError(err).Errorf("failed to write response to client")
-				}
-
-				return
+			if claims != nil {
+				ctx = ContextWithClaims(ctx, claims)
+				ctx = WithLogger(ctx, L(ctx).WithFields(logrus.Fields{
+					"jwt:sub":         claims.Subject,
+					"jwt:name":        claims.Name,
+					"jwt:tokenSource": tokenSource,
+				}))
 			}
-
-			ctx = ContextWithClaims(ctx, claims)
-			ctx = WithLogger(ctx, L(ctx).WithFields(logrus.Fields{
-				"jwt:sub":         claims.Subject,
-				"jwt:name":        claims.Name,
-				"jwt:tokenSource": tokenSource,
-			}))
 		}
 
 		// add the new context to the request.

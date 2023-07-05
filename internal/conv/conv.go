@@ -15,6 +15,7 @@ func UserProtoFromUser(user models.User) *idmv1.User {
 		FirstName:   user.FirstName,
 		LastName:    user.LastName,
 		Birthday:    user.Birthday,
+		Avatar:      user.Avatar,
 	}
 
 	return usr
@@ -22,7 +23,8 @@ func UserProtoFromUser(user models.User) *idmv1.User {
 
 func ProfileProtoFromUser(user models.User, useropts ...UserOption) *idmv1.Profile {
 	profile := &idmv1.Profile{
-		User: UserProtoFromUser(user),
+		User:        UserProtoFromUser(user),
+		TotpEnabled: user.TOTPSecret != "",
 	}
 
 	for _, fn := range useropts {
@@ -122,5 +124,11 @@ func WithPrimaryPhone(phone *models.PhoneNumber) UserOption {
 		}
 
 		u.User.PrimaryPhoneNumber = PhoneNumberProtoFromPhoneNumber(*phone)
+	}
+}
+
+func WithUserHasRecoveryCodes(hasCodes bool) UserOption {
+	return func(u *idmv1.Profile) {
+		u.RecoveryCodesGenerated = hasCodes
 	}
 }

@@ -18,6 +18,7 @@ func main() {
 	if err != nil {
 		logrus.Fatalf("failed to parse config from environment: %s", err)
 	}
+	logrus.Infof("sucessfully loaded configuration")
 
 	// connect to rqlite
 	userRepo, err := repo.New(cfg.DatabaseURL)
@@ -46,7 +47,7 @@ func main() {
 
 	logrus.Infof("successfully migrated database")
 
-	if _, err := bootstrap.Bootstrap(ctx, cfg, userRepo); err != nil {
+	if err := bootstrap.Bootstrap(ctx, cfg, userRepo); err != nil {
 		cancel()
 
 		logrus.Fatalf("failed to bootstrap: %s", err)

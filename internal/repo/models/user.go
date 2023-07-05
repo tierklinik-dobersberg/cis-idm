@@ -37,6 +37,7 @@ type User struct {
 	Avatar      string `mapstructure:"avatar"`
 	Password    string `mapstructure:"password"`
 	Birthday    string `mapstructure:"birthday"`
+	TOTPSecret  string `mapstructure:"totp_secret"`
 }
 
 type Role struct {
@@ -66,4 +67,23 @@ type Feature struct {
 type UserEnabledFeature struct {
 	FeatureName string `mapstructure:"feature_name"`
 	UserID      string `mapstructure:"user_id"`
+}
+
+type RegistrationToken struct {
+	InitialRoles string `mapstructure:"initial_roles"`
+	Token        string `mapstructure:"token"`
+	Expires      *int64 `mapstructure:"expires"`
+	AllowedUsage *int64 `mapstructure:"allowed_usage"`
+	CreatedBy    string `mapstructure:"created_by"`
+	CreatedAt    int64  `mapstructure:"created_at"`
+}
+
+type Passkey struct {
+	ID           string `mapstructure:"id"`
+	UserID       string `mapstructure:"user_id"`
+	Cred         string `mapstructure:"cred"`
+	CredType     string `mapstructure:"cred_type"`
+	ClientName   string `mapstructure:"client_name"`
+	ClientOS     string `mapstructure:"client_os"`
+	ClientDevice string `mapstructure:"client_device"`
 }

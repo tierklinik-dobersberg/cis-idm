@@ -1,0 +1,212 @@
+<div class="flex flex-col items-stretch w-screen max-w-2xl gap-4" *ngIf="profile$ | async as profile">
+  <div class="w-full tkd-card">
+    <header class="flex !flex-row w-full items-center">
+      <a (click)="goBack()">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
+          class="w-6 h-6">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+        </svg>
+      </a>
+
+      <h1 class="flex-grow">Authentifizierung und Sicherheits Einstellungen verwalten</h1>
+    </header>
+
+    <content>
+      <section>
+        <span>
+          Verwalte deine Login Methoden und registrierte Geräte / Passkeys.
+        </span>
+      </section>
+
+      <section *ngIf="enrollmentStep === null && !disableTotpMode">
+        <button class="tkd-btn" *ngIf="hasPublicKeyCreds" (click)="registerWebAuthN()">Neues Gerät / Passkey
+          registrieren</button>
+        <button class="tkd-btn-outline" *ngIf="profile.totpEnabled" (click)="disableTotp()">TOTP 2FA
+          Deaktivieren</button>
+        <button class="tkd-btn" *ngIf="!profile.totpEnabled" (click)="enableTotp()">TOTP 2FA Aktivieren</button>
+        <button class="tkd-btn" *ngIf="profile.totpEnabled" (click)="generateRecoveryCodes()">Neue Recovery Codes
+          erstellen</button>
+      </section>
+
+      <section *ngIf="disableTotpMode">
+        <form (ngSubmit)="disableTotp()" #form="ngForm" class="flex flex-col gap-4">
+          <span>Bitte bestätige deinen Sicherheits-Code:</span>
+
+          <div class="flex justify-center w-full">
+            <app-security-code [(ngModel)]="code" name="code" required></app-security-code>
+          </div>
+
+          <button class="tkd-btn" type="submit">Bestätigen</button>
+        </form>
+
+      </section>
+
+      <section *ngIf="enrollmentStep">
+        <form (ngSubmit)="enableTotp()" #form="ngForm" class="flex flex-col gap-4">
+
+          <span>Scanne den folgenden Code mit deiner Authenticator App (z.B. Google Authenticator, Microsoft
+            Authenticator, ...)</span>
+
+          <img [attr.src]="enrollmentStep.qrCode">
+
+          <span>Bitte gib den angezeigten Sicherheits-Code ein um TOTP zu aktivieren:</span>
+
+          <div class="flex justify-center w-full">
+            <app-security-code [(ngModel)]="code" name="code" required></app-security-code>
+          </div>
+
+          <button [disabled]="!form.valid" class="tkd-btn" type="submit">Bestätigen</button>
+        </form>
+      </section>
+
+      <section *ngIf="!!recoveryCodes?.length">
+        <span>
+          Bitte notiere dir die folgenden Recovery-Codes an einem sicheren Ort. Solltest du Zugriff auf dein TOTP Gerät
+          verlieren
+          kannst du dich mit einem der folgenden Codes anmelden. Bitte beachte das jeder Code nur einmal verwendet
+          werden kann.
+        </span>
+
+        <div class="grid items-center justify-center w-full grid-cols-4 gap-4 text-center">
+          <pre *ngFor="let code of recoveryCodes">{{ code }}</pre>
+        </div>
+      </section>
+
+      <section>
+        <h2 class="flex flex-row items-center justify-between">Deine Geräte / Passkeys</h2>
+        <span *ngIf="!passkeys?.length">
+          Keine Geräte / Passkeys konfiguriert.
+        </span>
+
+        <ul class="flex flex-col gap-4">
+          <li *ngFor="let key of passkeys; trackBy: trackPassKey"
+            class="flex flex-row items-center gap-4 p-2 rounded hover:bg-gray-100 dark:hover:bg-slate-600">
+
+            <div *ngIf="key.credType === 'cross-platform'">
+              <ng-template [ngTemplateOutlet]="securityKey"></ng-template>
+            </div>
+
+            <div *ngIf="key.credType === 'platform'">
+              <ng-container [ngSwitch]="key.clientOs">
+                <ng-container *ngSwitchCase="'Linux'">
+                  <ng-container *ngTemplateOutlet="linux"></ng-container>
+                </ng-container>
+                <ng-container *ngSwitchCase="'Windows'">
+                  <ng-container *ngTemplateOutlet="linux"></ng-container>
+                </ng-container>
+                <ng-container *ngSwitchDefault>
+                  <ng-container *ngTemplateOutlet="securityKey"></ng-container>
+                </ng-container>
+              </ng-container>
+            </div>
+
+            <div class="flex flex-col flex-grow text-sm">
+              <span><span class="font-semibold">{{ key.clientName }}</span> on {{ key.clientOs }}</span>
+              <span class="text-xs">Type: {{ key.credType }} | Device: {{ key.clientDevice || 'N/A' }}</span>
+            </div>
+
+            <a (click)="removePasskey(key.id)" *ngIf="passkeys.length > 1">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                stroke="currentColor" class="w-4 h-4">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </a>
+          </li>
+        </ul>
+      </section>
+
+      <section *ngIf="errMsg" class="flex !flex-row gap-4 !items-center">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
+          class="w-8 h-8 text-red-500 dark:text-red-300">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+        </svg>
+        <span class="text-red-500 dark:text-red-300">
+          {{ errMsg }}
+        </span>
+      </section>
+    </content>
+  </div>
+</div>
+
+<ng-template #linux>
+  <!-- Uploaded to: SVG Repo, www.svgrepo.com, Generator: SVG Repo Mixer Tools -->
+  <svg class="inline-block w-8 h-8" fill="currentColor" version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg"
+    xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 304.998 304.998" xml:space="preserve">
+    <g id="XMLID_91_">
+      <path id="XMLID_92_"
+        d="M274.659,244.888c-8.944-3.663-12.77-8.524-12.4-15.777c0.381-8.466-4.422-14.667-6.703-17.117
+		c1.378-5.264,5.405-23.474,0.004-39.291c-5.804-16.93-23.524-42.787-41.808-68.204c-7.485-10.438-7.839-21.784-8.248-34.922
+		c-0.392-12.531-0.834-26.735-7.822-42.525C190.084,9.859,174.838,0,155.851,0c-11.295,0-22.889,3.53-31.811,9.684
+		c-18.27,12.609-15.855,40.1-14.257,58.291c0.219,2.491,0.425,4.844,0.545,6.853c1.064,17.816,0.096,27.206-1.17,30.06
+		c-0.819,1.865-4.851,7.173-9.118,12.793c-4.413,5.812-9.416,12.4-13.517,18.539c-4.893,7.387-8.843,18.678-12.663,29.597
+		c-2.795,7.99-5.435,15.537-8.005,20.047c-4.871,8.676-3.659,16.766-2.647,20.505c-1.844,1.281-4.508,3.803-6.757,8.557
+		c-2.718,5.8-8.233,8.917-19.701,11.122c-5.27,1.078-8.904,3.294-10.804,6.586c-2.765,4.791-1.259,10.811,0.115,14.925
+		c2.03,6.048,0.765,9.876-1.535,16.826c-0.53,1.604-1.131,3.42-1.74,5.423c-0.959,3.161-0.613,6.035,1.026,8.542
+		c4.331,6.621,16.969,8.956,29.979,10.492c7.768,0.922,16.27,4.029,24.493,7.035c8.057,2.944,16.388,5.989,23.961,6.913
+		c1.151,0.145,2.291,0.218,3.39,0.218c11.434,0,16.6-7.587,18.238-10.704c4.107-0.838,18.272-3.522,32.871-3.882
+		c14.576-0.416,28.679,2.462,32.674,3.357c1.256,2.404,4.567,7.895,9.845,10.724c2.901,1.586,6.938,2.495,11.073,2.495
+		c0.001,0,0,0,0.001,0c4.416,0,12.817-1.044,19.466-8.039c6.632-7.028,23.202-16,35.302-22.551c2.7-1.462,5.226-2.83,7.441-4.065
+		c6.797-3.768,10.506-9.152,10.175-14.771C282.445,250.905,279.356,246.811,274.659,244.888z M124.189,243.535
+		c-0.846-5.96-8.513-11.871-17.392-18.715c-7.26-5.597-15.489-11.94-17.756-17.312c-4.685-11.082-0.992-30.568,5.447-40.602
+		c3.182-5.024,5.781-12.643,8.295-20.011c2.714-7.956,5.521-16.182,8.66-19.783c4.971-5.622,9.565-16.561,10.379-25.182
+		c4.655,4.444,11.876,10.083,18.547,10.083c1.027,0,2.024-0.134,2.977-0.403c4.564-1.318,11.277-5.197,17.769-8.947
+		c5.597-3.234,12.499-7.222,15.096-7.585c4.453,6.394,30.328,63.655,32.972,82.044c2.092,14.55-0.118,26.578-1.229,31.289
+		c-0.894-0.122-1.96-0.221-3.08-0.221c-7.207,0-9.115,3.934-9.612,6.283c-1.278,6.103-1.413,25.618-1.427,30.003
+		c-2.606,3.311-15.785,18.903-34.706,21.706c-7.707,1.12-14.904,1.688-21.39,1.688c-5.544,0-9.082-0.428-10.551-0.651l-9.508-10.879
+		C121.429,254.489,125.177,250.583,124.189,243.535z M136.254,64.149c-0.297,0.128-0.589,0.265-0.876,0.411
+		c-0.029-0.644-0.096-1.297-0.199-1.952c-1.038-5.975-5-10.312-9.419-10.312c-0.327,0-0.656,0.025-1.017,0.08
+		c-2.629,0.438-4.691,2.413-5.821,5.213c0.991-6.144,4.472-10.693,8.602-10.693c4.85,0,8.947,6.536,8.947,14.272
+		C136.471,62.143,136.4,63.113,136.254,64.149z M173.94,68.756c0.444-1.414,0.684-2.944,0.684-4.532
+		c0-7.014-4.45-12.509-10.131-12.509c-5.552,0-10.069,5.611-10.069,12.509c0,0.47,0.023,0.941,0.067,1.411
+		c-0.294-0.113-0.581-0.223-0.861-0.329c-0.639-1.935-0.962-3.954-0.962-6.015c0-8.387,5.36-15.211,11.95-15.211
+		c6.589,0,11.95,6.824,11.95,15.211C176.568,62.78,175.605,66.11,173.94,68.756z M169.081,85.08
+		c-0.095,0.424-0.297,0.612-2.531,1.774c-1.128,0.587-2.532,1.318-4.289,2.388l-1.174,0.711c-4.718,2.86-15.765,9.559-18.764,9.952
+		c-2.037,0.274-3.297-0.516-6.13-2.441c-0.639-0.435-1.319-0.897-2.044-1.362c-5.107-3.351-8.392-7.042-8.763-8.485
+		c1.665-1.287,5.792-4.508,7.905-6.415c4.289-3.988,8.605-6.668,10.741-6.668c0.113,0,0.215,0.008,0.321,0.028
+		c2.51,0.443,8.701,2.914,13.223,4.718c2.09,0.834,3.895,1.554,5.165,2.01C166.742,82.664,168.828,84.422,169.081,85.08z
+		 M205.028,271.45c2.257-10.181,4.857-24.031,4.436-32.196c-0.097-1.855-0.261-3.874-0.42-5.826
+		c-0.297-3.65-0.738-9.075-0.283-10.684c0.09-0.042,0.19-0.078,0.301-0.109c0.019,4.668,1.033,13.979,8.479,17.226
+		c2.219,0.968,4.755,1.458,7.537,1.458c7.459,0,15.735-3.659,19.125-7.049c1.996-1.996,3.675-4.438,4.851-6.372
+		c0.257,0.753,0.415,1.737,0.332,3.005c-0.443,6.885,2.903,16.019,9.271,19.385l0.927,0.487c2.268,1.19,8.292,4.353,8.389,5.853
+		c-0.001,0.001-0.051,0.177-0.387,0.489c-1.509,1.379-6.82,4.091-11.956,6.714c-9.111,4.652-19.438,9.925-24.076,14.803
+		c-6.53,6.872-13.916,11.488-18.376,11.488c-0.537,0-1.026-0.068-1.461-0.206C206.873,288.406,202.886,281.417,205.028,271.45z
+		 M39.917,245.477c-0.494-2.312-0.884-4.137-0.465-5.905c0.304-1.31,6.771-2.714,9.533-3.313c3.883-0.843,7.899-1.714,10.525-3.308
+		c3.551-2.151,5.474-6.118,7.17-9.618c1.228-2.531,2.496-5.148,4.005-6.007c0.085-0.05,0.215-0.108,0.463-0.108
+		c2.827,0,8.759,5.943,12.177,11.262c0.867,1.341,2.473,4.028,4.331,7.139c5.557,9.298,13.166,22.033,17.14,26.301
+		c3.581,3.837,9.378,11.214,7.952,17.541c-1.044,4.909-6.602,8.901-7.913,9.784c-0.476,0.108-1.065,0.163-1.758,0.163
+		c-7.606,0-22.662-6.328-30.751-9.728l-1.197-0.503c-4.517-1.894-11.891-3.087-19.022-4.241c-5.674-0.919-13.444-2.176-14.732-3.312
+		c-1.044-1.171,0.167-4.978,1.235-8.337c0.769-2.414,1.563-4.91,1.998-7.523C41.225,251.596,40.499,248.203,39.917,245.477z" />
+    </g>
+  </svg>
+</ng-template>
+
+<ng-template #windows>
+  <!-- Uploaded to: SVG Repo, www.svgrepo.com, Generator: SVG Repo Mixer Tools -->
+  <svg class="inline-block w-8 h-8" fill="currentColor" version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg"
+    xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 305 305" xml:space="preserve">
+    <g id="XMLID_108_">
+      <path id="XMLID_109_" d="M139.999,25.775v116.724c0,1.381,1.119,2.5,2.5,2.5H302.46c1.381,0,2.5-1.119,2.5-2.5V2.5
+		c0-0.726-0.315-1.416-0.864-1.891c-0.548-0.475-1.275-0.687-1.996-0.583L142.139,23.301
+		C140.91,23.48,139.999,24.534,139.999,25.775z" />
+      <path id="XMLID_110_" d="M122.501,279.948c0.601,0,1.186-0.216,1.644-0.616c0.544-0.475,0.856-1.162,0.856-1.884V162.5
+		c0-1.381-1.119-2.5-2.5-2.5H2.592c-0.663,0-1.299,0.263-1.768,0.732c-0.469,0.469-0.732,1.105-0.732,1.768l0.006,98.515
+		c0,1.25,0.923,2.307,2.16,2.477l119.903,16.434C122.274,279.94,122.388,279.948,122.501,279.948z" />
+      <path id="XMLID_138_" d="M2.609,144.999h119.892c1.381,0,2.5-1.119,2.5-2.5V28.681c0-0.722-0.312-1.408-0.855-1.883
+		c-0.543-0.475-1.261-0.693-1.981-0.594L2.164,42.5C0.923,42.669-0.001,43.728,0,44.98l0.109,97.521
+		C0.111,143.881,1.23,144.999,2.609,144.999z" />
+      <path id="XMLID_169_" d="M302.46,305c0.599,0,1.182-0.215,1.64-0.613c0.546-0.475,0.86-1.163,0.86-1.887l0.04-140
+		c0-0.663-0.263-1.299-0.732-1.768c-0.469-0.469-1.105-0.732-1.768-0.732H142.499c-1.381,0-2.5,1.119-2.5,2.5v117.496
+		c0,1.246,0.918,2.302,2.151,2.476l159.961,22.504C302.228,304.992,302.344,305,302.46,305z" />
+    </g>
+  </svg>
+</ng-template>
+
+<ng-template #securityKey>
+  <svg fill="currentColor" class="inline-block w-8 h-8" version="1.1" id="Icons" xmlns="http://www.w3.org/2000/svg"
+    xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 32 32" xml:space="preserve">
+    <path d="M20,3c-5,0-9,4-9,9c0,0.8,0.1,1.5,0.3,2.3l-8,8C3.1,22.5,3,22.7,3,23v5c0,0.6,0.4,1,1,1h5c0.6,0,1-0.4,1-1v-2h1
+	c0.6,0,1-0.4,1-1v-1h1c0.6,0,1-0.4,1-1v-1h2c0.3,0,0.5-0.1,0.7-0.3l1-1c0.8,0.2,1.5,0.3,2.3,0.3c5,0,9-4,9-9S25,3,20,3z M21,14
+	c-1.7,0-3-1.3-3-3s1.3-3,3-3s3,1.3,3,3S22.7,14,21,14z" />
+  </svg>
+</ng-template>

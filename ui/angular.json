@@ -13,7 +13,7 @@
         "build": {
           "builder": "@angular-devkit/build-angular:browser",
           "options": {
-            "outputPath": "dist/ui",
+            "outputPath": "../cmds/userd/static/ui",
             "index": "src/index.html",
             "main": "src/main.ts",
             "polyfills": [
@@ -25,9 +25,13 @@
               "src/assets"
             ],
             "styles": [
-              "src/styles.css"
+              "src/styles.css",
+              "node_modules/cropperjs/dist/cropper.min.css"
             ],
-            "scripts": []
+            "scripts": [
+              "node_modules/cropperjs/dist/cropper.min.js",
+              "node_modules/blueimp-load-image/js/load-image.all.min.js"
+            ]
           },
           "configurations": {
             "production": {

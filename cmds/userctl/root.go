@@ -1,19 +1,25 @@
 package main
 
 import (
+	"crypto/tls"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/bufbuild/connect-go"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
 var (
-	httpClient connect.HTTPClient = http.DefaultClient
-	baseURL    string
-	tokenPath  string
+	httpClient         connect.HTTPClient = http.DefaultClient
+	baseURL            string
+	defaultTransport   http.RoundTripper
+	tokenPath          string
+	insecureSkipVerify bool
 )
 
 func getRootCommand() *cobra.Command {
@@ -30,9 +36,29 @@ func getRootCommand() *cobra.Command {
 
 			// if we have an access token we wrap the default transport
 			// in a custom round-tripper that adds the authentication header
-			var rt http.RoundTripper = http.DefaultTransport
+			defaultTransport = &http.Transport{
+				Proxy: http.ProxyFromEnvironment,
+				DialContext: (&net.Dialer{
+					Timeout:   30 * time.Second,
+					KeepAlive: 30 * time.Second,
+				}).DialContext,
+				ForceAttemptHTTP2:     true,
+				MaxIdleConns:          100,
+				IdleConnTimeout:       90 * time.Second,
+				TLSHandshakeTimeout:   10 * time.Second,
+				ExpectContinueTimeout: 1 * time.Second,
+				TLSClientConfig: &tls.Config{
+					InsecureSkipVerify: insecureSkipVerify,
+				},
+			}
+
+			if insecureSkipVerify {
+				logrus.Warn("TLS certificate validation is disabled")
+			}
+
+			var rt = defaultTransport
 			if len(content) > 0 {
-				rt = &addHeaderRT{RoundTripper: rt, token: string(content)}
+				rt = &addHeaderRT{RoundTripper: defaultTransport, token: string(content)}
 			}
 
 			httpClient = &http.Client{
@@ -52,12 +78,14 @@ func getRootCommand() *cobra.Command {
 
 		flags.StringVarP(&baseURL, "url", "U", os.Getenv("CIS_IDM_URL"), "The Base URL for the cis-idm server")
 		flags.StringVarP(&tokenPath, "token-file", "t", defaultTokenPath, "The path to the cached access token")
+		flags.BoolVar(&insecureSkipVerify, "insecure", false, "Do not validate TLS certificates")
 	}
 
 	cmd.AddCommand(
 		getLoginCommand(),
 		getProfileCommand(),
 		getUsersCommand(),
+		getRegisterUserCommand(),
 	)
 
 	return cmd

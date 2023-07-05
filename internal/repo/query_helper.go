@@ -27,9 +27,19 @@ func Query[T any](ctx context.Context, stmt stmts.Statement[T], conn *gorqlite.C
 		return nil, err
 	}
 
-	typeOf := reflect.TypeOf(stmt.Result)
-	results := make([]T, 0, queryResult.NumRows())
+	if os.Getenv("DEBUG") != "" {
+		middleware.L(ctx).
+			Infof(pStmt.Query)
+	}
 
+	typeOf := reflect.TypeOf(stmt.Result)
+
+	// if T is nil than that statement is not expected to return data
+	if typeOf == nil {
+		return nil, nil
+	}
+
+	results := make([]T, 0, queryResult.NumRows())
 	for queryResult.Next() {
 		m, err := queryResult.Map()
 		if err != nil {
@@ -38,12 +48,12 @@ func Query[T any](ctx context.Context, stmt stmts.Statement[T], conn *gorqlite.C
 
 		if os.Getenv("DEBUG") != "" {
 			middleware.L(ctx).
-				WithField("query", pStmt.Query).
 				WithField("response", m).
-				Infof("DEBUG: got for query")
+				Infof("DEBUG: response")
 		}
 
-		obj := reflect.New(typeOf).Interface().(*T)
+		newObj := reflect.New(typeOf)
+		obj := newObj.Interface().(*T)
 		if err := mapstructure.WeakDecode(m, obj); err != nil {
 			return results, err
 		}

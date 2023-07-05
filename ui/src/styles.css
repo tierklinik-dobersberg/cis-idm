@@ -14,7 +14,7 @@ body {
 }
 
 a {
-    @apply dark:text-blue-400 text-blue-500 font-normal tracking-wide hover:text-blue-300 focus:text-blue-300 outline-none;
+    @apply dark:text-blue-400 text-blue-500 font-normal tracking-wide hover:text-blue-300 focus:text-blue-300 outline-none cursor-pointer;
 }
 
 #content > * {
@@ -82,7 +82,7 @@ a {
     }
 
     .tkd-base-btn {
-        @apply px-2 py-1.5 text-sm font-semibold rounded-md border outline-none focus:ring-1;
+        @apply px-2 py-1.5 text-sm font-semibold rounded-md border outline-none focus:ring-1 text-center block;
         @apply disabled:cursor-not-allowed disabled:opacity-50 ;
     }
 

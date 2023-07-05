@@ -6,11 +6,12 @@ import { AppComponent } from './app.component';
 import { AUTH_SERVICE, SELF_SERVICE, TRANSPORT, authServiceFactory, selfServiceFactory, transportFactory } from './clients';
 
 import { HttpClient, HttpClientModule } from '@angular/common/http';
+import { ActivatedRoute } from '@angular/router';
 import { map } from 'rxjs';
 import { ConfigService, RemoteConfig } from './config.service';
 
 const loadConfigFactory = (client: HttpClient) => {
-  return () => client.get<RemoteConfig>(`http://localhost:8080/config.json`)
+  return () => client.get<RemoteConfig>(`/config.json`)
     .pipe(
       map(response => {
         ConfigService.Config = response;
@@ -38,6 +39,7 @@ const loadConfigFactory = (client: HttpClient) => {
     {
       provide: TRANSPORT,
       useFactory: transportFactory,
+      deps: [ActivatedRoute]
     },
     {
       provide: AUTH_SERVICE,

@@ -1,10 +1,13 @@
 <ng-container *ngIf="(profile | async) as profile">
   <div class="tkd-card">
-    <header>
-      <h3>Willkommen zurück!</h3>
-      <h1>
-        Hallo <span class="font-medium">{{ profile.user?.displayName || profile.user?.username }}</span>
-      </h1>
+    <header class="flex !flex-row !justify-start items-center">
+      <div class="flex flex-col justify-center flex-grow gap-2">
+        <h3>Willkommen zurück!</h3>
+        <h1>
+          Hallo <span class="font-medium">{{ profile.user?.displayName || profile.user?.username }}</span>
+        </h1>
+      </div>
+      <img routerLink="./edit-avatar" class="w-12 h-12 rounded-full shadow cursor-pointer" [attr.src]="profile.user?.avatar">
     </header>
 
     <content>
@@ -67,8 +70,8 @@
           <button routerLink="./change-password" type="button" class="self-stretch flex-1 flex-grow tkd-btn-outline">
             Passwort ändern
           </button>
-          <button routerLink="./change-password" type="button" class="self-stretch flex-1 flex-grow tkd-btn-outline">
-            Zwei-Faktor Authentifizierung aktivieren
+          <button routerLink="./manage-mfa" type="button" class="self-stretch flex-1 flex-grow tkd-btn-outline">
+            Sicherheits & Login-Methoden
           </button>
         </div>
       </section>
@@ -85,7 +88,7 @@
   <div class="tkd-card" *ngIf="config.features.addresses">
     <header>
       <h3>Wo wohnst oder arbeitest du?</h3>
-      <h1>Addressen</h1>
+      <h1>Adressen</h1>
     </header>
     <content>
       <section>

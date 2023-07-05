@@ -4,13 +4,15 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
-    "build": "ng build",
+    "build": "ng build --configuration development",
+    "build:prod": "ng build --configuration production",
     "watch": "ng build --watch --configuration development",
     "test": "ng test"
   },
   "private": true,
   "dependencies": {
     "@angular/animations": "^16.0.0",
+    "@angular/cdk": "^16.1.2",
     "@angular/common": "^16.0.0",
     "@angular/compiler": "^16.0.0",
     "@angular/core": "^16.0.0",
@@ -20,8 +22,10 @@
     "@angular/router": "^16.0.0",
     "@bufbuild/connect": "^0.9.1",
     "@bufbuild/connect-web": "^0.9.1",
-    "@tkd/apis": "*",
+    "@simplewebauthn/browser": "^7.2.0",
+    "blueimp-load-image": "^5.16.0",
     "countries-list": "^2.6.1",
+    "cropperjs": "^1.5.13",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
     "zone.js": "~0.13.0"
@@ -30,6 +34,7 @@
     "@angular-devkit/build-angular": "^16.0.5",
     "@angular/cli": "~16.0.5",
     "@angular/compiler-cli": "^16.0.0",
+    "@simplewebauthn/typescript-types": "^7.0.0",
     "@types/jasmine": "~4.3.0",
     "autoprefixer": "^10.4.14",
     "jasmine-core": "~4.6.0",

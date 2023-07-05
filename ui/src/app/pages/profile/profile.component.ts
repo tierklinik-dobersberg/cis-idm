@@ -36,7 +36,11 @@ export class ProfileComponent {
       // trigger a "reloading" of the profile.
       await this.profileService.loadProfile();
 
-      this.router.navigate(["/login"])
+      this.router.navigate(["/login"], {
+        queryParams: {
+          'logout': '1'
+        }
+      })
     } catch(err) {
       console.error(err);
     }

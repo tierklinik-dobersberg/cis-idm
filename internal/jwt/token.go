@@ -20,6 +20,10 @@ const (
 
 	// ScopeRefresh is required to receive a new access token.
 	ScopeRefresh = "refresh"
+
+	// Scope2FAPending is used for JWTs that are issued during the login
+	// process when the second authentication factor is still pending.
+	Scope2FAPending = "2fa-pending"
 )
 
 var supportedMethods = map[string]struct{}{
@@ -38,6 +42,7 @@ type Authorization struct {
 // JWT tokens issued by cisd.
 type AppMetadata struct {
 	TokenVersion  string         `json:"token_version" xml:"token_version" yaml:"token_version"`
+	ParentTokenID string         `json:"parent_token" xml:"parent_token" yaml:"parent_token"`
 	Authorization *Authorization `json:"authorization,omitempty" xml:"authorization" yaml:"authorization,omitempty"`
 }
 
