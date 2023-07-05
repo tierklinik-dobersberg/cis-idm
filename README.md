@@ -6,7 +6,7 @@ Please note that cisidm is being actively developed and is not yet complete or r
 
 ## Features
 
-- Protobuf defined API using [Connect](https://buf.build/blog/connect-a-better-grpc) for interoperability with browsers and gRPC.
+- [Protobuf defined API](https://github.com/tierklinik-dobersberg/apis) using [Connect](https://buf.build/blog/connect-a-better-grpc) for interoperability with browsers and gRPC.
 - Support for **2FA using TOTP** with **Recovery Codes**
 - Support for **WebAuthN** and **Passkeys**
 - A public listener (which requires authentication)
@@ -31,10 +31,12 @@ Please note that cisidm is being actively developed and is not yet complete or r
 The following features are on our roadmap and will be finished before cisidm
 will be released as a v1:
 
-- A role based authentication system (`in-development`)
-- Change privacy settings (`in-development`)
-- Verification of phone numbers is `in-development` (will use Twilio)
-- Verification of E-Mail addresses is `in-development`
+- Support to send Mails (required by items below)
+- Support to send SMS via Twilio (required by items below)
+- A role based authentication system
+- Change privacy settings
+- Verification of phone numbers
+- Verification of E-Mail addresses
 - 2FA authentication using SMS
 - 2FA authentication using E-Mail
 - E-Mail magic-link authentication
