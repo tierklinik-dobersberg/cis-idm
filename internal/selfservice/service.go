@@ -17,11 +17,10 @@ import (
 	"github.com/pquerna/otp/totp"
 	idmv1 "github.com/tierklinik-dobersberg/apis/gen/go/tkd/idm/v1"
 	"github.com/tierklinik-dobersberg/apis/gen/go/tkd/idm/v1/idmv1connect"
-	"github.com/tierklinik-dobersberg/cis-idm/internal/common"
+	"github.com/tierklinik-dobersberg/cis-idm/internal/app"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/config"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/conv"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/middleware"
-	"github.com/tierklinik-dobersberg/cis-idm/internal/repo"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/repo/models"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/repo/stmts"
 	"github.com/vincent-petithory/dataurl"
@@ -31,20 +30,13 @@ import (
 type Service struct {
 	idmv1connect.UnimplementedSelfServiceServiceHandler
 
-	cfg  config.Config
-	repo *repo.Repo
-
-	common *common.Service
+	*app.Providers
 }
 
-func NewService(cfg config.Config, repo *repo.Repo, common *common.Service) (*Service, error) {
-	svc := &Service{
-		repo:   repo,
-		cfg:    cfg,
-		common: common,
+func NewService(provider *app.Providers) *Service {
+	return &Service{
+		Providers: provider,
 	}
-
-	return svc, nil
 }
 
 func (svc *Service) UpdateProfile(ctx context.Context, req *connect.Request[idmv1.UpdateProfileRequest]) (*connect.Response[idmv1.UpdateProfileResponse], error) {
@@ -53,7 +45,7 @@ func (svc *Service) UpdateProfile(ctx context.Context, req *connect.Request[idmv
 		return nil, fmt.Errorf("no claims associated with request context")
 	}
 
-	user, err := svc.repo.GetUserByID(ctx, claims.Subject)
+	user, err := svc.Datastore.GetUserByID(ctx, claims.Subject)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user object: %w", err)
 	}
@@ -67,7 +59,7 @@ func (svc *Service) UpdateProfile(ctx context.Context, req *connect.Request[idmv
 	for _, p := range paths {
 		switch p {
 		case "username":
-			if !svc.cfg.FeatureEnabled(config.FeatureAllowUsernameChange) {
+			if !svc.Config.FeatureEnabled(config.FeatureAllowUsernameChange) {
 				return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("username changes are not allowed"))
 			}
 
@@ -98,7 +90,7 @@ func (svc *Service) UpdateProfile(ctx context.Context, req *connect.Request[idmv
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 
-	if err := svc.repo.UpdateUser(ctx, user); err != nil {
+	if err := svc.Datastore.UpdateUser(ctx, user); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to update user: %w", err))
 	}
 
@@ -114,7 +106,7 @@ func (svc *Service) ChangePassword(ctx context.Context, req *connect.Request[idm
 		return nil, fmt.Errorf("no claims associated with request context")
 	}
 
-	user, err := svc.repo.GetUserByID(ctx, claims.Subject)
+	user, err := svc.Datastore.GetUserByID(ctx, claims.Subject)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user object: %w", err)
 	}
@@ -128,7 +120,7 @@ func (svc *Service) ChangePassword(ctx context.Context, req *connect.Request[idm
 		return nil, fmt.Errorf("failed to generate password hash: %w", err)
 	}
 
-	if err := svc.repo.SetUserPassword(ctx, claims.Subject, string(newHashedPassword)); err != nil {
+	if err := svc.Datastore.SetUserPassword(ctx, claims.Subject, string(newHashedPassword)); err != nil {
 		return nil, fmt.Errorf("failed to save user password: %w", err)
 	}
 
@@ -141,7 +133,7 @@ func (svc *Service) AddEmailAddress(ctx context.Context, req *connect.Request[id
 		return nil, fmt.Errorf("no token claims associated with request context")
 	}
 
-	mails, err := svc.common.AddEmailAddressToUser(ctx, models.EMail{
+	mails, err := svc.Common.AddEmailAddressToUser(ctx, models.EMail{
 		UserID:  claims.Subject,
 		Address: req.Msg.Email,
 	})
@@ -162,7 +154,7 @@ func (svc *Service) DeleteEmailAddress(ctx context.Context, req *connect.Request
 		return nil, fmt.Errorf("no token claims associated with request context")
 	}
 
-	mails, err := svc.common.DeleteEmailAddressFromUser(ctx, claims.Subject, req.Msg.Id)
+	mails, err := svc.Common.DeleteEmailAddressFromUser(ctx, claims.Subject, req.Msg.Id)
 	if err != nil {
 		return nil, err
 	}
@@ -180,7 +172,7 @@ func (svc *Service) MarkEmailAsPrimary(ctx context.Context, req *connect.Request
 		return nil, fmt.Errorf("no token claims associated with request context")
 	}
 
-	if err := svc.common.MarkEmailAsPrimary(ctx, claims.Subject, req.Msg.Id); err != nil {
+	if err := svc.Common.MarkEmailAsPrimary(ctx, claims.Subject, req.Msg.Id); err != nil {
 		return nil, err
 	}
 
@@ -193,7 +185,7 @@ func (svc *Service) AddAddress(ctx context.Context, req *connect.Request[idmv1.A
 		return nil, fmt.Errorf("no token claims associated with request context")
 	}
 
-	addresses, err := svc.common.AddUserAddress(ctx, models.Address{
+	addresses, err := svc.Common.AddUserAddress(ctx, models.Address{
 		UserID:   claims.Subject,
 		CityCode: req.Msg.CityCode,
 		CityName: req.Msg.CityName,
@@ -215,7 +207,7 @@ func (svc *Service) DeleteAddress(ctx context.Context, req *connect.Request[idmv
 		return nil, fmt.Errorf("no token claims associated with request context")
 	}
 
-	addresses, err := svc.common.DeleteUserAddress(ctx, claims.Subject, req.Msg.Id)
+	addresses, err := svc.Common.DeleteUserAddress(ctx, claims.Subject, req.Msg.Id)
 	if err != nil {
 		return nil, err
 	}
@@ -231,7 +223,7 @@ func (svc *Service) UpdateAddress(ctx context.Context, req *connect.Request[idmv
 		return nil, fmt.Errorf("no token claims associated with request context")
 	}
 
-	addrs, err := svc.common.UpdateUserAddress(ctx, models.Address{
+	addrs, err := svc.Common.UpdateUserAddress(ctx, models.Address{
 		CityCode: req.Msg.CityCode,
 		CityName: req.Msg.CityName,
 		Street:   req.Msg.Street,
@@ -249,7 +241,7 @@ func (svc *Service) UpdateAddress(ctx context.Context, req *connect.Request[idmv
 }
 
 func (svc *Service) AddPhoneNumber(ctx context.Context, req *connect.Request[idmv1.AddPhoneNumberRequest]) (*connect.Response[idmv1.AddPhoneNumberResponse], error) {
-	if !svc.cfg.FeatureEnabled(config.FeaturePhoneNumbers) {
+	if !svc.Config.FeatureEnabled(config.FeaturePhoneNumbers) {
 		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("phone-numbers: %w", config.ErrFeatureDisabled))
 	}
 
@@ -265,7 +257,7 @@ func (svc *Service) AddPhoneNumber(ctx context.Context, req *connect.Request[idm
 		Primary:     false,
 	}
 
-	m, err := svc.repo.AddUserPhoneNumber(ctx, m)
+	m, err := svc.Datastore.AddUserPhoneNumber(ctx, m)
 	if err != nil {
 		return nil, err
 	}
@@ -276,7 +268,7 @@ func (svc *Service) AddPhoneNumber(ctx context.Context, req *connect.Request[idm
 }
 
 func (svc *Service) DeletePhoneNumber(ctx context.Context, req *connect.Request[idmv1.DeletePhoneNumberRequest]) (*connect.Response[idmv1.DeletePhoneNumberResponse], error) {
-	if !svc.cfg.FeatureEnabled(config.FeaturePhoneNumbers) {
+	if !svc.Config.FeatureEnabled(config.FeaturePhoneNumbers) {
 		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("phone-numbers: %w", config.ErrFeatureDisabled))
 	}
 
@@ -285,7 +277,7 @@ func (svc *Service) DeletePhoneNumber(ctx context.Context, req *connect.Request[
 		return nil, fmt.Errorf("no token claims associated with request context")
 	}
 
-	if err := svc.repo.DeleteUserPhoneNumber(ctx, claims.Subject, req.Msg.Id); err != nil {
+	if err := svc.Datastore.DeleteUserPhoneNumber(ctx, claims.Subject, req.Msg.Id); err != nil {
 		return nil, err
 	}
 
@@ -293,7 +285,7 @@ func (svc *Service) DeletePhoneNumber(ctx context.Context, req *connect.Request[
 }
 
 func (svc *Service) MarkPhoneNumberAsPrimary(ctx context.Context, req *connect.Request[idmv1.MarkPhoneNumberAsPrimaryRequest]) (*connect.Response[idmv1.MarkPhoneNumberAsPrimaryResponse], error) {
-	if !svc.cfg.FeatureEnabled(config.FeaturePhoneNumbers) {
+	if !svc.Config.FeatureEnabled(config.FeaturePhoneNumbers) {
 		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("phone-numbers: %w", config.ErrFeatureDisabled))
 	}
 
@@ -302,7 +294,7 @@ func (svc *Service) MarkPhoneNumberAsPrimary(ctx context.Context, req *connect.R
 		return nil, fmt.Errorf("no token claims associated with request context")
 	}
 
-	if err := svc.repo.MarkPhoneNumberAsPrimary(ctx, claims.Subject, req.Msg.Id); err != nil {
+	if err := svc.Datastore.MarkPhoneNumberAsPrimary(ctx, claims.Subject, req.Msg.Id); err != nil {
 		return nil, err
 	}
 
@@ -315,7 +307,7 @@ func (svc *Service) Enroll2FA(ctx context.Context, req *connect.Request[idmv1.En
 		return nil, fmt.Errorf("no token claims associated with request context")
 	}
 
-	user, err := svc.repo.GetUserByID(ctx, claims.Subject)
+	user, err := svc.Datastore.GetUserByID(ctx, claims.Subject)
 	if err != nil {
 		return nil, err
 	}
@@ -332,14 +324,14 @@ func (svc *Service) Enroll2FA(ctx context.Context, req *connect.Request[idmv1.En
 		}
 
 		key, err := totp.Generate(totp.GenerateOpts{
-			Issuer:      svc.cfg.SiteName,
+			Issuer:      svc.Config.SiteName,
 			AccountName: displayName,
 		})
 		if err != nil {
 			return nil, err
 		}
 
-		mac := hmac.New(sha256.New, []byte(svc.cfg.JWTSecret))
+		mac := hmac.New(sha256.New, []byte(svc.Config.JWTSecret))
 
 		macString := mac.Sum([]byte(key.Secret()))
 		macStringHex := hex.EncodeToString(macString)
@@ -373,7 +365,7 @@ func (svc *Service) Enroll2FA(ctx context.Context, req *connect.Request[idmv1.En
 		}
 
 		// verify that the secret sent in the request was generated by us
-		mac := hmac.New(sha256.New, []byte(svc.cfg.JWTSecret))
+		mac := hmac.New(sha256.New, []byte(svc.Config.JWTSecret))
 		macString := mac.Sum([]byte(v.TotpStep2.Secret))
 		macStringHex := hex.EncodeToString(macString)
 		if macStringHex != v.TotpStep2.SecretHmac {
@@ -386,7 +378,7 @@ func (svc *Service) Enroll2FA(ctx context.Context, req *connect.Request[idmv1.En
 			return nil, fmt.Errorf("invalid passcode")
 		}
 
-		if err := svc.repo.SetUserTotpSecret(ctx, claims.Subject, v.TotpStep2.Secret); err != nil {
+		if err := svc.Datastore.SetUserTotpSecret(ctx, claims.Subject, v.TotpStep2.Secret); err != nil {
 			return nil, err
 		}
 
@@ -405,7 +397,7 @@ func (svc *Service) Remove2FA(ctx context.Context, req *connect.Request[idmv1.Re
 		return nil, fmt.Errorf("no token claims associated with request context")
 	}
 
-	user, err := svc.repo.GetUserByID(ctx, claims.Subject)
+	user, err := svc.Datastore.GetUserByID(ctx, claims.Subject)
 	if err != nil {
 		return nil, err
 	}
@@ -419,7 +411,7 @@ func (svc *Service) Remove2FA(ctx context.Context, req *connect.Request[idmv1.Re
 		valid := totp.Validate(v.TotpCode, user.TOTPSecret)
 		if !valid {
 			// check if the user used a recovery code
-			recoveryCodeErr := svc.repo.CheckAndDeleteRecoveryCode(ctx, user.ID, v.TotpCode)
+			recoveryCodeErr := svc.Datastore.CheckAndDeleteRecoveryCode(ctx, user.ID, v.TotpCode)
 			if recoveryCodeErr != nil {
 				if errors.Is(recoveryCodeErr, stmts.ErrNoRowsAffected) {
 					return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("totp passcode invalid"))
@@ -429,7 +421,7 @@ func (svc *Service) Remove2FA(ctx context.Context, req *connect.Request[idmv1.Re
 			}
 		}
 
-		if err := svc.repo.RemoveUserTotpSecret(ctx, claims.Subject); err != nil {
+		if err := svc.Datastore.RemoveUserTotpSecret(ctx, claims.Subject); err != nil {
 			return nil, err
 		}
 
@@ -454,7 +446,7 @@ func (svc *Service) GenerateRecoveryCodes(ctx context.Context, req *connect.Requ
 		codes[i] = fmt.Sprintf("%d", rand.Intn(999999-100000)+100000)
 	}
 
-	if err := svc.repo.ReplaceUserRecoveryCodes(ctx, claims.Subject, codes); err != nil {
+	if err := svc.Datastore.ReplaceUserRecoveryCodes(ctx, claims.Subject, codes); err != nil {
 		return nil, err
 	}
 
@@ -469,7 +461,7 @@ func (svc *Service) GetRegisteredPasskeys(ctx context.Context, req *connect.Requ
 		return nil, fmt.Errorf("no token claims associated with request context")
 	}
 
-	creds, err := svc.repo.GetPasskeys(ctx, claims.Subject)
+	creds, err := svc.Datastore.GetPasskeys(ctx, claims.Subject)
 	if err != nil {
 		return nil, err
 	}
@@ -497,7 +489,7 @@ func (svc *Service) RemovePasskey(ctx context.Context, req *connect.Request[idmv
 		return nil, fmt.Errorf("no token claims associated with request context")
 	}
 
-	if err := svc.repo.RemoveWebauthnCred(ctx, claims.Subject, req.Msg.Id); err != nil {
+	if err := svc.Datastore.RemoveWebauthnCred(ctx, claims.Subject, req.Msg.Id); err != nil {
 		if errors.Is(err, stmts.ErrNoRowsAffected) {
 			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("passkey not found"))
 		}

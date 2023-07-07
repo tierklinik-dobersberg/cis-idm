@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"os"
 
 	"github.com/sirupsen/logrus"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/bootstrap"
@@ -14,7 +15,7 @@ func main() {
 	defer cancel()
 
 	// get configuration from environment
-	cfg, err := config.FromEnvironment(ctx)
+	cfg, err := config.FromEnvironment(ctx, os.Args[1])
 	if err != nil {
 		logrus.Fatalf("failed to parse config from environment: %s", err)
 	}

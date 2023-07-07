@@ -10,13 +10,12 @@ import (
 
 	gojwt "github.com/dgrijalva/jwt-go"
 	"github.com/sirupsen/logrus"
-	"github.com/tierklinik-dobersberg/cis-idm/internal/config"
+	"github.com/tierklinik-dobersberg/cis-idm/internal/app"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/jwt"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/middleware"
-	"github.com/tierklinik-dobersberg/cis-idm/internal/repo"
 )
 
-func NewForwardAuthHandler(cfg config.Config, repo *repo.Repo) http.Handler {
+func NewForwardAuthHandler(providers *app.Providers) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 
@@ -38,7 +37,7 @@ func NewForwardAuthHandler(cfg config.Config, repo *repo.Repo) http.Handler {
 		// parse and verify the token here so we can react to token-expired errors.
 		var tokenErr error
 		if token != "" {
-			_, tokenErr = jwt.ParseAndVerify([]byte(cfg.JWTSecret), token)
+			_, tokenErr = jwt.ParseAndVerify([]byte(providers.Config.JWTSecret), token)
 		}
 
 		l.WithField("has_token", token != "").
@@ -47,13 +46,13 @@ func NewForwardAuthHandler(cfg config.Config, repo *repo.Repo) http.Handler {
 			Infof("received forward_auth request for %s", requestURL)
 
 		// check if authentication is required for this URL
-		if required, err := cfg.AuthRequiredForURL(method, requestURL); required {
+		if required, err := providers.Config.AuthRequiredForURL(method, requestURL); required {
 
 			// if there is no access token at all so redirect the user to the login
 			// screen
 			if token == "" {
-				if cfg.LoginRedirectURL != "" {
-					url := fmt.Sprintf(cfg.LoginRedirectURL, encodedRequestURL)
+				if providers.Config.LoginRedirectURL != "" {
+					url := fmt.Sprintf(providers.Config.LoginRedirectURL, encodedRequestURL)
 
 					http.Redirect(w, r, url, http.StatusFound)
 					return
@@ -63,8 +62,8 @@ func NewForwardAuthHandler(cfg config.Config, repo *repo.Repo) http.Handler {
 			// check if the token has been expired, and if, redirect the user to
 			// the RefreshRedirectURL.
 			if verr := new(gojwt.ValidationError); errors.As(tokenErr, verr) && (verr.Errors&gojwt.ValidationErrorExpired) > 0 {
-				if cfg.RefreshRedirectURL != "" {
-					url := fmt.Sprintf(cfg.RefreshRedirectURL, encodedRequestURL)
+				if providers.Config.RefreshRedirectURL != "" {
+					url := fmt.Sprintf(providers.Config.RefreshRedirectURL, encodedRequestURL)
 
 					http.Redirect(w, r, url, http.StatusFound)
 
@@ -107,7 +106,7 @@ func NewForwardAuthHandler(cfg config.Config, repo *repo.Repo) http.Handler {
 		// if we have valid user claims then load the user and it's primary e-mail address from
 		// the repository and add some headers for the upstream server.
 		if claims != nil {
-			user, err := repo.GetUserByID(ctx, claims.Subject)
+			user, err := providers.Datastore.GetUserByID(ctx, claims.Subject)
 			if err != nil {
 				middleware.L(ctx).Errorf("failed to find user by ID")
 
@@ -116,7 +115,7 @@ func NewForwardAuthHandler(cfg config.Config, repo *repo.Repo) http.Handler {
 				return
 			}
 
-			mail, err := repo.GetUserPrimaryMail(ctx, claims.Subject)
+			mail, err := providers.Datastore.GetUserPrimaryMail(ctx, claims.Subject)
 			if err != nil {
 				middleware.L(ctx).Errorf("failed to get primary user mail: %s", err)
 			} else {
@@ -131,7 +130,7 @@ func NewForwardAuthHandler(cfg config.Config, repo *repo.Repo) http.Handler {
 
 			w.Header().Add("X-Remote-User", displayName)
 			w.Header().Add("X-Remote-User-ID", user.ID)
-			w.Header().Add("X-Remote-Avatar-URL", fmt.Sprintf("%s/avatar/%s", cfg.PublicURL, user.ID))
+			w.Header().Add("X-Remote-Avatar-URL", fmt.Sprintf("%s/avatar/%s", providers.Config.PublicURL, user.ID))
 		}
 
 		middleware.L(ctx).WithFields(logrus.Fields{

@@ -9,9 +9,9 @@ import (
 	"github.com/mennanov/fmutils"
 	idmv1 "github.com/tierklinik-dobersberg/apis/gen/go/tkd/idm/v1"
 	"github.com/tierklinik-dobersberg/apis/gen/go/tkd/idm/v1/idmv1connect"
+	"github.com/tierklinik-dobersberg/cis-idm/internal/app"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/conv"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/middleware"
-	"github.com/tierklinik-dobersberg/cis-idm/internal/repo"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/repo/models"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -19,36 +19,36 @@ import (
 type Service struct {
 	idmv1connect.UnimplementedUserServiceHandler
 
-	repo *repo.Repo
+	*app.Providers
 }
 
-func NewService(repo *repo.Repo) (*Service, error) {
+func NewService(providers *app.Providers) (*Service, error) {
 	svc := &Service{
-		repo: repo,
+		Providers: providers,
 	}
 
 	return svc, nil
 }
 
 func (svc *Service) ListUsers(ctx context.Context, req *connect.Request[idmv1.ListUsersRequest]) (*connect.Response[idmv1.ListUsersResponse], error) {
-	users, err := svc.repo.GetUsers(ctx)
+	users, err := svc.Datastore.GetUsers(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	res := &idmv1.ListUsersResponse{}
 	for _, usr := range users {
-		addresses, err := svc.repo.GetUserAddresses(ctx, usr.ID)
+		addresses, err := svc.Datastore.GetUserAddresses(ctx, usr.ID)
 		if err != nil {
 			middleware.L(ctx).Errorf("failed to get user addresses for user %s: %s", usr.ID, err)
 		}
 
-		mails, err := svc.repo.GetUserEmails(ctx, usr.ID)
+		mails, err := svc.Datastore.GetUserEmails(ctx, usr.ID)
 		if err != nil {
 			middleware.L(ctx).Errorf("failed to get user emails for user %s: %s", usr.ID, err)
 		}
 
-		phones, err := svc.repo.GetUserPhoneNumbers(ctx, usr.ID)
+		phones, err := svc.Datastore.GetUserPhoneNumbers(ctx, usr.ID)
 		if err != nil {
 			middleware.L(ctx).Errorf("failed to get user phone numbers for user %s: %s", usr.ID, err)
 		}
@@ -72,7 +72,7 @@ func (svc *Service) ListUsers(ctx context.Context, req *connect.Request[idmv1.Li
 }
 
 func (svc *Service) GetUser(ctx context.Context, req *connect.Request[idmv1.GetUserRequest]) (*connect.Response[idmv1.GetUserResponse], error) {
-	user, err := svc.repo.GetUserByID(ctx, req.Msg.Id)
+	user, err := svc.Datastore.GetUserByID(ctx, req.Msg.Id)
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +95,7 @@ func (svc *Service) DeleteUser(ctx context.Context, req *connect.Request[idmv1.D
 	}
 
 	// actually delete the user from the repository
-	if err := svc.repo.DeleteUser(ctx, req.Msg.Id); err != nil {
+	if err := svc.Datastore.DeleteUser(ctx, req.Msg.Id); err != nil {
 		return nil, err
 	}
 
@@ -133,7 +133,7 @@ func (svc *Service) CreateUser(ctx context.Context, req *connect.Request[idmv1.C
 	}
 
 	// actually create the user.
-	userModel, err := svc.repo.CreateUser(ctx, userModel)
+	userModel, err := svc.Datastore.CreateUser(ctx, userModel)
 	if err != nil {
 		return nil, err
 	}
@@ -152,7 +152,7 @@ func (svc *Service) CreateUser(ctx context.Context, req *connect.Request[idmv1.C
 				Extra:    addr.Extra,
 			}
 
-			if addr, err := svc.repo.AddUserAddress(ctx, addrModel); err != nil {
+			if addr, err := svc.Datastore.AddUserAddress(ctx, addrModel); err != nil {
 				merr.Errors = append(merr.Errors, fmt.Errorf("failed to create user address: %w", err))
 			} else {
 				userAddresses = append(userAddresses, addr)
@@ -171,7 +171,7 @@ func (svc *Service) CreateUser(ctx context.Context, req *connect.Request[idmv1.C
 				Primary:     nbr.Primary,
 			}
 
-			if phone, err := svc.repo.AddUserPhoneNumber(ctx, nbrModel); err != nil {
+			if phone, err := svc.Datastore.AddUserPhoneNumber(ctx, nbrModel); err != nil {
 				merr.Errors = append(merr.Errors, fmt.Errorf("failed to create phone number: %w", err))
 			} else {
 				userPhoneNumbers = append(userPhoneNumbers, phone)
@@ -190,7 +190,7 @@ func (svc *Service) CreateUser(ctx context.Context, req *connect.Request[idmv1.C
 				Primary:  idx == 0,
 			}
 
-			if email, err := svc.repo.CreateUserEmail(ctx, mailModel); err != nil {
+			if email, err := svc.Datastore.CreateUserEmail(ctx, mailModel); err != nil {
 				merr.Errors = append(merr.Errors, fmt.Errorf("failed to create email record: %w", err))
 			} else {
 				userEmails = append(userEmails, email)

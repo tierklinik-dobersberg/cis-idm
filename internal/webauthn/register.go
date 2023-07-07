@@ -10,22 +10,30 @@ import (
 	"github.com/go-webauthn/webauthn/protocol"
 	"github.com/go-webauthn/webauthn/webauthn"
 	"github.com/mileusna/useragent"
+	"github.com/tierklinik-dobersberg/cis-idm/internal/app"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/auth"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/config"
-	"github.com/tierklinik-dobersberg/cis-idm/internal/jwt"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/middleware"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/repo"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/repo/models"
 )
 
-func New(cfg config.Config, authService *auth.AuthService, repo *repo.Repo) (http.Handler, error) {
+type Service struct {
+	*app.Providers
+
+	authService *auth.AuthService
+
+	web *webauthn.WebAuthn
+}
+
+func New(providers *app.Providers, authService *auth.AuthService) (http.Handler, error) {
 	mux := http.NewServeMux()
 
 	wconfig := &webauthn.Config{
-		RPDisplayName: cfg.SiteName,
-		RPID:          cfg.Domain,
+		RPDisplayName: providers.Config.SiteName,
+		RPID:          providers.Config.Domain,
 		RPOrigins: []string{
-			cfg.PublicURL,
+			providers.Config.PublicURL,
 		},
 	}
 
@@ -34,343 +42,340 @@ func New(cfg config.Config, authService *auth.AuthService, repo *repo.Repo) (htt
 		return nil, fmt.Errorf("failed to create webauthn instance: %w", err)
 	}
 
-	mux.Handle("/registration/begin", beginRegistrationHandler(cfg, authService, w, repo))
-	mux.Handle("/registration/finish", finishRegistrationHandler(cfg, w, repo))
-	mux.Handle("/login/begin/", beginLoginHandler(cfg, w, repo))
-	mux.Handle("/login/finish", finishLoginHandler(cfg, authService, w, repo))
+	instance := &Service{
+		authService: authService,
+		Providers:   providers,
+		web:         w,
+	}
+
+	mux.Handle("/registration/begin", http.HandlerFunc(instance.BeginRegistrationHandler))
+	mux.Handle("/registration/finish", http.HandlerFunc(instance.FinishRegistrationHandler))
+	mux.Handle("/login/begin/", http.HandlerFunc(instance.BeginLoginHandler))
+	mux.Handle("/login/finish", http.HandlerFunc(instance.FinishLoginHandler))
 
 	return mux, nil
 }
 
-func beginRegistrationHandler(cfg config.Config, auth *auth.AuthService, web *webauthn.WebAuthn, datastore *repo.Repo) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
-		l := middleware.L(ctx)
+func (svc *Service) BeginRegistrationHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	l := middleware.L(ctx)
 
-		l.Infof("received request to begin webauthn registration")
+	l.Infof("received request to begin webauthn registration")
 
-		var user models.User
-		claims := middleware.ClaimsFromContext(ctx)
-		if claims == nil {
-			var payload struct {
-				Username string `json:"username"`
-				Token    string `json:"token"`
-			}
-
-			dec := json.NewDecoder(r.Body)
-			if err := dec.Decode(&payload); err != nil {
-				http.Error(w, "bad request", http.StatusBadRequest)
-				return
-			}
-
-			// a user is performing an initial registration
-			userModel, err := auth.CreateUser(ctx, models.User{
-				Username: payload.Username,
-			}, payload.Token)
-			if err != nil {
-				http.Error(w, "internal server error", http.StatusInternalServerError)
-
-				return
-			}
-
-			user = *userModel
-
-		} else {
-			// an existing user is adding a new device
-			var err error
-			user, err = datastore.GetUserByID(ctx, claims.Subject)
-			if err != nil {
-				http.Error(w, "not found", http.StatusNotFound)
-
-				return
-			}
+	var user models.User
+	claims := middleware.ClaimsFromContext(ctx)
+	if claims == nil {
+		var payload struct {
+			Username string `json:"username"`
+			Token    string `json:"token"`
 		}
 
-		webauthnUser := repo.NewWebAuthnUser(
-			ctx,
-			middleware.L(ctx),
-			datastore,
-			user,
-		)
-
-		exclusions := []protocol.CredentialDescriptor{}
-		for _, cred := range webauthnUser.WebAuthnCredentials() {
-			exclusions = append(exclusions, cred.Descriptor())
+		dec := json.NewDecoder(r.Body)
+		if err := dec.Decode(&payload); err != nil {
+			http.Error(w, "bad request", http.StatusBadRequest)
+			return
 		}
 
-		options, session, err := web.BeginRegistration(webauthnUser,
-			webauthn.WithExclusions(exclusions),
-			webauthn.WithResidentKeyRequirement(protocol.ResidentKeyRequirementPreferred),
-			webauthn.WithConveyancePreference(protocol.PreferIndirectAttestation),
-		)
+		// a user is performing an initial registration
+		userModel, err := svc.authService.CreateUser(ctx, models.User{
+			Username: payload.Username,
+		}, payload.Token)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, "internal server error", http.StatusInternalServerError)
 
 			return
 		}
 
-		sessionID, err := datastore.SaveWebauthnSession(ctx, session)
+		user = *userModel
+
+	} else {
+		// an existing user is adding a new device
+		var err error
+		user, err = svc.Datastore.GetUserByID(ctx, claims.Subject)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, "not found", http.StatusNotFound)
 
 			return
 		}
+	}
 
-		http.SetCookie(w, &http.Cookie{
-			Name:     "registration_session",
-			Value:    sessionID,
-			Secure:   *cfg.SecureCookie,
-			HttpOnly: true,
-			SameSite: http.SameSiteLaxMode,
-			Path:     "/",
-		})
+	webauthnUser := repo.NewWebAuthnUser(
+		ctx,
+		middleware.L(ctx),
+		svc.Datastore,
+		user,
+	)
 
-		jsonResponse(w, options, http.StatusOK)
+	exclusions := []protocol.CredentialDescriptor{}
+	for _, cred := range webauthnUser.WebAuthnCredentials() {
+		exclusions = append(exclusions, cred.Descriptor())
+	}
+
+	options, session, err := svc.web.BeginRegistration(webauthnUser,
+		webauthn.WithExclusions(exclusions),
+		webauthn.WithResidentKeyRequirement(protocol.ResidentKeyRequirementPreferred),
+		webauthn.WithConveyancePreference(protocol.PreferIndirectAttestation),
+	)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+
+		return
+	}
+
+	sessionID, err := svc.Datastore.SaveWebauthnSession(ctx, session)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+
+		return
+	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "registration_session",
+		Value:    sessionID,
+		Secure:   *svc.Config.SecureCookie,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+		Path:     "/",
 	})
+
+	jsonResponse(w, options, http.StatusOK)
 }
 
-func finishRegistrationHandler(cfg config.Config, web *webauthn.WebAuthn, datastore *repo.Repo) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
+func (svc *Service) FinishRegistrationHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 
-		response, err := protocol.ParseCredentialCreationResponseBody(r.Body)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
+	response, err := protocol.ParseCredentialCreationResponseBody(r.Body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
-		middleware.L(ctx).Infof("%+v", response)
+	middleware.L(ctx).Infof("%+v", response)
 
-		cookie := middleware.FindCookie("registration_session", r.Header)
-		if cookie == nil {
-			http.Error(w, "cookie not found", http.StatusBadRequest)
-			return
-		}
+	cookie := middleware.FindCookie("registration_session", r.Header)
+	if cookie == nil {
+		http.Error(w, "cookie not found", http.StatusBadRequest)
+		return
+	}
 
-		session, err := datastore.GetWebauthnSession(ctx, cookie.Value)
-		if err != nil {
-			http.Error(w, "session not found: "+err.Error(), http.StatusNotFound)
+	session, err := svc.Datastore.GetWebauthnSession(ctx, cookie.Value)
+	if err != nil {
+		http.Error(w, "session not found: "+err.Error(), http.StatusNotFound)
 
-			return
-		}
+		return
+	}
 
-		user, err := datastore.GetUserByID(ctx, string(session.UserID))
-		if err != nil {
-			http.Error(w, "user not found: "+err.Error(), http.StatusNotFound)
+	user, err := svc.Datastore.GetUserByID(ctx, string(session.UserID))
+	if err != nil {
+		http.Error(w, "user not found: "+err.Error(), http.StatusNotFound)
 
-			return
-		}
+		return
+	}
 
-		webauthnUser := repo.NewWebAuthnUser(
-			ctx,
-			middleware.L(ctx),
-			datastore,
-			user,
-		)
+	webauthnUser := repo.NewWebAuthnUser(
+		ctx,
+		middleware.L(ctx),
+		svc.Datastore,
+		user,
+	)
 
-		cred, err := web.CreateCredential(webauthnUser, *session, response)
-		if err != nil {
-			http.Error(w, "failed to create credentials: "+err.Error(), http.StatusInternalServerError)
+	cred, err := svc.web.CreateCredential(webauthnUser, *session, response)
+	if err != nil {
+		http.Error(w, "failed to create credentials: "+err.Error(), http.StatusInternalServerError)
 
-			return
-		}
+		return
+	}
 
-		ua := useragent.Parse(r.UserAgent())
+	ua := useragent.Parse(r.UserAgent())
 
-		if err := datastore.AddWebauthnCred(ctx, user.ID, *cred, ua); err != nil {
-			http.Error(w, "failed to create credentials: "+err.Error(), http.StatusInternalServerError)
+	if err := svc.Datastore.AddWebauthnCred(ctx, user.ID, *cred, ua); err != nil {
+		http.Error(w, "failed to create credentials: "+err.Error(), http.StatusInternalServerError)
 
-			return
-		}
+		return
+	}
 
-		jsonResponse(w, "Success", http.StatusOK)
-	})
+	jsonResponse(w, "Success", http.StatusOK)
 }
 
-func beginLoginHandler(cfg config.Config, web *webauthn.WebAuthn, datastore *repo.Repo) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
+func (svc *Service) BeginLoginHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 
-		var (
-			options *protocol.CredentialAssertion
-			session *webauthn.SessionData
-		)
+	var (
+		options *protocol.CredentialAssertion
+		session *webauthn.SessionData
+	)
 
-		pathParts := strings.Split(r.URL.Path, "/")
-		userNameOrEmail := pathParts[len(pathParts)-1]
+	pathParts := strings.Split(r.URL.Path, "/")
+	userNameOrEmail := pathParts[len(pathParts)-1]
 
-		if userNameOrEmail != "" {
-			user, err := datastore.GetUserByName(ctx, userNameOrEmail)
-			if err != nil {
-				if cfg.FeatureEnabled(config.FeatureLoginByMail) {
-					var verified bool
-					user, verified, err = datastore.GetUserByEMail(ctx, userNameOrEmail)
+	if userNameOrEmail != "" {
+		user, err := svc.Datastore.GetUserByName(ctx, userNameOrEmail)
+		if err != nil {
+			if svc.Config.FeatureEnabled(config.FeatureLoginByMail) {
+				var verified bool
+				user, verified, err = svc.Datastore.GetUserByEMail(ctx, userNameOrEmail)
 
-					if err == nil && !verified {
-						http.Error(w, "e-mail address not verified", http.StatusPreconditionFailed)
+				if err == nil && !verified {
+					http.Error(w, "e-mail address not verified", http.StatusPreconditionFailed)
 
-						return
-					}
+					return
 				}
 			}
-
-			webauthnUser := repo.NewWebAuthnUser(
-				ctx,
-				middleware.L(ctx),
-				datastore,
-				user,
-			)
-
-			if err != nil {
-				http.Error(w, "user not found", http.StatusNotFound)
-
-				return
-			}
-
-			options, session, err = web.BeginLogin(webauthnUser)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-
-				return
-			}
-		} else {
-			var err error
-
-			options, session, err = web.BeginDiscoverableLogin()
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-
-				return
-			}
 		}
 
-		sessionID, err := datastore.SaveWebauthnSession(ctx, session)
+		webauthnUser := repo.NewWebAuthnUser(
+			ctx,
+			middleware.L(ctx),
+			svc.Datastore,
+			user,
+		)
+
+		if err != nil {
+			http.Error(w, "user not found", http.StatusNotFound)
+
+			return
+		}
+
+		options, session, err = svc.web.BeginLogin(webauthnUser)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 
 			return
 		}
+	} else {
+		var err error
 
-		http.SetCookie(w, &http.Cookie{
-			Name:     "login_session",
-			Value:    sessionID,
-			Secure:   *cfg.SecureCookie,
-			HttpOnly: true,
-			SameSite: http.SameSiteLaxMode,
-			Expires:  time.Now().Add(time.Minute * 5),
-			Path:     "/",
-		})
+		options, session, err = svc.web.BeginDiscoverableLogin()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 
-		jsonResponse(w, options, http.StatusOK)
+			return
+		}
+	}
+
+	sessionID, err := svc.Datastore.SaveWebauthnSession(ctx, session)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+
+		return
+	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "login_session",
+		Value:    sessionID,
+		Secure:   *svc.Config.SecureCookie,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+		Expires:  time.Now().Add(time.Minute * 5),
+		Path:     "/",
 	})
+
+	jsonResponse(w, options, http.StatusOK)
 }
 
-func finishLoginHandler(cfg config.Config, auth *auth.AuthService, web *webauthn.WebAuthn, datastore *repo.Repo) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
+func (svc *Service) FinishLoginHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 
-		response, err := protocol.ParseCredentialRequestResponseBody(r.Body)
+	response, err := protocol.ParseCredentialRequestResponseBody(r.Body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	requestedRedirect := r.URL.Query().Get("redirect")
+	if requestedRedirect != "" {
+		requestedRedirect, err = svc.HandleRequestedRedirect(ctx, requestedRedirect)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
+
 			return
 		}
+	}
 
-		requestedRedirect := r.URL.Query().Get("redirect")
-		if requestedRedirect != "" {
-			requestedRedirect, err = auth.HandleRequestedRedirect(ctx, requestedRedirect)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusBadRequest)
+	cookie := middleware.FindCookie("login_session", r.Header)
+	if cookie == nil {
+		http.Error(w, "cookie not found", http.StatusBadRequest)
+		return
+	}
 
-				return
-			}
-		}
+	session, err := svc.Datastore.GetWebauthnSession(ctx, cookie.Value)
+	if err != nil {
+		http.Error(w, "session not found", http.StatusNotFound)
 
-		cookie := middleware.FindCookie("login_session", r.Header)
-		if cookie == nil {
-			http.Error(w, "cookie not found", http.StatusBadRequest)
-			return
-		}
+		return
+	}
 
-		session, err := datastore.GetWebauthnSession(ctx, cookie.Value)
+	var user models.User
+	getUserID := func(rawID, userHandle []byte) (webauthn.User, error) {
+		var err error
+		user, err = svc.Datastore.GetUserByID(ctx, string(userHandle))
 		if err != nil {
-			http.Error(w, "session not found", http.StatusNotFound)
-
-			return
+			return nil, fmt.Errorf("user not found")
 		}
 
-		var user models.User
-		getUserID := func(rawID, userHandle []byte) (webauthn.User, error) {
-			var err error
-			user, err = datastore.GetUserByID(ctx, string(userHandle))
-			if err != nil {
-				return nil, fmt.Errorf("user not found")
-			}
+		webauthnUser := repo.NewWebAuthnUser(
+			ctx,
+			middleware.L(ctx),
+			svc.Datastore,
+			user,
+		)
 
-			webauthnUser := repo.NewWebAuthnUser(
-				ctx,
-				middleware.L(ctx),
-				datastore,
-				user,
-			)
+		return webauthnUser, nil
+	}
 
-			return webauthnUser, nil
-		}
-
-		if len(session.UserID) > 0 {
-			webauthnUser, err := getUserID(nil, session.UserID)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusNotFound)
-
-				return
-			}
-
-			_, err = web.ValidateLogin(webauthnUser, *session, response)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusUnauthorized)
-
-				return
-			}
-		} else {
-			_, err := web.ValidateDiscoverableLogin(getUserID, *session, response)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusUnauthorized)
-
-				return
-			}
-		}
-
-		roles, err := datastore.GetUserRoles(ctx, user.ID)
+	if len(session.UserID) > 0 {
+		webauthnUser, err := getUserID(nil, session.UserID)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, err.Error(), http.StatusNotFound)
 
 			return
 		}
 
-		refreshToken, refreshTokenID, err := auth.CreateSignedJWT(user, roles, "", cfg.RefreshTokenTTL.AsDuration(), jwt.ScopeRefresh)
+		_, err = svc.web.ValidateLogin(webauthnUser, *session, response)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, err.Error(), http.StatusUnauthorized)
 
 			return
 		}
-
-		accessToken, _, err := auth.CreateSignedJWT(user, roles, refreshTokenID, cfg.AccessTokenTTL.AsDuration(), jwt.ScopeAccess)
+	} else {
+		_, err := svc.web.ValidateDiscoverableLogin(getUserID, *session, response)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, err.Error(), http.StatusUnauthorized)
 
 			return
 		}
+	}
 
-		auth.AddRefreshTokenCookie(w.Header(), refreshToken, cfg.RefreshTokenTTL.AsDuration())
-		auth.AddAccessTokenCookie(w.Header(), accessToken, cfg.AccessTokenTTL.AsDuration())
+	roles, err := svc.Datastore.GetUserRoles(ctx, user.ID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 
-		userResponse := make(map[string]any)
+		return
+	}
 
-		if requestedRedirect != "" {
-			userResponse["redirectTo"] = requestedRedirect
-		}
+	// Generate and add refresh and access tokens
 
-		jsonResponse(w, userResponse, http.StatusOK)
-	})
+	_, refreshTokenID, err := svc.AddRefreshToken(user, roles, w.Header())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+
+		return
+	}
+
+	if _, _, err := svc.AddAccessToken(user, roles, 0, refreshTokenID, w.Header()); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+
+		return
+	}
+
+	// Prepare the response.
+
+	userResponse := make(map[string]any)
+	if requestedRedirect != "" {
+		userResponse["redirectTo"] = requestedRedirect
+	}
+
+	jsonResponse(w, userResponse, http.StatusOK)
 }
 
 func jsonResponse(w http.ResponseWriter, body any, code int) {

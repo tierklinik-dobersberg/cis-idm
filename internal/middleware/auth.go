@@ -9,7 +9,6 @@ import (
 
 	"github.com/bufbuild/connect-go"
 	commonv1 "github.com/tierklinik-dobersberg/apis/gen/go/tkd/common/v1"
-	"github.com/tierklinik-dobersberg/cis-idm/internal/config"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/jwt"
 	"golang.org/x/exp/slices"
 	"google.golang.org/protobuf/proto"
@@ -43,12 +42,12 @@ func TokenFromContext(ctx context.Context) string {
 	return token
 }
 
-func NewAuthInterceptor(cfg config.Config, reg *protoregistry.Files) connect.UnaryInterceptorFunc {
+func NewAuthInterceptor(registry *protoregistry.Files) connect.UnaryInterceptorFunc {
 	interceptor := func(next connect.UnaryFunc) connect.UnaryFunc {
 		return connect.UnaryFunc(func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
 			parts := strings.Split(req.Spec().Procedure, "/")
 
-			methodDesc := getMethodDesc(reg, parts[1], parts[2])
+			methodDesc := getMethodDesc(registry, parts[1], parts[2])
 			if methodDesc == nil {
 				return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to find method descriptor for %s", req.Spec().Procedure))
 			}

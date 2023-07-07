@@ -2,29 +2,25 @@ package auth
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 
 	"github.com/bufbuild/connect-go"
-	"github.com/bufbuild/protovalidate-go"
-	"github.com/gofrs/uuid"
 	"github.com/hashicorp/go-multierror"
 	"github.com/pquerna/otp/totp"
 	"github.com/sirupsen/logrus"
 	idmv1 "github.com/tierklinik-dobersberg/apis/gen/go/tkd/idm/v1"
 	"github.com/tierklinik-dobersberg/apis/gen/go/tkd/idm/v1/idmv1connect"
+	"github.com/tierklinik-dobersberg/cis-idm/internal/app"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/bootstrap"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/config"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/conv"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/jwt"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/middleware"
-	"github.com/tierklinik-dobersberg/cis-idm/internal/repo"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/repo/models"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/repo/stmts"
 	"golang.org/x/crypto/bcrypt"
@@ -34,39 +30,17 @@ import (
 type AuthService struct {
 	idmv1connect.UnimplementedAuthServiceHandler
 
-	validator *protovalidate.Validator
-
-	repo *repo.Repo
-	cfg  config.Config
+	*app.Providers
 }
 
 // NewService returns a new authentication service that verifies users using repo.
-func NewService(repo *repo.Repo, cfg config.Config) (*AuthService, error) {
-	validator, err := protovalidate.New(
-		protovalidate.WithMessages(
-			&idmv1.LoginRequest{},
-			&idmv1.LogoutRequest{},
-			&idmv1.IntrospectRequest{},
-			&idmv1.RefreshTokenRequest{},
-		),
-	)
-
-	if err != nil {
-		return nil, err
-	}
-
+func NewService(providers *app.Providers) *AuthService {
 	return &AuthService{
-		repo:      repo,
-		cfg:       cfg,
-		validator: validator,
-	}, nil
+		Providers: providers,
+	}
 }
 
 func (svc *AuthService) Login(ctx context.Context, req *connect.Request[idmv1.LoginRequest]) (*connect.Response[idmv1.LoginResponse], error) {
-	if err := svc.validator.Validate(req.Msg); err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, err)
-	}
-
 	logrus.Infof("received authentication request")
 	r := req.Msg
 
@@ -88,12 +62,12 @@ func (svc *AuthService) Login(ctx context.Context, req *connect.Request[idmv1.Lo
 		logrus.Infof("authentication request for user %s", passwordAuth.GetUsername())
 
 		var err error
-		user, err = svc.repo.GetUserByName(ctx, passwordAuth.GetUsername())
+		user, err = svc.Datastore.GetUserByName(ctx, passwordAuth.GetUsername())
 		if err != nil {
-			if svc.cfg.FeatureEnabled(config.FeatureLoginByMail) {
+			if svc.Config.FeatureEnabled(config.FeatureLoginByMail) {
 				if errors.Is(err, stmts.ErrNoResults) {
 					var verified bool
-					user, verified, err = svc.repo.GetUserByEMail(ctx, passwordAuth.GetUsername())
+					user, verified, err = svc.Datastore.GetUserByEMail(ctx, passwordAuth.GetUsername())
 
 					if err == nil && !verified {
 						return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("e-mail address has not been verified"))
@@ -135,7 +109,7 @@ func (svc *AuthService) Login(ctx context.Context, req *connect.Request[idmv1.Lo
 			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid message"))
 		}
 
-		claims, err := jwt.ParseAndVerify([]byte(svc.cfg.JWTSecret), req.Msg.GetTotp().State)
+		claims, err := jwt.ParseAndVerify([]byte(svc.Config.JWTSecret), req.Msg.GetTotp().State)
 		if err != nil {
 			return nil, connect.NewError(connect.CodeUnauthenticated, err)
 		}
@@ -144,7 +118,7 @@ func (svc *AuthService) Login(ctx context.Context, req *connect.Request[idmv1.Lo
 			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid message"))
 		}
 
-		user, err = svc.repo.GetUserByID(ctx, claims.Subject)
+		user, err = svc.Datastore.GetUserByID(ctx, claims.Subject)
 		if err != nil {
 			return nil, err
 		}
@@ -158,7 +132,7 @@ func (svc *AuthService) Login(ctx context.Context, req *connect.Request[idmv1.Lo
 			// if the code is not valid the user might used a recovery code.
 			// TODO(ppacher): do we have security implications if we automatically try
 			// recovery codes here?
-			recoveryCodeErr := svc.repo.CheckAndDeleteRecoveryCode(ctx, claims.Subject, req.Msg.GetTotp().Code)
+			recoveryCodeErr := svc.Datastore.CheckAndDeleteRecoveryCode(ctx, claims.Subject, req.Msg.GetTotp().Code)
 			if recoveryCodeErr != nil {
 				if errors.Is(recoveryCodeErr, stmts.ErrNoRowsAffected) {
 					return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("invalid totp passcode"))
@@ -174,7 +148,7 @@ func (svc *AuthService) Login(ctx context.Context, req *connect.Request[idmv1.Lo
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("unsupported authentication method"))
 	}
 
-	roles, err := svc.repo.GetUserRoles(ctx, user.ID)
+	roles, err := svc.Datastore.GetUserRoles(ctx, user.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -191,29 +165,12 @@ func (svc *AuthService) Login(ctx context.Context, req *connect.Request[idmv1.Lo
 		}
 	}
 
-	var (
-		refreshToken   string
-		refreshTokenID string
-	)
-
-	if !r.GetNoRefreshToken() {
-		refreshToken, refreshTokenID, err = svc.CreateSignedJWT(user, nil, "", svc.cfg.RefreshTokenTTL.AsDuration(), jwt.ScopeRefresh)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	accessTokenTTL := svc.cfg.AccessTokenTTL.AsDuration()
-	if req.Msg.Ttl != nil {
-		requestedTTL := req.Msg.Ttl.AsDuration()
-		if requestedTTL > 0 && requestedTTL < accessTokenTTL {
-			accessTokenTTL = requestedTTL
-		}
-	}
-
-	accessToken, _, err := svc.CreateSignedJWT(user, roles, refreshTokenID, accessTokenTTL, jwt.ScopeAccess)
-	if err != nil {
-		return nil, err
+	response := &idmv1.AccessTokenResponse{
+		User: &idmv1.User{
+			Id:          user.ID,
+			Username:    user.Username,
+			DisplayName: user.DisplayName,
+		},
 	}
 
 	redirectTo, err := svc.HandleRequestedRedirect(ctx, req.Msg.RequestedRedirect)
@@ -223,32 +180,30 @@ func (svc *AuthService) Login(ctx context.Context, req *connect.Request[idmv1.Lo
 
 	resp := connect.NewResponse(&idmv1.LoginResponse{
 		Response: &idmv1.LoginResponse_AccessToken{
-			AccessToken: &idmv1.AccessTokenResponse{
-				Token: accessToken,
-				User: &idmv1.User{
-					Id:          user.ID,
-					Username:    user.Username,
-					DisplayName: user.DisplayName,
-				},
-			},
+			AccessToken: response,
 		},
 		RedirectTo: redirectTo,
 	})
 
-	svc.AddAccessTokenCookie(resp.Header(), accessToken, accessTokenTTL)
+	var refreshTokenID string
 
 	if !r.GetNoRefreshToken() {
-		svc.AddRefreshTokenCookie(resp.Header(), refreshToken, svc.cfg.RefreshTokenTTL.AsDuration())
+		_, refreshTokenID, err = svc.AddRefreshToken(user, roles, resp.Header())
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if token, _, err := svc.AddAccessToken(user, roles, req.Msg.Ttl.AsDuration(), refreshTokenID, resp.Header()); err != nil {
+		return nil, err
+	} else {
+		response.Token = token
 	}
 
 	return resp, nil
 }
 
 func (svc *AuthService) Logout(ctx context.Context, req *connect.Request[idmv1.LogoutRequest]) (*connect.Response[idmv1.LogoutResponse], error) {
-	if err := svc.validator.Validate(req.Msg); err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, err)
-	}
-
 	// get the JWT token claims from the request context
 	claims := middleware.ClaimsFromContext(ctx)
 	if claims == nil {
@@ -256,7 +211,7 @@ func (svc *AuthService) Logout(ctx context.Context, req *connect.Request[idmv1.L
 	}
 
 	// mark the token as rejected
-	if err := svc.repo.MarkTokenRejected(ctx, models.RejectedToken{
+	if err := svc.Datastore.MarkTokenRejected(ctx, models.RejectedToken{
 		TokenID:   claims.ID,
 		UserID:    claims.Subject,
 		IssuedAt:  claims.IssuedAt,
@@ -267,7 +222,7 @@ func (svc *AuthService) Logout(ctx context.Context, req *connect.Request[idmv1.L
 
 	// also mark the parent (refresh) token as rejected
 	if claims.AppMetadata != nil && claims.AppMetadata.ParentTokenID != "" {
-		if err := svc.repo.MarkTokenRejected(ctx, models.RejectedToken{
+		if err := svc.Datastore.MarkTokenRejected(ctx, models.RejectedToken{
 			TokenID:   claims.AppMetadata.ParentTokenID,
 			UserID:    claims.Subject,
 			IssuedAt:  claims.IssuedAt,
@@ -281,9 +236,9 @@ func (svc *AuthService) Logout(ctx context.Context, req *connect.Request[idmv1.L
 
 	// clear the refresh token cookie
 	clearRefreshCookie := http.Cookie{
-		Name:     svc.cfg.RefreshTokenCookieName,
+		Name:     svc.Config.RefreshTokenCookieName,
 		Value:    "",
-		Domain:   svc.cfg.Domain,
+		Domain:   svc.Config.Domain,
 		MaxAge:   -1,
 		SameSite: http.SameSiteLaxMode,
 		Path:     "/tkd.idm.v1.AuthService/RefreshToken",
@@ -291,9 +246,9 @@ func (svc *AuthService) Logout(ctx context.Context, req *connect.Request[idmv1.L
 	}
 
 	clearAccessCookie := http.Cookie{
-		Name:     svc.cfg.AccessTokenCookieName,
+		Name:     svc.Config.AccessTokenCookieName,
 		Value:    "",
-		Domain:   svc.cfg.Domain,
+		Domain:   svc.Config.Domain,
 		MaxAge:   -1,
 		SameSite: http.SameSiteLaxMode,
 		Path:     "/",
@@ -308,16 +263,12 @@ func (svc *AuthService) Logout(ctx context.Context, req *connect.Request[idmv1.L
 }
 
 func (svc *AuthService) RefreshToken(ctx context.Context, req *connect.Request[idmv1.RefreshTokenRequest]) (*connect.Response[idmv1.RefreshTokenResponse], error) {
-	if err := svc.validator.Validate(req.Msg); err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, err)
-	}
-
-	refreshCookie := middleware.FindCookie(svc.cfg.RefreshTokenCookieName, req.Header())
+	refreshCookie := middleware.FindCookie(svc.Config.RefreshTokenCookieName, req.Header())
 	if refreshCookie == nil {
 		return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("no refresh cookie provided"))
 	}
 
-	claims, err := jwt.ParseAndVerify([]byte(svc.cfg.JWTSecret), refreshCookie.Value)
+	claims, err := jwt.ParseAndVerify([]byte(svc.Config.JWTSecret), refreshCookie.Value)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("invalid refresh token: %w", err))
 	}
@@ -326,20 +277,14 @@ func (svc *AuthService) RefreshToken(ctx context.Context, req *connect.Request[i
 		return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("the provided token is invalid"))
 	}
 
-	user, err := svc.repo.GetUserByID(ctx, claims.Subject)
+	user, err := svc.Datastore.GetUserByID(ctx, claims.Subject)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("invalid refresh token"))
 	}
 
-	roles, err := svc.repo.GetUserRoles(ctx, claims.Name)
+	roles, err := svc.Datastore.GetUserRoles(ctx, claims.Name)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get group memberships: %w", err)
-	}
-
-	tokenTTL := svc.cfg.AccessTokenTTL.AsDuration()
-	token, _, err := svc.CreateSignedJWT(user, roles, claims.ID, tokenTTL, jwt.ScopeAccess)
-	if err != nil {
-		return nil, err
 	}
 
 	redirectTo, err := svc.HandleRequestedRedirect(ctx, req.Msg.RequestedRedirect)
@@ -347,15 +292,21 @@ func (svc *AuthService) RefreshToken(ctx context.Context, req *connect.Request[i
 		return nil, err
 	}
 
+	tokenResponse := &idmv1.AccessTokenResponse{
+		User: conv.UserProtoFromUser(user),
+	}
+
 	resp := connect.NewResponse(&idmv1.RefreshTokenResponse{
-		AccessToken: &idmv1.AccessTokenResponse{
-			Token: token,
-			User:  conv.UserProtoFromUser(user),
-		},
-		RedirectTo: redirectTo,
+		AccessToken: tokenResponse,
+		RedirectTo:  redirectTo,
 	})
 
-	svc.AddAccessTokenCookie(resp.Header(), token, tokenTTL)
+	token, _, err := svc.AddAccessToken(user, roles, req.Msg.Ttl.AsDuration(), claims.ID, resp.Header())
+	if err != nil {
+		return nil, err
+	}
+
+	tokenResponse.Token = token
 
 	return resp, nil
 }
@@ -366,22 +317,22 @@ func (svc *AuthService) Introspect(ctx context.Context, req *connect.Request[idm
 		return nil, fmt.Errorf("not jwt token claims found in request context")
 	}
 
-	user, err := svc.repo.GetUserByID(ctx, claims.Subject)
+	user, err := svc.Datastore.GetUserByID(ctx, claims.Subject)
 	if err != nil {
 		return nil, fmt.Errorf("invalid user")
 	}
 
-	emails, err := svc.repo.GetUserEmails(ctx, user.ID)
+	emails, err := svc.Datastore.GetUserEmails(ctx, user.ID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load emails: %w", err)
 	}
 
-	addresses, err := svc.repo.GetUserAddresses(ctx, user.ID)
+	addresses, err := svc.Datastore.GetUserAddresses(ctx, user.ID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load user addresses: %w", err)
 	}
 
-	phoneNumbers, err := svc.repo.GetUserPhoneNumbers(ctx, user.ID)
+	phoneNumbers, err := svc.Datastore.GetUserPhoneNumbers(ctx, user.ID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load user phone numbers: %w", err)
 	}
@@ -406,7 +357,7 @@ func (svc *AuthService) Introspect(ctx context.Context, req *connect.Request[idm
 		}
 	}
 
-	hasBackupCodes, err := svc.repo.UserHasRecoveryCodes(ctx, user.ID)
+	hasBackupCodes, err := svc.Datastore.UserHasRecoveryCodes(ctx, user.ID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to check for existing recovery codes: %w", err)
 	}
@@ -456,10 +407,10 @@ func (svc *AuthService) GenerateRegistrationToken(ctx context.Context, req *conn
 		var initialRoles []string
 
 		for _, role := range req.Msg.InitialRoles {
-			roleModel, err := svc.repo.GetRoleByID(ctx, role)
+			roleModel, err := svc.Datastore.GetRoleByID(ctx, role)
 			if err != nil {
 				if errors.Is(err, stmts.ErrNoResults) {
-					roleModel, err = svc.repo.GetRoleByName(ctx, role)
+					roleModel, err = svc.Datastore.GetRoleByName(ctx, role)
 				}
 			}
 
@@ -481,7 +432,7 @@ func (svc *AuthService) GenerateRegistrationToken(ctx context.Context, req *conn
 		tokenModel.InitialRoles = string(roleBlob)
 	}
 
-	if err := svc.repo.CreateRegistrationToken(ctx, tokenModel); err != nil {
+	if err := svc.Datastore.CreateRegistrationToken(ctx, tokenModel); err != nil {
 		return nil, err
 	}
 
@@ -491,7 +442,7 @@ func (svc *AuthService) GenerateRegistrationToken(ctx context.Context, req *conn
 }
 
 func (svc *AuthService) ValidateRegistrationToken(ctx context.Context, req *connect.Request[idmv1.ValidateRegistrationTokenRequest]) (*connect.Response[idmv1.ValidateRegistrationTokenResponse], error) {
-	_, err := svc.repo.ValidateRegistrationToken(ctx, req.Msg.Token)
+	_, err := svc.Datastore.ValidateRegistrationToken(ctx, req.Msg.Token)
 	if err != nil {
 		return nil, err
 	}
@@ -500,7 +451,7 @@ func (svc *AuthService) ValidateRegistrationToken(ctx context.Context, req *conn
 }
 
 func (svc *AuthService) RegisterUser(ctx context.Context, req *connect.Request[idmv1.RegisterUserRequest]) (*connect.Response[idmv1.RegisterUserResponse], error) {
-	if !svc.cfg.FeatureEnabled(config.FeatureSelfRegistration) {
+	if !svc.Config.FeatureEnabled(config.FeatureSelfRegistration) {
 		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("registration feature is disabled"))
 	}
 
@@ -517,27 +468,25 @@ func (svc *AuthService) RegisterUser(ctx context.Context, req *connect.Request[i
 		return nil, err
 	}
 
-	refreshTokenTTL := svc.cfg.RefreshTokenTTL.AsDuration()
-	refreshToken, refreshTokenID, err := svc.CreateSignedJWT(*userModel, nil, "", refreshTokenTTL, jwt.ScopeRefresh)
-	if err != nil {
-		return nil, err
-	}
-
-	accessTokenTTL := svc.cfg.AccessTokenTTL.AsDuration()
-	accessToken, _, err := svc.CreateSignedJWT(*userModel, nil /*FIXME*/, refreshTokenID, accessTokenTTL, jwt.ScopeAccess)
-	if err != nil {
-		return nil, err
+	tokenResponse := &idmv1.AccessTokenResponse{
+		User: conv.UserProtoFromUser(*userModel),
 	}
 
 	resp := connect.NewResponse(&idmv1.RegisterUserResponse{
-		AccessToken: &idmv1.AccessTokenResponse{
-			Token: accessToken,
-			User:  conv.UserProtoFromUser(*userModel),
-		},
+		AccessToken: tokenResponse,
 	})
 
-	svc.AddAccessTokenCookie(resp.Header(), accessToken, accessTokenTTL)
-	svc.AddRefreshTokenCookie(resp.Header(), refreshToken, refreshTokenTTL)
+	_, refreshTokenID, err := svc.AddRefreshToken(*userModel, nil, resp.Header())
+	if err != nil {
+		return nil, err
+	}
+
+	token, _, err := svc.AddAccessToken(*userModel, nil, 0, refreshTokenID, resp.Header())
+	if err != nil {
+		return nil, err
+	}
+
+	tokenResponse.Token = token
 
 	return resp, nil
 }
@@ -551,8 +500,8 @@ func (svc *AuthService) CreateUser(ctx context.Context, userModel models.User, t
 	// ensure we have a valid registration token if IDM_REGISTRATION_REQUIRES_TOKEN is set to true.
 	// Note that we also accept a registration token even if it's not required so users can be
 	// bootstrapped with a set of initial roles.
-	if svc.cfg.RegistrationRequiresToken || token != "" {
-		tokenModel, err := svc.repo.ValidateRegistrationToken(ctx, token)
+	if svc.Config.RegistrationRequiresToken || token != "" {
+		tokenModel, err := svc.Datastore.ValidateRegistrationToken(ctx, token)
 		if err != nil {
 			if errors.Is(err, stmts.ErrNoResults) {
 				return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid registration token"))
@@ -566,7 +515,7 @@ func (svc *AuthService) CreateUser(ctx context.Context, userModel models.User, t
 			}
 		}
 
-		if err := svc.repo.MarkRegistrationTokenUsed(ctx, token); err != nil {
+		if err := svc.Datastore.MarkRegistrationTokenUsed(ctx, token); err != nil {
 			if errors.Is(err, stmts.ErrNoRowsAffected) {
 				return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid registration token"))
 			}
@@ -574,14 +523,14 @@ func (svc *AuthService) CreateUser(ctx context.Context, userModel models.User, t
 		}
 	}
 
-	userModel, err = svc.repo.CreateUser(ctx, userModel)
+	userModel, err = svc.Datastore.CreateUser(ctx, userModel)
 	if err != nil {
 		return nil, err
 	}
 
 	merr := new(multierror.Error)
 	for _, role := range initialRoles {
-		if err := svc.repo.AssignRoleToUser(ctx, userModel.ID, role); err != nil {
+		if err := svc.Datastore.AssignRoleToUser(ctx, userModel.ID, role); err != nil {
 			merr.Errors = append(merr.Errors, fmt.Errorf("failed to assign role %s: %w", role, err))
 		}
 	}
@@ -591,98 +540,6 @@ func (svc *AuthService) CreateUser(ctx context.Context, userModel models.User, t
 	}
 
 	return &userModel, nil
-}
-
-func (svc *AuthService) AddAccessTokenCookie(resp http.Header, token string, ttl time.Duration) {
-	// add the access token as a cookie.
-	accessCookie := http.Cookie{
-		Name:     svc.cfg.AccessTokenCookieName,
-		Value:    token,
-		Path:     "/",
-		Domain:   svc.cfg.Domain,
-		Expires:  time.Now().Add(ttl),
-		Secure:   *svc.cfg.SecureCookie,
-		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode,
-	}
-	resp.Add("Set-Cookie", accessCookie.String())
-}
-
-func (svc *AuthService) AddRefreshTokenCookie(resp http.Header, token string, ttl time.Duration) {
-	cookie := http.Cookie{
-		Name:     svc.cfg.RefreshTokenCookieName,
-		Value:    token,
-		Path:     "/tkd.idm.v1.AuthService/RefreshToken",
-		Domain:   svc.cfg.Domain,
-		Expires:  time.Now().Add(ttl),
-		Secure:   *svc.cfg.SecureCookie,
-		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode,
-	}
-
-	resp.Add("Set-Cookie", cookie.String())
-}
-
-func (svc *AuthService) CreateSignedJWT(user models.User, roles []models.Role, parentTokenID string, ttl time.Duration, scopes ...jwt.Scope) (string, string, error) {
-	auth := &jwt.Authorization{}
-	for _, g := range roles {
-		auth.Roles = append(auth.Roles, g.ID)
-	}
-
-	tokenID, err := uuid.NewV4()
-	if err != nil {
-		return "", "", err
-	}
-
-	expiresAt := time.Now().Add(ttl)
-
-	claims := jwt.Claims{
-		Audience:  svc.cfg.Audience,
-		ExpiresAt: expiresAt.Unix(),
-		ID:        tokenID.String(),
-		IssuedAt:  time.Now().Unix(),
-		Issuer:    svc.cfg.Domain,
-		NotBefore: time.Now().Unix(),
-		Subject:   user.ID,
-		Name:      user.Username,
-		Scopes:    scopes,
-		AppMetadata: &jwt.AppMetadata{
-			TokenVersion:  "1",
-			ParentTokenID: parentTokenID,
-			Authorization: auth,
-		},
-	}
-
-	token, err := jwt.SignToken("HS512", []byte(svc.cfg.JWTSecret), claims)
-	if err != nil {
-		return "", "", err
-	}
-
-	return token, claims.ID, nil
-}
-
-func (svc *AuthService) HandleRequestedRedirect(ctx context.Context, requestedRedirect string) (string, error) {
-	if requestedRedirect != "" {
-		decoded, err := base64.URLEncoding.DecodeString(requestedRedirect)
-		if err != nil {
-			return "", err
-		}
-
-		u, err := url.Parse(string(decoded))
-		if err != nil {
-			return "", err
-		}
-
-		if slices.Contains(svc.cfg.AllowedDomainRedirects, u.Host) {
-			middleware.L(ctx).Infof("redirecting user to %s", u.String())
-			return u.String(), nil
-
-		} else {
-			middleware.L(ctx).Warnf("requested redirect to %s is not allowed", string(decoded))
-		}
-	}
-
-	return "", nil
 }
 
 var _ idmv1connect.AuthServiceHandler = new(AuthService)

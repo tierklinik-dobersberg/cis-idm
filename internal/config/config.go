@@ -10,13 +10,19 @@ import (
 	"strings"
 	"time"
 
+	"github.com/caarlos0/env"
 	"github.com/ghodss/yaml"
 	"github.com/hashicorp/go-multierror"
-	"github.com/sethvargo/go-envconfig"
 	"golang.org/x/exp/slices"
 )
 
-type File struct {
+type Twilio struct {
+	From        string `json:"from" env:"FROM"`
+	AccountSid  string `json:"sid" env:"SID"`
+	AccessToken string `json:"token" env:"TOKEN"`
+}
+
+type Config struct {
 	// ForwardAuth configures domains and URLs that require authentication
 	// when passed to the /validate endpoint.
 	ForwardAuth []*ForwardAuthEntry `json:"forwardAuth" yaml:"forwardAuth"`
@@ -134,9 +140,14 @@ type File struct {
 	// featureMap is built from FeatureSet and cannot be set using the configuration
 	// file.
 	featureMap map[Feature]bool `json:"-"`
+
+	// Twilio is required for all SMS related features.
+	// TODO(ppacher): print a warning when a SMS feature is enabled
+	// but twilio is not confiugred.
+	Twilio *Twilio `json:"twilio" envPrefix:"TWILIO__"`
 }
 
-func LoadFile(path string) (*File, error) {
+func LoadFile(path string) (*Config, error) {
 	content, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -155,7 +166,7 @@ func LoadFile(path string) (*File, error) {
 		return nil, fmt.Errorf("unsupported file format %q", filepath.Ext(path))
 	}
 
-	var f File
+	var f Config
 	if err := json.Unmarshal(content, &f); err != nil {
 		return nil, err
 	}
@@ -171,7 +182,7 @@ func LoadFile(path string) (*File, error) {
 	return &f, nil
 }
 
-func (file *File) applyDefaults() error {
+func (file *Config) applyDefaults() error {
 	if file.PublicURL == "" {
 		return fmt.Errorf("publicURL must be set")
 	}
@@ -235,7 +246,7 @@ func (file *File) applyDefaults() error {
 	return nil
 }
 
-func (file File) AuthRequiredForURL(method string, url string) (bool, error) {
+func (file Config) AuthRequiredForURL(method string, url string) (bool, error) {
 	merr := new(multierror.Error)
 
 	for _, fae := range file.ForwardAuth {
@@ -255,35 +266,27 @@ func (file File) AuthRequiredForURL(method string, url string) (bool, error) {
 	return false, merr.ErrorOrNil()
 }
 
-type Config struct {
-	File
-
-	ConfigFilePath string `env:"CONFIG_FILE,default=/etc/cisidm/config.yml"`
-}
-
 // FromEnvironment returns a Config object parsed from environment variables.
-func FromEnvironment(ctx context.Context) (cfg Config, err error) {
-	l := envconfig.PrefixLookuper("IDM_", envconfig.OsLookuper())
+func FromEnvironment(ctx context.Context, cfgFilePath string) (cfg Config, err error) {
+	if cfgFilePath != "" {
+		parsedFile, err := LoadFile(cfgFilePath)
+		if err != nil {
+			return cfg, fmt.Errorf("failed to parse config file at %q: %w", cfgFilePath, err)
+		}
 
-	if err := envconfig.ProcessWith(ctx, &cfg, l); err != nil {
-		return cfg, err
+		cfg = *parsedFile
+	}
+
+	if err := env.Parse(&cfg); err != nil {
+		return cfg, fmt.Errorf("failed to parse config from environment")
 	}
 
 	cfg.parseFeatureSet()
 
-	if cfg.ConfigFilePath != "" {
-		parsedFile, err := LoadFile(cfg.ConfigFilePath)
-		if err != nil {
-			return cfg, fmt.Errorf("failed to parse config file at %q: %w", cfg.ConfigFilePath, err)
-		}
-
-		cfg.File = *parsedFile
-	}
-
 	return cfg, nil
 }
 
-func (file *File) parseFeatureSet() error {
+func (file *Config) parseFeatureSet() error {
 	defaultValue := slices.Contains(file.FeatureSet, FeatureAll)
 
 	file.featureMap = make(map[Feature]bool)

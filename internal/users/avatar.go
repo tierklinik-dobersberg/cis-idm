@@ -6,17 +6,17 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/tierklinik-dobersberg/cis-idm/internal/app"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/middleware"
-	"github.com/tierklinik-dobersberg/cis-idm/internal/repo"
 	"github.com/vincent-petithory/dataurl"
 )
 
-func NewAvatarHandler(repo *repo.Repo) http.Handler {
+func NewAvatarHandler(providers *app.Providers) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		pathParts := strings.Split(r.URL.Path, "/")
 		userID := pathParts[len(pathParts)-1]
 
-		user, err := repo.GetUserByID(r.Context(), userID)
+		user, err := providers.Datastore.GetUserByID(r.Context(), userID)
 		if err != nil {
 			http.Error(w, "failed to get user", http.StatusNotFound)
 			return

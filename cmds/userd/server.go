@@ -18,14 +18,15 @@ import (
 	"github.com/rs/cors"
 	idmv1 "github.com/tierklinik-dobersberg/apis/gen/go/tkd/idm/v1"
 	"github.com/tierklinik-dobersberg/apis/gen/go/tkd/idm/v1/idmv1connect"
+	"github.com/tierklinik-dobersberg/cis-idm/internal/app"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/auth"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/common"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/config"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/jwt"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/middleware"
-	"github.com/tierklinik-dobersberg/cis-idm/internal/middleware/acl"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/repo"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/selfservice"
+	"github.com/tierklinik-dobersberg/cis-idm/internal/tmpl"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/users"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/webauthn"
 	"golang.org/x/net/http2"
@@ -82,18 +83,16 @@ func getStaticFilesHandler(path string) (http.Handler, error) {
 	return common.ServeSPA(http.Dir(path), "index.html"), nil
 }
 
-func setupPublicServer(repo *repo.Repo, cfg config.Config, reg *protoregistry.Files, validator *protovalidate.Validator) (*http.Server, error) {
+func setupPublicServer(providers *app.Providers) (*http.Server, error) {
 	// prepare middlewares and interceptors
 	loggingInterceptor := middleware.NewLoggingInterceptor()
-	authInterceptor := middleware.NewAuthInterceptor(cfg, reg)
-	aclInterceptor := acl.NewInterceptor(reg)
-	validatorInterceptor := middleware.NewValidationInterceptor(validator)
+	authInterceptor := middleware.NewAuthInterceptor(providers.ProtoRegistry)
+	validatorInterceptor := middleware.NewValidationInterceptor(providers.Validator)
 	privacyInterceptor := middleware.NewPrivacyFilterInterceptor()
 
 	interceptors := connect.WithInterceptors(
 		loggingInterceptor,
 		authInterceptor,
-		aclInterceptor,
 		validatorInterceptor,
 		privacyInterceptor,
 	)
@@ -101,15 +100,8 @@ func setupPublicServer(repo *repo.Repo, cfg config.Config, reg *protoregistry.Fi
 	// create a new servemux to handle our routes.
 	publicListenerMux := http.NewServeMux()
 
-	// create a common.Service instance that shares code for the AuthService
-	// and UserService instances.
-	commonService := common.New(repo, cfg)
-
 	// Setup and serve the AuthService
-	authService, err := auth.NewService(repo, cfg)
-	if err != nil {
-		return nil, fmt.Errorf("failed to initialize auth service: %w", err)
-	}
+	authService := auth.NewService(providers)
 	path, handler := idmv1connect.NewAuthServiceHandler(
 		authService,
 		interceptors,
@@ -117,10 +109,8 @@ func setupPublicServer(repo *repo.Repo, cfg config.Config, reg *protoregistry.Fi
 	publicListenerMux.Handle(path, handler)
 
 	// Setup and serve the Self-Service
-	selfserviceService, err := selfservice.NewService(cfg, repo, commonService)
-	if err != nil {
-		return nil, fmt.Errorf("failed to initialize self-service service: %w", err)
-	}
+	selfserviceService := selfservice.NewService(providers)
+
 	path, handler = idmv1connect.NewSelfServiceServiceHandler(
 		selfserviceService,
 		interceptors,
@@ -128,7 +118,7 @@ func setupPublicServer(repo *repo.Repo, cfg config.Config, reg *protoregistry.Fi
 	publicListenerMux.Handle(path, handler)
 
 	// Setup and serve the User service.
-	userService, err := users.NewService(repo)
+	userService, err := users.NewService(providers)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize users service: %w", err)
 	}
@@ -139,15 +129,15 @@ func setupPublicServer(repo *repo.Repo, cfg config.Config, reg *protoregistry.Fi
 	publicListenerMux.Handle(path, handler)
 
 	// Serve basic configuration for the UI on /config.json
-	publicListenerMux.Handle("/config.json", config.NewConfigHandler(cfg))
+	publicListenerMux.Handle("/config.json", config.NewConfigHandler(providers.Config))
 
 	// Setup CORS middleware
 	c := cors.New(cors.Options{
 		AllowedOrigins: append([]string{
-			cfg.PublicURL,
-			fmt.Sprintf("http://%s", cfg.Domain),
-			fmt.Sprintf("https://%s", cfg.Domain),
-		}, cfg.AllowedOrigins...),
+			providers.Config.PublicURL,
+			fmt.Sprintf("http://%s", providers.Config.Domain),
+			fmt.Sprintf("https://%s", providers.Config.Domain),
+		}, providers.Config.AllowedOrigins...),
 		AllowCredentials: true,
 		AllowedHeaders:   []string{"Connect-Protocol-Version", "Content-Type", "Authentication"},
 		Debug:            os.Getenv("DEBUG") != "",
@@ -156,7 +146,7 @@ func setupPublicServer(repo *repo.Repo, cfg config.Config, reg *protoregistry.Fi
 	// Get a static file handler.
 	// This will either return a handler for the embed.FS, a local directory using http.Dir
 	// or a reverse proxy to some other service.
-	staticFilesHandler, err := getStaticFilesHandler(cfg.StaticFiles)
+	staticFilesHandler, err := getStaticFilesHandler(providers.Config.StaticFiles)
 	if err != nil {
 		return nil, err
 	}
@@ -167,12 +157,12 @@ func setupPublicServer(repo *repo.Repo, cfg config.Config, reg *protoregistry.Fi
 	// to response with either HTTP redirects (if the user avatar is a URL)
 	// or with plain bytes and an approriate content-type if the user avatar
 	// is a dataurl.
-	publicListenerMux.Handle("/avatar/", users.NewAvatarHandler(repo))
+	publicListenerMux.Handle("/avatar/", users.NewAvatarHandler(providers))
 
 	// setup the webauthn handlers for registration and login.
 	// TODO(ppacher): migrate those to connect-go/protobuf style endpoints
 	// as the browser does not actually care about how this is implemented.
-	webauthnHandler, err := webauthn.New(cfg, authService, repo)
+	webauthnHandler, err := webauthn.New(providers, authService)
 	if err != nil {
 		return nil, err
 	}
@@ -181,9 +171,9 @@ func setupPublicServer(repo *repo.Repo, cfg config.Config, reg *protoregistry.Fi
 	// finally, return a http.Server that uses h2c for HTTP/2 support and
 	// wrap the finnal handler in CORS and a JWT middleware.
 	return &http.Server{
-		Addr: cfg.PublicListenAddr,
+		Addr: providers.Config.PublicListenAddr,
 		Handler: h2c.NewHandler(
-			c.Handler(middleware.NewJWTMiddleware(cfg, repo, publicListenerMux, func(r *http.Request) bool {
+			c.Handler(middleware.NewJWTMiddleware(providers.Config, providers.Datastore, publicListenerMux, func(r *http.Request) bool {
 				// Skip JWT token verification for the /validate endpoint as
 				// the ForwardAuthHanlder will take care of this on it's own due to special
 				// handling of rejected or expired tokens.
@@ -198,10 +188,10 @@ func setupPublicServer(repo *repo.Repo, cfg config.Config, reg *protoregistry.Fi
 	}, nil
 }
 
-func setupAdminServer(repo *repo.Repo, cfg config.Config, reg *protoregistry.Files, validator *protovalidate.Validator) (*http.Server, error) {
+func setupAdminServer(providers *app.Providers) (*http.Server, error) {
 	// prepare middlewares and interceptors
 	loggingInterceptor := middleware.NewLoggingInterceptor()
-	validatorInterceptor := middleware.NewValidationInterceptor(validator)
+	validatorInterceptor := middleware.NewValidationInterceptor(providers.Validator)
 	privacyInterceptor := middleware.NewPrivacyFilterInterceptor()
 
 	interceptors := connect.WithInterceptors(
@@ -213,7 +203,7 @@ func setupAdminServer(repo *repo.Repo, cfg config.Config, reg *protoregistry.Fil
 	serveMux := http.NewServeMux()
 
 	// User service
-	userService, err := users.NewService(repo)
+	userService, err := users.NewService(providers)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize users service: %w", err)
 	}
@@ -223,10 +213,10 @@ func setupAdminServer(repo *repo.Repo, cfg config.Config, reg *protoregistry.Fil
 	)
 	serveMux.Handle(path, handler)
 
-	serveMux.Handle("/validate", auth.NewForwardAuthHandler(cfg, repo))
+	serveMux.Handle("/validate", auth.NewForwardAuthHandler(providers))
 
 	return &http.Server{
-		Addr: cfg.AdminListenAddr,
+		Addr: providers.Config.AdminListenAddr,
 		Handler: h2c.NewHandler(
 			http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				clientIP := r.RemoteAddr
@@ -236,8 +226,8 @@ func setupAdminServer(repo *repo.Repo, cfg config.Config, reg *protoregistry.Fil
 				claims := jwt.Claims{
 					Subject:  clientIP,
 					ID:       clientIP,
-					Audience: cfg.Audience,
-					Issuer:   cfg.Domain,
+					Audience: providers.Config.Audience,
+					Issuer:   providers.Config.Domain,
 					Scopes:   []jwt.Scope{jwt.ScopeAccess},
 					Name:     clientIP,
 					AppMetadata: &jwt.AppMetadata{
@@ -260,6 +250,11 @@ func setupAdminServer(repo *repo.Repo, cfg config.Config, reg *protoregistry.Fil
 }
 
 func startServer(repo *repo.Repo, cfg config.Config) error {
+	tmplEngine, err := tmpl.New()
+	if err != nil {
+		return fmt.Errorf("failed to prepare template engine: %w", err)
+	}
+
 	reg, err := getProtoRegistry()
 	if err != nil {
 		return fmt.Errorf("failed to create proto registry: %w", err)
@@ -270,12 +265,24 @@ func startServer(repo *repo.Repo, cfg config.Config) error {
 		return fmt.Errorf("failed to create protovalidate.Validator: %w", err)
 	}
 
-	publicServer, err := setupPublicServer(repo, cfg, reg, validator)
+	commonService := common.New(repo, cfg)
+
+	providers := &app.Providers{
+		TemplateEngine: tmplEngine,
+		SMSSender:      nil,
+		Datastore:      repo,
+		Config:         cfg,
+		Common:         commonService,
+		ProtoRegistry:  reg,
+		Validator:      validator,
+	}
+
+	publicServer, err := setupPublicServer(providers)
 	if err != nil {
 		return fmt.Errorf("failed to create public server: %w", err)
 	}
 
-	adminServer, err := setupAdminServer(repo, cfg, reg, validator)
+	adminServer, err := setupAdminServer(providers)
 	if err != nil {
 		return fmt.Errorf("failed to create admin server: %w", err)
 	}
