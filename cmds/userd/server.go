@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/bufbuild/connect-go"
-	"github.com/bufbuild/protovalidate-go"
 	"github.com/rs/cors"
 	idmv1 "github.com/tierklinik-dobersberg/apis/gen/go/tkd/idm/v1"
 	"github.com/tierklinik-dobersberg/apis/gen/go/tkd/idm/v1/idmv1connect"
@@ -24,9 +23,7 @@ import (
 	"github.com/tierklinik-dobersberg/cis-idm/internal/config"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/jwt"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/middleware"
-	"github.com/tierklinik-dobersberg/cis-idm/internal/repo"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/selfservice"
-	"github.com/tierklinik-dobersberg/cis-idm/internal/tmpl"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/users"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/webauthn"
 	"golang.org/x/net/http2"
@@ -249,33 +246,7 @@ func setupAdminServer(providers *app.Providers) (*http.Server, error) {
 	}, nil
 }
 
-func startServer(repo *repo.Repo, cfg config.Config) error {
-	tmplEngine, err := tmpl.New()
-	if err != nil {
-		return fmt.Errorf("failed to prepare template engine: %w", err)
-	}
-
-	reg, err := getProtoRegistry()
-	if err != nil {
-		return fmt.Errorf("failed to create proto registry: %w", err)
-	}
-
-	validator, err := protovalidate.New()
-	if err != nil {
-		return fmt.Errorf("failed to create protovalidate.Validator: %w", err)
-	}
-
-	commonService := common.New(repo, cfg)
-
-	providers := &app.Providers{
-		TemplateEngine: tmplEngine,
-		SMSSender:      nil,
-		Datastore:      repo,
-		Config:         cfg,
-		Common:         commonService,
-		ProtoRegistry:  reg,
-		Validator:      validator,
-	}
+func startServer(providers *app.Providers) error {
 
 	publicServer, err := setupPublicServer(providers)
 	if err != nil {
