@@ -27,14 +27,23 @@ type Sender interface {
 	Send(ctx context.Context, msg Message) error
 }
 
+type NoopProvider struct{}
+
+func NewNoopProvider() Sender {
+	return new(NoopProvider)
+}
+
+func (*NoopProvider) Send(ctx context.Context, msg Message) error {
+	return fmt.Errorf("sms provider is not configured")
+}
+
 // New creates a new SMSSender using acc.
-func New(acc Account, engine tmpl.TemplateEngine) (Sender, error) {
+func New(acc Account) (Sender, error) {
 	client := twilio.NewClient(acc.AccountSid, acc.AccessToken, nil)
 
 	return &sender{
 		defaultFrom: acc.From,
 		client:      client,
-		engine:      engine,
 	}, nil
 }
 
@@ -56,7 +65,6 @@ func SendTemplate[T tmpl.Context](ctx context.Context, sender Sender, engine tmp
 type sender struct {
 	client      *twilio.Client
 	defaultFrom string
-	engine      tmpl.TemplateEngine
 }
 
 func (s *sender) Send(ctx context.Context, msg Message) error {

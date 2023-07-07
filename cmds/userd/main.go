@@ -12,6 +12,7 @@ import (
 	"github.com/tierklinik-dobersberg/cis-idm/internal/common"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/config"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/repo"
+	"github.com/tierklinik-dobersberg/cis-idm/internal/sms"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/tmpl"
 )
 
@@ -26,23 +27,26 @@ func main() {
 	}
 	logrus.Infof("sucessfully loaded configuration")
 
-	providers, err := setupApp(ctx, cfg)
+	// prepare all application providers.
+	providers, err := setupAppProviders(ctx, cfg)
 	if err != nil {
 		logrus.Fatal(err.Error())
 	}
 
+	// bootstrap the application by creating required roles.
 	if err := bootstrap.Bootstrap(ctx, cfg, providers.Datastore); err != nil {
 		cancel()
 
 		logrus.Fatalf("failed to bootstrap: %s", err)
 	}
 
+	// finally, start of the HTTP/2 servers...
 	if err := startServer(providers); err != nil {
 		logrus.Fatalf("failed to start server: %s", err)
 	}
 }
 
-func setupApp(ctx context.Context, cfg config.Config) (*app.Providers, error) {
+func setupAppProviders(ctx context.Context, cfg config.Config) (*app.Providers, error) {
 	// connect to rqlite
 	datastore, err := repo.New(cfg.DatabaseURL)
 	if err != nil {
@@ -67,26 +71,45 @@ func setupApp(ctx context.Context, cfg config.Config) (*app.Providers, error) {
 
 	logrus.Infof("successfully migrated database")
 
+	// Prepare the template engine used for notification templates.
 	tmplEngine, err := tmpl.New()
 	if err != nil {
 		return nil, fmt.Errorf("failed to prepare template engine: %w", err)
 	}
 
+	// Prepare the proto registry used for reflection operations.
 	reg, err := getProtoRegistry()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create proto registry: %w", err)
 	}
 
+	// Prepare a new validator used to validate incoming requests.
 	validator, err := protovalidate.New()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create protovalidate.Validator: %w", err)
+	}
+
+	// prepare a new Twilio SMS provider.
+	var smsProvider sms.Sender
+
+	if cfg.Twilio != nil {
+		smsProvider, err = sms.New(sms.Account{
+			From:        cfg.Twilio.From,
+			AccountSid:  cfg.Twilio.AccountSid,
+			AccessToken: cfg.Twilio.AccessToken,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to setup sms provider: %w", err)
+		}
+	} else {
+		smsProvider = sms.NewNoopProvider()
 	}
 
 	commonService := common.New(datastore, cfg)
 
 	providers := &app.Providers{
 		TemplateEngine: tmplEngine,
-		SMSSender:      nil,
+		SMSSender:      smsProvider,
 		Datastore:      datastore,
 		Config:         cfg,
 		Common:         commonService,
