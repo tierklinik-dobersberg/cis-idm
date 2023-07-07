@@ -9,6 +9,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/app"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/bootstrap"
+	"github.com/tierklinik-dobersberg/cis-idm/internal/cache"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/common"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/config"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/repo"
@@ -115,6 +116,7 @@ func setupAppProviders(ctx context.Context, cfg config.Config) (*app.Providers, 
 		Common:         commonService,
 		ProtoRegistry:  reg,
 		Validator:      validator,
+		Cache:          cache.NewInMemoryCache(), // TODO(ppacher): support redis here for HA
 	}
 
 	return providers, nil

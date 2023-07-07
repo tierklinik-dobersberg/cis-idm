@@ -67,9 +67,5 @@ func (repo *Repo) Migrate(ctx context.Context) error {
 		return fmt.Errorf("failed to create webauthn_creds table: %w", err)
 	}
 
-	if err := stmts.CreateWebauthnSessionTable.Write(ctx, repo.Conn, nil); err != nil && !errors.Is(err, stmts.ErrNoRowsAffected) {
-		return fmt.Errorf("failed to create webauthn_sessions table: %w", err)
-	}
-
 	return nil
 }

@@ -111,25 +111,4 @@ var (
 		Query: `DELETE FROM webauthn_creds WHERE user_id = ? AND id = ?`,
 		Args:  []string{"user_id", "id"},
 	}
-
-	SaveWebauthnSession = Statement[any]{
-		Query: `INSERT INTO webauthn_sessions (id, user_id, session) VALUES (?, ?, ?)`,
-		Args:  []string{"id", "user_id", "session"},
-	}
-
-	GetWebauthnSession = Statement[struct {
-		ID      string `mapstructure:"id"`
-		UserID  string `mapstructure:"user_id"`
-		Session string `mapstructure:"session"`
-	}]{
-		Query: `SELECT * FROM webauthn_sessions WHERE id = ?`,
-		Args:  []string{"id"},
-	}
-
-	DeleteWebauthnSession = Statement[any]{
-		Query: `DELETE FROM webauthn_sessions WHERE id = ?`,
-		Args:  []string{"id"},
-	}
-
-	// FIXME(ppacher): create trigger that removes stale session entries ...
 )

@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-webauthn/webauthn/protocol"
 	"github.com/go-webauthn/webauthn/webauthn"
+	"github.com/gofrs/uuid"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/config"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/middleware"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/repo"
@@ -70,8 +71,14 @@ func (svc *Service) BeginLoginHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	sessionID, err := svc.Datastore.SaveWebauthnSession(ctx, session)
+	sessionID, err := uuid.NewV4()
 	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+
+		return
+	}
+
+	if err := svc.Cache.PutKeyTTL(ctx, sessionID.String(), session, session.Expires.Sub(time.Now())); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 
 		return
@@ -79,7 +86,7 @@ func (svc *Service) BeginLoginHandler(w http.ResponseWriter, r *http.Request) {
 
 	http.SetCookie(w, &http.Cookie{
 		Name:     "login_session",
-		Value:    sessionID,
+		Value:    sessionID.String(),
 		Secure:   *svc.Config.SecureCookie,
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
@@ -115,8 +122,8 @@ func (svc *Service) FinishLoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	session, err := svc.Datastore.GetWebauthnSession(ctx, cookie.Value)
-	if err != nil {
+	var session webauthn.SessionData
+	if err := svc.Cache.GetAndDeleteKey(ctx, cookie.Value, &session); err != nil {
 		http.Error(w, "session not found", http.StatusNotFound)
 
 		return
@@ -148,14 +155,14 @@ func (svc *Service) FinishLoginHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		_, err = svc.web.ValidateLogin(webauthnUser, *session, response)
+		_, err = svc.web.ValidateLogin(webauthnUser, session, response)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusUnauthorized)
 
 			return
 		}
 	} else {
-		_, err := svc.web.ValidateDiscoverableLogin(getUserID, *session, response)
+		_, err := svc.web.ValidateDiscoverableLogin(getUserID, session, response)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusUnauthorized)
 

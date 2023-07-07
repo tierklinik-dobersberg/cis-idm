@@ -135,15 +135,4 @@ var (
 				ON DELETE CASCADE
 		)`,
 	}
-
-	CreateWebauthnSessionTable = Statement[any]{
-		Query: `CREATE TABLE IF NOT EXISTS webauthn_sessions (
-			id TEXT PRIMARY KEY,
-			user_id TEXT,
-			session TEXT,
-			CONSTRAINT fk_webauthn_session_user
-				FOREIGN KEY(user_id) REFERENCES users(id)
-				ON DELETE CASCADE
-		)`,
-	}
 )

@@ -3,9 +3,11 @@ package webauthn
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/go-webauthn/webauthn/protocol"
 	"github.com/go-webauthn/webauthn/webauthn"
+	"github.com/gofrs/uuid"
 	"github.com/mileusna/useragent"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/middleware"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/repo"
@@ -78,8 +80,14 @@ func (svc *Service) BeginRegistrationHandler(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	sessionID, err := svc.Datastore.SaveWebauthnSession(ctx, session)
+	sessionID, err := uuid.NewV4()
 	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+
+		return
+	}
+
+	if err := svc.Cache.PutKeyTTL(ctx, sessionID.String(), session, session.Expires.Sub(time.Now())); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 
 		return
@@ -87,7 +95,7 @@ func (svc *Service) BeginRegistrationHandler(w http.ResponseWriter, r *http.Requ
 
 	http.SetCookie(w, &http.Cookie{
 		Name:     "registration_session",
-		Value:    sessionID,
+		Value:    sessionID.String(),
 		Secure:   *svc.Config.SecureCookie,
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
@@ -114,8 +122,8 @@ func (svc *Service) FinishRegistrationHandler(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	session, err := svc.Datastore.GetWebauthnSession(ctx, cookie.Value)
-	if err != nil {
+	var session webauthn.SessionData
+	if err := svc.Cache.GetAndDeleteKey(ctx, cookie.Value, &session); err != nil {
 		http.Error(w, "session not found: "+err.Error(), http.StatusNotFound)
 
 		return
@@ -135,7 +143,7 @@ func (svc *Service) FinishRegistrationHandler(w http.ResponseWriter, r *http.Req
 		user,
 	)
 
-	cred, err := svc.web.CreateCredential(webauthnUser, *session, response)
+	cred, err := svc.web.CreateCredential(webauthnUser, session, response)
 	if err != nil {
 		http.Error(w, "failed to create credentials: "+err.Error(), http.StatusInternalServerError)
 

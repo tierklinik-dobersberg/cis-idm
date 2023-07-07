@@ -2,6 +2,7 @@ package app
 
 import (
 	"github.com/bufbuild/protovalidate-go"
+	"github.com/tierklinik-dobersberg/cis-idm/internal/cache"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/common"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/config"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/repo"
@@ -18,4 +19,5 @@ type Providers struct {
 	Common         *common.Service
 	ProtoRegistry  *protoregistry.Files
 	Validator      *protovalidate.Validator
+	Cache          cache.Cache
 }
