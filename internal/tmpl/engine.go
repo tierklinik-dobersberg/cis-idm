@@ -41,7 +41,7 @@ type TemplateEngine interface {
 }
 
 func NewTextEngine(fs fs.FS, kind Kind) (TemplateEngine, error) {
-	t, err := textTemplate.New("").ParseFS(fs, filepath.Join(string(kind), "*.tmpl"))
+	t, err := textTemplate.New("").ParseFS(fs, filepath.Join("templates", string(kind), "*.tmpl"))
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +56,7 @@ func NewTextEngine(fs fs.FS, kind Kind) (TemplateEngine, error) {
 }
 
 func NewHTMLEngine(fs fs.FS, kind Kind) (TemplateEngine, error) {
-	t, err := htmlTemplate.New("").ParseFS(fs, filepath.Join(string(kind), "*.tmpl"))
+	t, err := htmlTemplate.New("").ParseFS(fs, filepath.Join("templates", string(kind), "*.tmpl"))
 	if err != nil {
 		return nil, err
 	}

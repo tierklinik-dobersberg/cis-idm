@@ -9,8 +9,15 @@ import (
 )
 
 func (repo *Repo) GetUserPhoneNumbers(ctx context.Context, userID string) ([]models.PhoneNumber, error) {
-	return Query(ctx, stmts.GetUserPhoneNumbersByID, repo.Conn, map[string]any{
+	return Query(ctx, stmts.GetPhoneNumbersByUserID, repo.Conn, map[string]any{
 		"user_id": userID,
+	})
+}
+
+func (repo *Repo) GetUserPhoneNumberByID(ctx context.Context, id, userID string) (models.PhoneNumber, error) {
+	return QueryOne(ctx, stmts.GetPhoneNumberByID, repo.Conn, map[string]any{
+		"user_id": userID,
+		"id":      id,
 	})
 }
 
@@ -40,6 +47,13 @@ func (repo *Repo) DeleteUserPhoneNumber(ctx context.Context, userID string, phon
 
 func (repo *Repo) MarkPhoneNumberAsPrimary(ctx context.Context, userID string, phoneNumberID string) error {
 	return stmts.MarkPhoneNumberAsPrimary.Write(ctx, repo.Conn, map[string]any{
+		"user_id": userID,
+		"id":      phoneNumberID,
+	})
+}
+
+func (repo *Repo) MarkPhoneNumberAsVerified(ctx context.Context, userID string, phoneNumberID string) error {
+	return stmts.MarkPhoneNumberAsVerified.Write(ctx, repo.Conn, map[string]any{
 		"user_id": userID,
 		"id":      phoneNumberID,
 	})

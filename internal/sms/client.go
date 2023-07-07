@@ -48,8 +48,8 @@ func New(acc Account) (Sender, error) {
 }
 
 // SendTemplates renders a known template
-func SendTemplate[T tmpl.Context](ctx context.Context, sender Sender, engine tmpl.TemplateEngine, to []string, t tmpl.Known[T], args T) error {
-	message, err := tmpl.RenderKnown(engine, t, args)
+func SendTemplate[T tmpl.Context](ctx context.Context, sender Sender, engine *tmpl.Engine, to []string, t tmpl.Known[T], args T) error {
+	message, err := tmpl.RenderKnown(engine.SMS, t, args)
 	if err != nil {
 		return fmt.Errorf("failed to render template: %w", err)
 	}

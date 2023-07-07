@@ -21,8 +21,14 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	configFilePath := "/etc/cisidm/config.yml"
+
+	if path := os.Getenv("CONFIG_FILE"); path != "" {
+		configFilePath = path
+	}
+
 	// get configuration from environment
-	cfg, err := config.FromEnvironment(ctx, os.Args[1])
+	cfg, err := config.FromEnvironment(ctx, configFilePath)
 	if err != nil {
 		logrus.Fatalf("failed to parse config from environment: %s", err)
 	}

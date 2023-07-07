@@ -16,6 +16,7 @@ const routes: Routes = [
   { path: "profile/edit-mail/:id", canActivate: [authGuard], loadComponent: () => import('./pages/add-edit-mail/add-edit-mail.component').then(m => m.AddEditMailComponent)},
   { path: "profile/edit-phone", canActivate: [authGuard], loadComponent: () => import('./pages/add-edit-phone/add-edit-phone.component').then(m => m.AddEditPhoneComponent)},
   { path: "profile/edit-phone/:id", canActivate: [authGuard], loadComponent: () => import('./pages/add-edit-phone/add-edit-phone.component').then(m => m.AddEditPhoneComponent)},
+  { path: "profile/verify-phone/:id", canActivate: [authGuard], loadComponent: () => import('./pages/verify-phone/verify-phone.component').then(m => m.VerifyPhoneComponent)},
   { path: "profile/manage-mfa", canActivate: [authGuard], loadComponent: () => import('./pages/manage-mfa/manage-mfa.component').then(m => m.ManageMfaComponent)},
   { path: "profile/edit-avatar", canActivate: [authGuard], loadComponent: () => import('./pages/edit-avatar/edit-avatar.component').then(m => m.EditAvatarComponent)},
 ];

@@ -34,7 +34,7 @@
         Diese Telefonnummer wurde noch nicht verifiziert
         und kann daher noch nicht verwendet werden.
       </span>
-      <button class="tkd-btn-outline whitespace-nowrap">Jetzt verifizieren</button>
+      <button [routerLink]="['/profile/verify-phone', id]" class="tkd-btn-outline whitespace-nowrap">Jetzt verifizieren</button>
     </section>
     <section *ngIf="saveAddrError" class="flex !flex-row gap-4 !items-center">
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"

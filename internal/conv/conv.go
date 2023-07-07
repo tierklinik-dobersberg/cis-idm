@@ -66,7 +66,7 @@ func PhoneNumberProtoFromPhoneNumber(nbr models.PhoneNumber) *idmv1.PhoneNumber 
 	return &idmv1.PhoneNumber{
 		Id:       nbr.ID,
 		Number:   nbr.PhoneNumber,
-		Verified: false,
+		Verified: nbr.Verified,
 		Primary:  nbr.Primary,
 	}
 }

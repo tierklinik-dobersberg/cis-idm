@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/caarlos0/env"
 	"github.com/ghodss/yaml"
 	"github.com/hashicorp/go-multierror"
 	"golang.org/x/exp/slices"
@@ -268,18 +267,18 @@ func (file Config) AuthRequiredForURL(method string, url string) (bool, error) {
 
 // FromEnvironment returns a Config object parsed from environment variables.
 func FromEnvironment(ctx context.Context, cfgFilePath string) (cfg Config, err error) {
-	if cfgFilePath != "" {
-		parsedFile, err := LoadFile(cfgFilePath)
-		if err != nil {
-			return cfg, fmt.Errorf("failed to parse config file at %q: %w", cfgFilePath, err)
+	parsedFile, err := LoadFile(cfgFilePath)
+	if err != nil {
+		return cfg, fmt.Errorf("failed to parse config file %q: %w", cfgFilePath, err)
+	}
+
+	cfg = *parsedFile
+
+	/*
+		if err := env.Parse(&cfg); err != nil {
+			return cfg, fmt.Errorf("failed to parse config from environment: %w", err)
 		}
-
-		cfg = *parsedFile
-	}
-
-	if err := env.Parse(&cfg); err != nil {
-		return cfg, fmt.Errorf("failed to parse config from environment")
-	}
+	*/
 
 	cfg.parseFeatureSet()
 

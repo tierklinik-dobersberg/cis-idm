@@ -23,7 +23,9 @@ type Cache interface {
 }
 
 func NewInMemoryCache() Cache {
-	return new(inMemoryCache)
+	return &inMemoryCache{
+		keys: make(map[string]cacheEntry),
+	}
 }
 
 type cacheEntry struct {

@@ -11,7 +11,6 @@ RUN npm install
 RUN npx browserslist@latest --update-db
 
 COPY ./ui .
-COPY --from=tkdapis /src/ /app/ui/node_modules/@tkd/apis
 RUN npm run build
 
 # Build the gobinary

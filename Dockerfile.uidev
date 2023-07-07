@@ -1,12 +1,8 @@
-FROM tkd-apis:latest as tkdapis
 FROM node:16 as builder
 
 WORKDIR /app/ui
 
-COPY --from=tkdapis /src/ /app/@tkd/apis
-RUN cd /app/@tkd/apis && npm link
-
 USER 1000:1000
 
 ENTRYPOINT ["bash"]
-CMD [ "-c", "npm install && npm link @tkd/apis && ./node_modules/.bin/ng serve --host=0.0.0.0 --port=4200 --configuration=development --disable-host-check"]
+CMD [ "-c", "npm install && ./node_modules/.bin/ng serve --host=0.0.0.0 --port=4200 --configuration=development --disable-host-check"]
