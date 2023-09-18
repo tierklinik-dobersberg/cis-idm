@@ -96,6 +96,7 @@ func (p *Providers) addAccessTokenCookie(resp http.Header, token string, ttl tim
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
 	}
+
 	resp.Add("Set-Cookie", accessCookie.String())
 }
 

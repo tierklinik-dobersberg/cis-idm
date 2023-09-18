@@ -2,7 +2,7 @@
 
 Welcome to the project page of cisidm, a simple, self-hosted and high-available identity management server.
 
-Please note that cisidm is being actively developed and is not yet complete or ready for production use. Use at your own risk! 
+Please note that cisidm is being actively developed and is not yet complete or ready for production use. Use at your own risk!
 
 ## Features
 
@@ -14,15 +14,16 @@ Please note that cisidm is being actively developed and is not yet complete or r
 - Privacy (access to user profile fields) backed into Protobuf (see tierklinik-dobersberg/apis)
 - Stateless (uses [rqlite](https://rqlite.io) for storage) so it can be deployed
   multiple times for load-balancing.
+- Support user invites per mail
 - A `/validate` endpoint that can be used for proxy forward authentication as supported in [Traefik](https://doc.traefik.io/traefik/) or [Caddy](https://caddyserver.com/docs/caddyfile/directives/forward_auth).
 - A pretty **Self-Service Portal** UI:
   - Update / Manage profile / avatar picture.
-  - Change passwords
-  - Enroll 2FA
+  - Change passwords or reset via mail link
+  - Enroll 2FA (TOTP)
   - Enroll WebAuthN/Passkeys
   - Self registration (may optionally require a registration token) with either Password or WebAuthN
-  - Manage E-Mail addresses
-  - Manage phone numbers
+  - Manage E-Mail addresses and verify them
+  - Manage phone numbers and verify them using one-time security codes.
   - Manage addresses (delivery/billing/...)
   - Dark and Light mode :rocket:
 
@@ -33,16 +34,11 @@ will be released as a v1:
 
 - Self-Service: Manage your active user-sessions and revoke refresh/access tokens
 - UI: i18n support (UI is currently in German Only)
-- Internal: Support to send Mails (required by items below)
-- Internal: Support to send SMS via Twilio (required by items below)
 - Authz: A role based authentication system
 - Self-Service: Change privacy settings
-- Self-Service: Verification of phone numbers
-- Self-Service: Verification of E-Mail addresses
 - Auth: 2FA authentication using SMS
 - Auth: 2FA authentication using E-Mail
 - Auth: E-Mail magic-link authentication
-- Auth: Password recovery using E-Mail or SMS
 - Feature-Flag management on a per-user basis
 
 ## Quick-Start
@@ -66,6 +62,18 @@ allowedOrigins:
 publicURL: https://account.example.dev
 allowedRedirects:
   - wiki.example.dev
+
+twilio:
+  sid: XXXX
+  token: XXXX
+  from: XXXX
+
+mail:
+  host: xxxx
+  user: xxxx
+  password: xxxx
+  port: 465
+  from: xxxx
 ```
 
 You should make sure that `example.dev`, `wiki.example.dev` and `account.example.dev` resolve to localhost.

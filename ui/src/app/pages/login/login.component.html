@@ -60,7 +60,7 @@
               name="password" [(ngModel)]="password">
 
             <a (click)="chooseDifferentAccount()" class="inline-block w-full text-sm text-center">Nicht dein Account? Verwende einen anderen.</a>
-            <a class="inline-block w-full -mt-2 text-sm text-center" href="#">Password vergessen?</a>
+            <a class="inline-block w-full -mt-2 text-sm text-center" [routerLink]="['/password/request-reset']">Password vergessen?</a>
 
           </ng-container>
 
@@ -80,8 +80,6 @@
         <button [disabled]="!loginForm.valid" type="submit" class="tkd-btn">Weiter</button>
         <a *ngIf="config.features.registration" class="inline-block w-full -mt-2 text-xs text-center"
           routerLink="/registration">Noch keine Account? Registriere dich!</a>
-
-
       </section>
     </content>
   </div>

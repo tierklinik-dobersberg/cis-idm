@@ -19,16 +19,20 @@
 
         <span class="text-base">Bitte wähle einen neuen Benutzernamen und ein neues Passwort:</span>
 
-        <input required placeholder="Username"
+        <input required placeholder="Username" autocomplete="username webauthn"
           class="tkd-input"
           type="text" name="username" [(ngModel)]="username">
 
+          <input required placeholder="E-Mail" autocomplete="email"
+            class="tkd-input"
+            type="text" name="email" [(ngModel)]="email">
+
         <ng-container *ngIf="usePassword">
-          <input required placeholder="Password"
+          <input required placeholder="Password" autocomplete="new-password webauthn"
             class="tkd-input"
             type="password" name="password" [(ngModel)]="password">
 
-          <input required placeholder="Password wiederholen"
+          <input required placeholder="Password wiederholen" autocomplete="new-password webauthn"
             class="tkd-input"
             type="password" name="password" [(ngModel)]="passwordRepeat">
         </ng-container>

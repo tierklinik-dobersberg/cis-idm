@@ -9,6 +9,7 @@ import (
 	"github.com/go-webauthn/webauthn/webauthn"
 	"github.com/gofrs/uuid"
 	"github.com/mileusna/useragent"
+	"github.com/tierklinik-dobersberg/apis/pkg/log"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/middleware"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/repo"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/repo/models"
@@ -16,7 +17,7 @@ import (
 
 func (svc *Service) BeginRegistrationHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	l := middleware.L(ctx)
+	l := log.L(ctx)
 
 	l.Infof("received request to begin webauthn registration")
 
@@ -59,7 +60,7 @@ func (svc *Service) BeginRegistrationHandler(w http.ResponseWriter, r *http.Requ
 
 	webauthnUser := repo.NewWebAuthnUser(
 		ctx,
-		middleware.L(ctx),
+		log.L(ctx),
 		svc.Datastore,
 		user,
 	)
@@ -114,7 +115,7 @@ func (svc *Service) FinishRegistrationHandler(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	middleware.L(ctx).Infof("%+v", response)
+	log.L(ctx).Infof("%+v", response)
 
 	cookie := middleware.FindCookie("registration_session", r.Header)
 	if cookie == nil {
@@ -124,6 +125,7 @@ func (svc *Service) FinishRegistrationHandler(w http.ResponseWriter, r *http.Req
 
 	var session webauthn.SessionData
 	if err := svc.Cache.GetAndDeleteKey(ctx, cookie.Value, &session); err != nil {
+		log.L(ctx).Errorf("failed to find webauthn registration session: %s", err)
 		http.Error(w, "session not found: "+err.Error(), http.StatusNotFound)
 
 		return
@@ -138,7 +140,7 @@ func (svc *Service) FinishRegistrationHandler(w http.ResponseWriter, r *http.Req
 
 	webauthnUser := repo.NewWebAuthnUser(
 		ctx,
-		middleware.L(ctx),
+		log.L(ctx),
 		svc.Datastore,
 		user,
 	)

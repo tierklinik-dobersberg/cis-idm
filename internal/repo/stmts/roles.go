@@ -13,13 +13,27 @@ var (
 		Args:  []string{"id"},
 	}
 
+	GetRoles = Statement[models.Role]{
+		Query: `SELECT * FROM roles`,
+	}
+
 	CreateRole = Statement[any]{
 		Query: `INSERT INTO roles (id, name, description, delete_protected) VALUES (?, ?, ?, ?)`,
 		Args:  []string{"id", "name", "description", "delete_protected"},
 	}
 
+	UpdateRole = Statement[any]{
+		Query: `UPDATE roles SET name = ?, description = ?, delete_protected = ? WHERE id = ?`,
+		Args:  []string{"name", "description", "delete_protected", "id"},
+	}
+
 	AssignRoleToUser = Statement[any]{
 		Query: `INSERT INTO role_assignments (user_id, role_id) VALUES (?, ?)`,
+		Args:  []string{"user_id", "role_id"},
+	}
+
+	UnassignRoleFromUser = Statement[any]{
+		Query: `DELETE FROM role_assignments WHERE user_id = ? AND role_id = ?`,
 		Args:  []string{"user_id", "role_id"},
 	}
 
@@ -37,5 +51,10 @@ var (
 		JOIN users ON users.id = user_id
 		WHERE role_id = ?`,
 		Args: []string{"role_id"},
+	}
+
+	DeleteRole = Statement[any]{
+		Query: `DELETE FROM roles WHERE id = ?`,
+		Args:  []string{"id"},
 	}
 )

@@ -14,6 +14,12 @@ func (repo *Repo) GetUserPhoneNumbers(ctx context.Context, userID string) ([]mod
 	})
 }
 
+func (repo *Repo) GetUserPrimaryPhoneNumber(ctx context.Context, userID string) (models.PhoneNumber, error) {
+	return QueryOne(ctx, stmts.GetUserPrimaryPhoneNumber, repo.Conn, map[string]any{
+		"user_id": userID,
+	})
+}
+
 func (repo *Repo) GetUserPhoneNumberByID(ctx context.Context, id, userID string) (models.PhoneNumber, error) {
 	return QueryOne(ctx, stmts.GetPhoneNumberByID, repo.Conn, map[string]any{
 		"user_id": userID,

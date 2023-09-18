@@ -33,7 +33,7 @@ type User struct {
 	DisplayName string `mapstructure:"display_name"`
 	FirstName   string `mapstructure:"first_name"`
 	LastName    string `mapstructure:"last_name"`
-	Extra       []byte `mapstructure:"extra"`
+	Extra       string `mapstructure:"extra"`
 	Avatar      string `mapstructure:"avatar"`
 	Password    string `mapstructure:"password"`
 	Birthday    string `mapstructure:"birthday"`

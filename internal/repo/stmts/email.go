@@ -19,6 +19,11 @@ var (
 		Args:  []string{"user_id"},
 	}
 
+	GetEmailByID = Statement[models.EMail]{
+		Query: `SELECT * FROM user_emails WHERE user_id = ? AND id = ?`,
+		Args:  []string{"user_id", "id"},
+	}
+
 	GetPrimaryEmailForUserByID = Statement[models.EMail]{
 		Query: `SELECT * FROM user_emails WHERE user_id = ? and is_primary = true LIMIT 1`,
 		Args:  []string{"user_id"},
@@ -37,5 +42,10 @@ var (
 	MarkEmailAsPrimary = Statement[any]{
 		Query: `UPDATE user_emails SET is_primary = (id == ?) WHERE user_id = ?`,
 		Args:  []string{"id", "user_id"},
+	}
+
+	MarkEmailAsVerified = Statement[any]{
+		Query: `UPDATE user_emails SET verified = true WHERE user_id = ? AND id = ?`,
+		Args:  []string{"user_id", "id"},
 	}
 )

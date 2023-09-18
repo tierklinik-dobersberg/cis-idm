@@ -26,7 +26,6 @@ export class ProfileService {
     try {
       const result = await this.client.introspect({})
       this.profile.next(result.profile!);
-      console.log("got response", result)
     } catch(err) {
       console.error(ConnectError.from(err))
       this.profile.next(null)

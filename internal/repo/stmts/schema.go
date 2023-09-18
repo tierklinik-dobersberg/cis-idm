@@ -8,7 +8,7 @@ var (
 			display_name TEXT,
 			first_name TEXT,
 			last_name TEXT,
-			extra BLOB,
+			extra TEXT,
 			avatar TEXT,
 			birthday TEXT,
 			password TEXT NOT NULL,

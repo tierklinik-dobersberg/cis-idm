@@ -4,11 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 
 	"github.com/mitchellh/mapstructure"
 	"github.com/rqlite/gorqlite"
-	"github.com/tierklinik-dobersberg/cis-idm/internal/middleware"
 )
 
 type Statement[R any] struct {
@@ -57,11 +55,6 @@ func (stmt Statement[R]) Write(ctx context.Context, conn *gorqlite.Connection, a
 	pStmt, err := stmt.Prepare(args)
 	if err != nil {
 		return err
-	}
-
-	if os.Getenv("DEBUG") != "" {
-		middleware.L(ctx).
-			Infof(pStmt.Query)
 	}
 
 	writeResult, err := conn.WriteOneParameterizedContext(ctx, pStmt)

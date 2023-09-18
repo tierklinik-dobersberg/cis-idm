@@ -12,6 +12,7 @@ import (
 	"github.com/tierklinik-dobersberg/cis-idm/internal/cache"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/common"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/config"
+	"github.com/tierklinik-dobersberg/cis-idm/internal/mailer"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/repo"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/sms"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/tmpl"
@@ -98,7 +99,6 @@ func setupAppProviders(ctx context.Context, cfg config.Config) (*app.Providers, 
 
 	// prepare a new Twilio SMS provider.
 	var smsProvider sms.Sender
-
 	if cfg.Twilio != nil {
 		smsProvider, err = sms.New(sms.Account{
 			From:        cfg.Twilio.From,
@@ -112,11 +112,31 @@ func setupAppProviders(ctx context.Context, cfg config.Config) (*app.Providers, 
 		smsProvider = sms.NewNoopProvider()
 	}
 
+	// prepare the mailer
+	var mailSender mailer.Mailer
+	if cfg.MailConfig != nil {
+		mailSender, err = mailer.New(mailer.Account{
+			Host:          cfg.MailConfig.Host,
+			Port:          cfg.MailConfig.Port,
+			Username:      cfg.MailConfig.Username,
+			Password:      cfg.MailConfig.Password,
+			From:          cfg.MailConfig.From,
+			AllowInsecure: cfg.MailConfig.AllowInsecure,
+			UseSSL:        cfg.MailConfig.UseSSL,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to setup mail provider: %w", err)
+		}
+	} else {
+		mailSender = new(mailer.NoOpMailer)
+	}
+
 	commonService := common.New(datastore, cfg)
 
 	providers := &app.Providers{
 		TemplateEngine: tmplEngine,
 		SMSSender:      smsProvider,
+		Mailer:         mailSender,
 		Datastore:      datastore,
 		Config:         cfg,
 		Common:         commonService,

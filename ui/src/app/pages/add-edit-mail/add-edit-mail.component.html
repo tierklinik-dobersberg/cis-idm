@@ -24,7 +24,7 @@
         </div>
       </form>
     </section>
-    <section *ngIf="!isNew && !verified" class="flex !flex-row gap-4 !items-center">
+    <section *ngIf="!isNew && !verified && !validationSent" class="flex !flex-row gap-4 !items-center">
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
         class="w-8 h-8 text-yellow-500 dark:text-yellow-300">
         <path stroke-linecap="round" stroke-linejoin="round"
@@ -34,8 +34,15 @@
         Diese E-Mail Adresse wurde noch nicht verifiziert
         und kann daher noch nicht verwendet werden.
       </span>
-      <button class="tkd-btn-outline whitespace-nowrap">Jetzt verifizieren</button>
+      <button class="tkd-btn-outline whitespace-nowrap" (click)="validateEmail()">Jetzt verifizieren</button>
     </section>
+
+    <section *ngIf="validationSent" class="flex !flex-row gap-4 !items-center">
+      <span class="flex-grow text-yellow-500 dark:text-yellow-300">
+        Wir haben einen Bestätigungslink an deine E-Mail Adresse geschickt. Bitte kontrolliere deinen Posteingang.
+      </span>
+    </section>
+
     <section *ngIf="saveAddrError" class="flex !flex-row gap-4 !items-center">
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
         class="w-8 h-8 text-red-500 dark:text-red-300">

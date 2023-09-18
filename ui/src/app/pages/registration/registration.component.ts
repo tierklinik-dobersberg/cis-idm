@@ -37,11 +37,15 @@ export class RegistrationComponent {
   username = '';
   password = '';
   passwordRepeat = '';
+  email = '';
   token = '';
   errorMessage = '';
 
   ngOnInit() {
-    this.token = this.currentRoute.snapshot.queryParamMap.get("token") || "";
+    const params = this.currentRoute.snapshot.queryParamMap;
+    this.token = params.get("token") || "";
+    this.email = params.get("mail") || "";
+    this.username = params.get("name") || "";
   }
 
   async submit() {
@@ -72,6 +76,7 @@ export class RegistrationComponent {
         registrationToken: this.token,
         password: this.password,
         username: this.username,
+        email: this.email,
       })
 
       if (!result.accessToken) {

@@ -8,10 +8,17 @@ import (
 	"golang.org/x/exp/slices"
 )
 
+type StaticToken struct {
+	Tokens    string   `json:"token"`
+	SubjectID string   `json:"subject"`
+	Roles     []string `json:"roles"`
+}
+
 type ForwardAuthEntry struct {
-	Required *bool    `json:"required,omitempty" yaml:"required,omitempty"`
-	URL      string   `json:"url" yaml:"url"`
-	Methods  []string `json:"methods,omitempty" yaml:"methods,omitempty"`
+	Required *bool         `json:"required,omitempty" yaml:"required,omitempty"`
+	URL      string        `json:"url" yaml:"url"`
+	Methods  []string      `json:"methods,omitempty" yaml:"methods,omitempty"`
+	Tokens   []StaticToken `json:"staticTokens"`
 
 	parsedUrlRegex *regexp.Regexp
 	parseOnce      sync.Once

@@ -7,7 +7,7 @@ import (
 
 	"github.com/go-webauthn/webauthn/webauthn"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/app"
-	"github.com/tierklinik-dobersberg/cis-idm/internal/auth"
+	"github.com/tierklinik-dobersberg/cis-idm/internal/services/auth"
 )
 
 type Service struct {

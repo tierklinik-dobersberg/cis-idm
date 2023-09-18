@@ -23,7 +23,7 @@ interface LoggedInUserHistory {
   users: LoggedInUser[];
 }
 
-type States = 'user-select' | 'username-input' | 'password-input' | 'totp-input';
+type States = 'user-select' | 'username-input' | 'password-input' | 'totp-input' ;
 
 @Component({
   standalone: true,

@@ -9,6 +9,7 @@ import (
 	"github.com/go-webauthn/webauthn/protocol"
 	"github.com/go-webauthn/webauthn/webauthn"
 	"github.com/gofrs/uuid"
+	"github.com/tierklinik-dobersberg/apis/pkg/log"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/config"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/middleware"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/repo"
@@ -43,7 +44,7 @@ func (svc *Service) BeginLoginHandler(w http.ResponseWriter, r *http.Request) {
 
 		webauthnUser := repo.NewWebAuthnUser(
 			ctx,
-			middleware.L(ctx),
+			log.L(ctx),
 			svc.Datastore,
 			user,
 		)
@@ -78,7 +79,7 @@ func (svc *Service) BeginLoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := svc.Cache.PutKeyTTL(ctx, sessionID.String(), session, session.Expires.Sub(time.Now())); err != nil {
+	if err := svc.Cache.PutKeyTTL(ctx, sessionID.String(), session, time.Until(session.Expires)); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 
 		return
@@ -124,7 +125,8 @@ func (svc *Service) FinishLoginHandler(w http.ResponseWriter, r *http.Request) {
 
 	var session webauthn.SessionData
 	if err := svc.Cache.GetAndDeleteKey(ctx, cookie.Value, &session); err != nil {
-		http.Error(w, "session not found", http.StatusNotFound)
+		log.L(ctx).Errorf("failed to get webauthn login session for key %s: %s", cookie.Value, err)
+		http.Error(w, "session not found: "+err.Error(), http.StatusNotFound)
 
 		return
 	}
@@ -139,7 +141,7 @@ func (svc *Service) FinishLoginHandler(w http.ResponseWriter, r *http.Request) {
 
 		webauthnUser := repo.NewWebAuthnUser(
 			ctx,
-			middleware.L(ctx),
+			log.L(ctx),
 			svc.Datastore,
 			user,
 		)

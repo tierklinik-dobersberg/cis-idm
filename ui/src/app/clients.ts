@@ -1,5 +1,5 @@
 import { InjectionToken } from "@angular/core";
-import { ActivatedRoute } from "@angular/router";
+import { ActivatedRoute, Router } from "@angular/router";
 import { Code, ConnectError, Interceptor, PromiseClient, Transport, createPromiseClient } from "@bufbuild/connect";
 import { createConnectTransport } from "@bufbuild/connect-web";
 import { AuthService, SelfServiceService } from "@tkd/apis";
@@ -11,7 +11,7 @@ export const SELF_SERVICE = new InjectionToken<SelfServiceClient>('SELF_SERVICE'
 export type AuthServiceClient = PromiseClient<typeof AuthService>;
 export type SelfServiceClient = PromiseClient<typeof SelfServiceService>;
 
-const retryRefreshToken: (transport: Transport, activatedRoute: ActivatedRoute) => Interceptor = (transport, activatedRoute) => {
+const retryRefreshToken: (transport: Transport, activatedRoute: ActivatedRoute, router: Router) => Interceptor = (transport, activatedRoute, router) => {
   let pendingRefresh: Promise<void> | null = null;
 
   return (next) => async (req) => {
@@ -46,7 +46,18 @@ const retryRefreshToken: (transport: Transport, activatedRoute: ActivatedRoute) 
 
           console.log(`[DEBUG] call to ${req.service.typeName}/${req.method.name} not authenticated, trying to refresh token`)
           try {
-            const res = await cli.refreshToken({})
+            let redirect = activatedRoute.snapshot.queryParamMap.get("redirect");
+            if (!redirect && router.getCurrentNavigation() !== null) {
+              redirect = router.getCurrentNavigation()!.extractedUrl.queryParamMap.get("redirect")
+            }
+
+            const res = await cli.refreshToken({
+              requestedRedirect: redirect || '',
+            })
+
+            if (res.redirectTo !== '') {
+              window.location.href = res.redirectTo;
+            }
 
             _resolve();
           } catch (refreshErr) {
@@ -74,14 +85,17 @@ const retryRefreshToken: (transport: Transport, activatedRoute: ActivatedRoute) 
   }
 }
 
-export function transportFactory(route: ActivatedRoute): Transport {
+export function transportFactory(route: ActivatedRoute, router: Router): Transport {
   const retryTransport = createConnectTransport({baseUrl: '', credentials: 'include'})
 
   return createConnectTransport({
     baseUrl: '',
     credentials: 'include',
+    jsonOptions: {
+      ignoreUnknownFields: true
+    },
     interceptors: [
-      retryRefreshToken(retryTransport, route),
+      retryRefreshToken(retryTransport, route, router),
     ],
   })
 }

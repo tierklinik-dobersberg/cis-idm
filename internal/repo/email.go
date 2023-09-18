@@ -14,6 +14,13 @@ func (repo *Repo) GetUserEmails(ctx context.Context, userID string) ([]models.EM
 	})
 }
 
+func (repo *Repo) GetUserEmailByID(ctx context.Context, userID, id string) (models.EMail, error) {
+	return QueryOne(ctx, stmts.GetEmailByID, repo.Conn, map[string]any{
+		"user_id": userID,
+		"id":      id,
+	})
+}
+
 func (repo *Repo) GetUserPrimaryMail(ctx context.Context, userID string) (models.EMail, error) {
 	return QueryOne(ctx, stmts.GetPrimaryEmailForUserByID, repo.Conn, map[string]any{
 		"user_id": userID,
@@ -39,6 +46,13 @@ func (repo *Repo) CreateUserEmail(ctx context.Context, mail models.EMail) (model
 
 func (repo *Repo) DeleteEMailFromUser(ctx context.Context, userID string, mailID string) error {
 	return stmts.DeleteEMailFromUser.Write(ctx, repo.Conn, map[string]any{
+		"user_id": userID,
+		"id":      mailID,
+	})
+}
+
+func (repo *Repo) MarkEmailAsVerified(ctx context.Context, userID string, mailID string) error {
+	return stmts.MarkEmailAsVerified.Write(ctx, repo.Conn, map[string]any{
 		"user_id": userID,
 		"id":      mailID,
 	})

@@ -8,6 +8,11 @@ var (
 		Args:  []string{"user_id"},
 	}
 
+	GetUserPrimaryPhoneNumber = Statement[models.PhoneNumber]{
+		Query: `SELECT * FROM user_phone_numbers WHERE user_id = ? AND is_primary = TRUE`,
+		Args:  []string{"user_id"},
+	}
+
 	GetPhoneNumberByID = Statement[models.PhoneNumber]{
 		Query: `SELECT * FROM user_phone_numbers WHERE user_id = ? AND id = ?`,
 		Args:  []string{"user_id", "id"},

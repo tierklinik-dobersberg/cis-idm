@@ -30,6 +30,7 @@ export class AddEditMailComponent implements OnInit {
   destroyRef = inject(DestroyRef);
   router = inject(Router);
   cdr = inject(ChangeDetectorRef);
+  validationSent = false;
 
   id: string | null = null;
   saveAddrError: string | null = null;
@@ -87,6 +88,22 @@ export class AddEditMailComponent implements OnInit {
     await this.selfService.deleteEmailAddress({ id: this.id! })
     await this.profileService.loadProfile();
     this.router.navigate(['../'])
+  }
+
+  async validateEmail() {
+    try {
+      await this.selfService.validateEmail({
+        kind: {
+          case: 'emailId',
+          value: this.id!,
+        }
+      })
+
+      this.validationSent = true
+    } catch (err) {
+      this.saveAddrError = ConnectError.from(err).rawMessage;
+      this.cdr.markForCheck();
+    }
   }
 
   async markAsPrimary() {

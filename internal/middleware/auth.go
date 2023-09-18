@@ -9,6 +9,7 @@ import (
 
 	"github.com/bufbuild/connect-go"
 	commonv1 "github.com/tierklinik-dobersberg/apis/gen/go/tkd/common/v1"
+	"github.com/tierklinik-dobersberg/apis/pkg/log"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/jwt"
 	"golang.org/x/exp/slices"
 	"google.golang.org/protobuf/proto"
@@ -52,14 +53,14 @@ func NewAuthInterceptor(registry *protoregistry.Files) connect.UnaryInterceptorF
 				return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to find method descriptor for %s", req.Spec().Procedure))
 			}
 
-			l := L(ctx).WithField("method", methodDesc.FullName())
+			l := log.L(ctx).WithField("method", methodDesc.FullName())
 
 			claims := ClaimsFromContext(ctx)
 
 			opts, ok := proto.GetExtension(methodDesc.Options(), commonv1.E_Auth).(*commonv1.AuthDecorator)
 
 			if ok && opts != nil {
-				L(ctx).Infof("checking authentication requirement: %#v", opts)
+				log.L(ctx).Infof("checking authentication requirement: %#v", opts)
 				switch opts.Require {
 				case commonv1.AuthRequirement_AUTH_REQ_REQUIRED:
 					l.Infof("service method requires authentication")
@@ -92,7 +93,7 @@ func NewAuthInterceptor(registry *protoregistry.Files) connect.UnaryInterceptorF
 				l.Infof("not authentication requirement specified for service method")
 			}
 
-			ctx = WithLogger(ctx, l)
+			ctx = log.WithLogger(ctx, l)
 
 			return next(ctx, req)
 		})

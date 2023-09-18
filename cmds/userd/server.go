@@ -3,32 +3,32 @@ package main
 import (
 	"context"
 	"embed"
-	"errors"
 	"fmt"
 	"io/fs"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
-	"os"
 	"strings"
-	"time"
 
 	"github.com/bufbuild/connect-go"
-	"github.com/rs/cors"
 	idmv1 "github.com/tierklinik-dobersberg/apis/gen/go/tkd/idm/v1"
 	"github.com/tierklinik-dobersberg/apis/gen/go/tkd/idm/v1/idmv1connect"
+	"github.com/tierklinik-dobersberg/apis/pkg/cors"
+	"github.com/tierklinik-dobersberg/apis/pkg/log"
+	"github.com/tierklinik-dobersberg/apis/pkg/privacy"
+	"github.com/tierklinik-dobersberg/apis/pkg/server"
+	"github.com/tierklinik-dobersberg/apis/pkg/spa"
+	"github.com/tierklinik-dobersberg/apis/pkg/validator"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/app"
-	"github.com/tierklinik-dobersberg/cis-idm/internal/auth"
-	"github.com/tierklinik-dobersberg/cis-idm/internal/common"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/config"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/jwt"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/middleware"
-	"github.com/tierklinik-dobersberg/cis-idm/internal/selfservice"
-	"github.com/tierklinik-dobersberg/cis-idm/internal/users"
+	"github.com/tierklinik-dobersberg/cis-idm/internal/services/auth"
+	"github.com/tierklinik-dobersberg/cis-idm/internal/services/notify"
+	"github.com/tierklinik-dobersberg/cis-idm/internal/services/roles"
+	"github.com/tierklinik-dobersberg/cis-idm/internal/services/selfservice"
+	"github.com/tierklinik-dobersberg/cis-idm/internal/services/users"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/webauthn"
-	"golang.org/x/net/http2"
-	"golang.org/x/net/http2/h2c"
-	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/reflect/protoregistry"
 )
@@ -43,6 +43,8 @@ func getProtoRegistry() (*protoregistry.Files, error) {
 		idmv1.File_tkd_idm_v1_self_service_proto,
 		idmv1.File_tkd_idm_v1_user_proto,
 		idmv1.File_tkd_idm_v1_user_service_proto,
+		idmv1.File_tkd_idm_v1_role_service_proto,
+		idmv1.File_tkd_idm_v1_notify_service_proto,
 	} {
 		if err := reg.RegisterFile(file); err != nil {
 			return nil, fmt.Errorf("failed to register %s at protoregistry: %w", file.Name(), err)
@@ -58,7 +60,7 @@ func getStaticFilesHandler(path string) (http.Handler, error) {
 		if err != nil {
 			return nil, err
 		}
-		return common.ServeSPA(http.FS(webapp), "index.html"), nil
+		return spa.ServeSPA(http.FS(webapp), "index.html"), nil
 	}
 
 	if strings.HasPrefix(path, "http") {
@@ -77,25 +79,36 @@ func getStaticFilesHandler(path string) (http.Handler, error) {
 		return handler(httputil.NewSingleHostReverseProxy(remote)), nil
 	}
 
-	return common.ServeSPA(http.Dir(path), "index.html"), nil
+	return spa.ServeSPA(http.Dir(path), "index.html"), nil
 }
 
 func setupPublicServer(providers *app.Providers) (*http.Server, error) {
 	// prepare middlewares and interceptors
-	loggingInterceptor := middleware.NewLoggingInterceptor()
+	loggingInterceptor := log.NewLoggingInterceptor()
 	authInterceptor := middleware.NewAuthInterceptor(providers.ProtoRegistry)
-	validatorInterceptor := middleware.NewValidationInterceptor(providers.Validator)
-	privacyInterceptor := middleware.NewPrivacyFilterInterceptor()
+	validatorInterceptor := validator.NewInterceptor(providers.Validator)
+
+	privacyInterceptor := privacy.NewFilterInterceptor(privacy.SubjectResolverFunc(func(ctx context.Context, ar connect.AnyRequest) (string, []string, error) {
+		claims := middleware.ClaimsFromContext(ctx)
+		if claims == nil {
+			return "", nil, nil
+		}
+
+		return claims.Subject, claims.AppMetadata.Authorization.Roles, nil
+	}))
+
+	errorInterceptor := middleware.NewErrorInterceptor()
 
 	interceptors := connect.WithInterceptors(
 		loggingInterceptor,
 		authInterceptor,
 		validatorInterceptor,
 		privacyInterceptor,
+		errorInterceptor,
 	)
 
 	// create a new servemux to handle our routes.
-	publicListenerMux := http.NewServeMux()
+	serveMux := http.NewServeMux()
 
 	// Setup and serve the AuthService
 	authService := auth.NewService(providers)
@@ -103,7 +116,7 @@ func setupPublicServer(providers *app.Providers) (*http.Server, error) {
 		authService,
 		interceptors,
 	)
-	publicListenerMux.Handle(path, handler)
+	serveMux.Handle(path, handler)
 
 	// Setup and serve the Self-Service
 	selfserviceService := selfservice.NewService(providers)
@@ -112,7 +125,7 @@ func setupPublicServer(providers *app.Providers) (*http.Server, error) {
 		selfserviceService,
 		interceptors,
 	)
-	publicListenerMux.Handle(path, handler)
+	serveMux.Handle(path, handler)
 
 	// Setup and serve the User service.
 	userService, err := users.NewService(providers)
@@ -123,22 +136,35 @@ func setupPublicServer(providers *app.Providers) (*http.Server, error) {
 		userService,
 		interceptors,
 	)
-	publicListenerMux.Handle(path, handler)
+	serveMux.Handle(path, handler)
+
+	roleService := roles.NewService(providers)
+	path, handler = idmv1connect.NewRoleServiceHandler(
+		roleService,
+		interceptors,
+	)
+	serveMux.Handle(path, handler)
+
+	// Notify service
+	notifyService := notify.New(providers)
+	path, handler = idmv1connect.NewNotifyServiceHandler(
+		notifyService,
+		interceptors,
+	)
+	serveMux.Handle(path, handler)
 
 	// Serve basic configuration for the UI on /config.json
-	publicListenerMux.Handle("/config.json", config.NewConfigHandler(providers.Config))
+	serveMux.Handle("/config.json", config.NewConfigHandler(providers.Config))
 
 	// Setup CORS middleware
-	c := cors.New(cors.Options{
+	corsOpts := cors.Config{
 		AllowedOrigins: append([]string{
 			providers.Config.PublicURL,
 			fmt.Sprintf("http://%s", providers.Config.Domain),
 			fmt.Sprintf("https://%s", providers.Config.Domain),
 		}, providers.Config.AllowedOrigins...),
 		AllowCredentials: true,
-		AllowedHeaders:   []string{"Connect-Protocol-Version", "Content-Type", "Authentication"},
-		Debug:            os.Getenv("DEBUG") != "",
-	})
+	}
 
 	// Get a static file handler.
 	// This will either return a handler for the embed.FS, a local directory using http.Dir
@@ -148,13 +174,13 @@ func setupPublicServer(providers *app.Providers) (*http.Server, error) {
 		return nil, err
 	}
 
-	publicListenerMux.Handle("/", staticFilesHandler)
+	serveMux.Handle("/", staticFilesHandler)
 
 	// Setup the avatar handler. This does not use connect-go since we need
 	// to response with either HTTP redirects (if the user avatar is a URL)
 	// or with plain bytes and an approriate content-type if the user avatar
 	// is a dataurl.
-	publicListenerMux.Handle("/avatar/", users.NewAvatarHandler(providers))
+	serveMux.Handle("/avatar/", users.NewAvatarHandler(providers))
 
 	// setup the webauthn handlers for registration and login.
 	// TODO(ppacher): migrate those to connect-go/protobuf style endpoints
@@ -163,38 +189,51 @@ func setupPublicServer(providers *app.Providers) (*http.Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	publicListenerMux.Handle("/webauthn/", http.StripPrefix("/webauthn", webauthnHandler))
+	serveMux.Handle("/webauthn/", http.StripPrefix("/webauthn", webauthnHandler))
+
+	// Setup the forward auth handler
+	serveMux.Handle("/validate", auth.NewForwardAuthHandler(providers))
 
 	// finally, return a http.Server that uses h2c for HTTP/2 support and
 	// wrap the finnal handler in CORS and a JWT middleware.
-	return &http.Server{
-		Addr: providers.Config.PublicListenAddr,
-		Handler: h2c.NewHandler(
-			c.Handler(middleware.NewJWTMiddleware(providers.Config, providers.Datastore, publicListenerMux, func(r *http.Request) bool {
+	return server.Create(
+		providers.Config.PublicListenAddr,
+		cors.Wrap(
+			corsOpts,
+			middleware.NewJWTMiddleware(providers.Config, providers.Datastore, serveMux, func(r *http.Request) bool {
 				// Skip JWT token verification for the /validate endpoint as
 				// the ForwardAuthHanlder will take care of this on it's own due to special
 				// handling of rejected or expired tokens.
-				if r.URL.Path == "validate" || strings.HasPrefix(r.URL.Path, "webauthn/") {
+				if r.URL.Path == "/validate" || strings.HasPrefix(r.URL.Path, "/webauthn") {
 					return true
 				}
 
 				return false
-			})),
-			&http2.Server{},
+			}),
 		),
-	}, nil
+	), nil
 }
 
 func setupAdminServer(providers *app.Providers) (*http.Server, error) {
 	// prepare middlewares and interceptors
-	loggingInterceptor := middleware.NewLoggingInterceptor()
-	validatorInterceptor := middleware.NewValidationInterceptor(providers.Validator)
-	privacyInterceptor := middleware.NewPrivacyFilterInterceptor()
+	loggingInterceptor := log.NewLoggingInterceptor()
+	validatorInterceptor := validator.NewInterceptor(providers.Validator)
+	privacyInterceptor := privacy.NewFilterInterceptor(privacy.SubjectResolverFunc(func(ctx context.Context, ar connect.AnyRequest) (string, []string, error) {
+		claims := middleware.ClaimsFromContext(ctx)
+		if claims == nil {
+			return "", nil, nil
+		}
+
+		return claims.Subject, claims.AppMetadata.Authorization.Roles, nil
+	}))
+
+	errorInterceptor := middleware.NewErrorInterceptor()
 
 	interceptors := connect.WithInterceptors(
 		loggingInterceptor,
 		validatorInterceptor,
 		privacyInterceptor,
+		errorInterceptor,
 	)
 
 	serveMux := http.NewServeMux()
@@ -210,44 +249,74 @@ func setupAdminServer(providers *app.Providers) (*http.Server, error) {
 	)
 	serveMux.Handle(path, handler)
 
+	// Role service
+	roleService := roles.NewService(providers)
+	path, handler = idmv1connect.NewRoleServiceHandler(
+		roleService,
+		interceptors,
+	)
+	serveMux.Handle(path, handler)
+
+	// Notify service
+	notifyService := notify.New(providers)
+	path, handler = idmv1connect.NewNotifyServiceHandler(
+		notifyService,
+		interceptors,
+	)
+	serveMux.Handle(path, handler)
+
 	serveMux.Handle("/validate", auth.NewForwardAuthHandler(providers))
 
-	return &http.Server{
-		Addr: providers.Config.AdminListenAddr,
-		Handler: h2c.NewHandler(
+	return server.Create(
+		providers.Config.AdminListenAddr,
+		middleware.NewJWTMiddleware(
+			providers.Config,
+			providers.Datastore,
 			http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				clientIP := r.RemoteAddr
+				if r.URL.Path != "/validate" {
+					log.L(r.Context()).Infof("adding fake admin claims to request: %s", r.URL.Path)
 
-				// associate a dummy claims object to all request that are
-				// received on the admin interface
-				claims := jwt.Claims{
-					Subject:  clientIP,
-					ID:       clientIP,
-					Audience: providers.Config.Audience,
-					Issuer:   providers.Config.Domain,
-					Scopes:   []jwt.Scope{jwt.ScopeAccess},
-					Name:     clientIP,
-					AppMetadata: &jwt.AppMetadata{
-						TokenVersion: "2",
-						Authorization: &jwt.Authorization{
-							Roles: []string{"idm_superuser"},
+					clientIP := r.RemoteAddr
+
+					// associate a dummy claims object to all request that are
+					// received on the admin interface
+					claims := jwt.Claims{
+						Subject:  clientIP,
+						ID:       clientIP,
+						Audience: providers.Config.Audience,
+						Issuer:   providers.Config.Domain,
+						Scopes:   []jwt.Scope{jwt.ScopeAccess},
+						Name:     clientIP,
+						AppMetadata: &jwt.AppMetadata{
+							TokenVersion: "2",
+							Authorization: &jwt.Authorization{
+								Roles: []string{"idm_superuser"},
+							},
 						},
-					},
+					}
+
+					ctx := middleware.ContextWithClaims(r.Context(), &claims)
+
+					r = r.WithContext(ctx)
 				}
-
-				ctx := middleware.ContextWithClaims(r.Context(), &claims)
-
-				r = r.WithContext(ctx)
 
 				serveMux.ServeHTTP(w, r)
 			}),
-			&http2.Server{},
+			func(r *http.Request) bool {
+				// Skip JWT token verification for the /validate endpoint as
+				// the ForwardAuthHanlder will take care of this on it's own due to special
+				// handling of rejected or expired tokens.
+				if r.URL.Path == "/validate" || strings.HasPrefix(r.URL.Path, "/webauthn") {
+					return true
+				}
+
+				return false
+			},
 		),
-	}, nil
+	), nil
 }
 
 func startServer(providers *app.Providers) error {
-
 	publicServer, err := setupPublicServer(providers)
 	if err != nil {
 		return fmt.Errorf("failed to create public server: %w", err)
@@ -258,24 +327,5 @@ func startServer(providers *app.Providers) error {
 		return fmt.Errorf("failed to create admin server: %w", err)
 	}
 
-	errgrp, ctx := errgroup.WithContext(context.Background())
-
-	go func() {
-		<-ctx.Done()
-
-		timeOutCtx, cancel := context.WithTimeout(context.Background(), time.Minute)
-		defer cancel()
-
-		publicServer.Shutdown(timeOutCtx)
-		adminServer.Shutdown(timeOutCtx)
-	}()
-
-	errgrp.Go(publicServer.ListenAndServe)
-	errgrp.Go(adminServer.ListenAndServe)
-
-	if err := errgrp.Wait(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		return err
-	}
-
-	return nil
+	return server.Serve(context.Background(), publicServer, adminServer)
 }

@@ -1,6 +1,7 @@
 package config
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -19,6 +20,16 @@ type Twilio struct {
 	From        string `json:"from" env:"FROM"`
 	AccountSid  string `json:"sid" env:"SID"`
 	AccessToken string `json:"token" env:"TOKEN"`
+}
+
+type MailConfig struct {
+	Host          string `json:"host" env:"HOST"`
+	Port          int    `json:"port" env:"PORT"`
+	Username      string `json:"user" env:"USER"`
+	Password      string `json:"password" env:"PASSWORD"`
+	From          string `json:"from" env:"FROM"`
+	AllowInsecure bool   `json:"allowInsecure" env:"ALLOW_INSECURE"`
+	UseSSL        *bool  `json:"useTLS" env:"USE_TLS"`
 }
 
 type Config struct {
@@ -127,6 +138,18 @@ type Config struct {
 	// If left empty, it defaults to {{ PublicURL }}/refresh?redirect=%s
 	RefreshRedirectURL string `json:"refreshURL"`
 
+	// PasswordResetURL defines the format string to build the password reset URL.
+	// If left empty, it defaults to {{ PublicURL }}/password/reset?token=%s
+	PasswordResetURL string `json:"passwordResetURL"`
+
+	// VerifyMailURL defines the format string to build the verify-email address URL.
+	// If left empty, it defaults to {{ PublicURL }}/verify-mail?token=%s
+	VerifyMailURL string `json:"verifyMailURL"`
+
+	// RegistrationURL defines the format string to build the invitation address URL.
+	// If left empty, it defaults to {{ PublicURL }}/registration?token=%s
+	RegistrationURL string `json:"registrationURL"`
+
 	// SiteName can be used to specify the name of the cisidm instance and will be displayed
 	// at the login screen and throughout the user interface. This defaults to Example
 	// so will likely want to set this field as well.
@@ -144,6 +167,9 @@ type Config struct {
 	// TODO(ppacher): print a warning when a SMS feature is enabled
 	// but twilio is not confiugred.
 	Twilio *Twilio `json:"twilio" envPrefix:"TWILIO__"`
+
+	// MailConfig is required for all email related features.
+	MailConfig *MailConfig `json:"mail" envPrefix:"MAIL__"`
 }
 
 func LoadFile(path string) (*Config, error) {
@@ -165,8 +191,11 @@ func LoadFile(path string) (*Config, error) {
 		return nil, fmt.Errorf("unsupported file format %q", filepath.Ext(path))
 	}
 
+	dec := json.NewDecoder(bytes.NewReader(content))
+	dec.DisallowUnknownFields()
+
 	var f Config
-	if err := json.Unmarshal(content, &f); err != nil {
+	if err := dec.Decode(&f); err != nil {
 		return nil, err
 	}
 
@@ -232,6 +261,15 @@ func (file *Config) applyDefaults() error {
 	if file.RefreshRedirectURL == "" {
 		file.RefreshRedirectURL = fmt.Sprintf("%s/refresh?redirect=%%s", file.PublicURL)
 	}
+	if file.PasswordResetURL == "" {
+		file.PasswordResetURL = fmt.Sprintf("%s/password/reset?token=%%s", file.PublicURL)
+	}
+	if file.VerifyMailURL == "" {
+		file.VerifyMailURL = fmt.Sprintf("%s/profile/verify-mail?token=%%s", file.PublicURL)
+	}
+	if file.RegistrationURL == "" {
+		file.RegistrationURL = fmt.Sprintf("%s/registration?token=%%s&mail=%%s&name=%%s", file.PublicURL)
+	}
 
 	if file.Audience == "" || file.Domain == "" {
 		return fmt.Errorf("missing domain and audience")
@@ -242,10 +280,14 @@ func (file *Config) applyDefaults() error {
 		*file.SecureCookie = parsedPublicURL.Scheme == "https:"
 	}
 
+	if file.MailConfig == nil {
+		file.MailConfig = new(MailConfig)
+	}
+
 	return nil
 }
 
-func (file Config) AuthRequiredForURL(method string, url string) (bool, error) {
+func (file Config) AuthRequiredForURL(method string, url string) (*ForwardAuthEntry, bool, error) {
 	merr := new(multierror.Error)
 
 	for _, fae := range file.ForwardAuth {
@@ -257,12 +299,12 @@ func (file Config) AuthRequiredForURL(method string, url string) (bool, error) {
 
 		if matches {
 			if fae.IsRequired() {
-				return true, merr.ErrorOrNil()
+				return fae, true, merr.ErrorOrNil()
 			}
 		}
 	}
 
-	return false, merr.ErrorOrNil()
+	return nil, false, merr.ErrorOrNil()
 }
 
 // FromEnvironment returns a Config object parsed from environment variables.

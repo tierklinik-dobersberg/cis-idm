@@ -5,4 +5,4 @@ WORKDIR /app/ui
 USER 1000:1000
 
 ENTRYPOINT ["bash"]
-CMD [ "-c", "npm install && ./node_modules/.bin/ng serve --host=0.0.0.0 --port=4200 --configuration=development --disable-host-check"]
+CMD [ "-c", "npm install && npm update @tkd/apis && ./node_modules/.bin/ng serve --host=0.0.0.0 --port=4200 --configuration=development --disable-host-check"]

@@ -12,6 +12,7 @@ import (
 
 var (
 	ErrKeyNotFound = errors.New("key not found")
+	ErrKeyExpired  = errors.New("key expired")
 )
 
 type Cache interface {
@@ -39,18 +40,8 @@ type inMemoryCache struct {
 	keys map[string]cacheEntry
 }
 
-func (c *inMemoryCache) PutKey(_ context.Context, key string, value any) error {
-	c.l.Lock()
-	defer c.l.Unlock()
-
-	blob, err := json.Marshal(value)
-	if err != nil {
-		return err
-	}
-
-	c.keys[key] = cacheEntry{value: blob}
-
-	return nil
+func (c *inMemoryCache) PutKey(ctx context.Context, key string, value any) error {
+	return c.PutKeyTTL(ctx, key, value, 0)
 }
 
 func (c *inMemoryCache) PutKeyTTL(_ context.Context, key string, value any, ttl time.Duration) error {
@@ -62,9 +53,14 @@ func (c *inMemoryCache) PutKeyTTL(_ context.Context, key string, value any, ttl 
 		return err
 	}
 
+	var expires time.Time
+	if ttl > 0 {
+		expires = time.Now().Add(ttl)
+	}
+
 	c.keys[key] = cacheEntry{
 		value:   blob,
-		expires: time.Now().Add(ttl),
+		expires: expires,
 	}
 
 	return nil
@@ -79,8 +75,8 @@ func (c *inMemoryCache) GetKey(_ context.Context, key string, receiver any) erro
 		return ErrKeyNotFound
 	}
 
-	if !val.expires.IsZero() && val.expires.Before(time.Now()) {
-		return ErrKeyNotFound
+	if !val.expires.IsZero() && time.Now().After(val.expires) {
+		return ErrKeyExpired
 	}
 
 	if receiver == nil {
@@ -101,8 +97,8 @@ func (c *inMemoryCache) GetAndDeleteKey(_ context.Context, key string, receiver 
 
 	delete(c.keys, key)
 
-	if !val.expires.IsZero() && val.expires.Before(time.Now()) {
-		return ErrKeyNotFound
+	if !val.expires.IsZero() && time.Now().After(val.expires) {
+		return ErrKeyExpired
 	}
 
 	if receiver == nil {

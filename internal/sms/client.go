@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	twilio "github.com/kevinburke/twilio-go"
+	"github.com/tierklinik-dobersberg/cis-idm/internal/config"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/tmpl"
 )
 
@@ -48,8 +49,8 @@ func New(acc Account) (Sender, error) {
 }
 
 // SendTemplates renders a known template
-func SendTemplate[T tmpl.Context](ctx context.Context, sender Sender, engine *tmpl.Engine, to []string, t tmpl.Known[T], args T) error {
-	message, err := tmpl.RenderKnown(engine.SMS, t, args)
+func SendTemplate[T tmpl.Context](ctx context.Context, cfg config.Config, sender Sender, engine *tmpl.Engine, to []string, t tmpl.Known[T], args T) error {
+	message, err := tmpl.RenderKnown(cfg, engine.SMS, t, args)
 	if err != nil {
 		return fmt.Errorf("failed to render template: %w", err)
 	}

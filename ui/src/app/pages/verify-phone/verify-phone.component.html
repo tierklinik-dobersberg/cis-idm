@@ -5,7 +5,10 @@
         <h1 class="w-full mt-2 text-2xl font-medium">Telefonnummer verifizieren</h1>
         <span class="mb-4 -mt-4 text-sm font-light">Gib den Sicherheits-Code ein den wir an dein Telefon geschickt haben:</span>
 
-        <app-security-code [(ngModel)]="securityCode" name="code"></app-security-code>
+        <div class="flex flex-row items-center justify-center w-full">
+          <app-security-code [(ngModel)]="securityCode" name="code"></app-security-code>
+        </div>
+
         <button type="submit" class="tkd-btn">Verifizieren</button>
 
         <a (click)="requestVerificationCode()">Neuen Code anfordern</a>

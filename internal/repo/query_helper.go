@@ -8,7 +8,7 @@ import (
 
 	"github.com/mitchellh/mapstructure"
 	"github.com/rqlite/gorqlite"
-	"github.com/tierklinik-dobersberg/cis-idm/internal/middleware"
+	"github.com/tierklinik-dobersberg/apis/pkg/log"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/repo/stmts"
 )
 
@@ -28,7 +28,7 @@ func Query[T any](ctx context.Context, stmt stmts.Statement[T], conn *gorqlite.C
 	}
 
 	if os.Getenv("DEBUG") != "" {
-		middleware.L(ctx).
+		log.L(ctx).
 			Infof(pStmt.Query)
 	}
 
@@ -47,7 +47,7 @@ func Query[T any](ctx context.Context, stmt stmts.Statement[T], conn *gorqlite.C
 		}
 
 		if os.Getenv("DEBUG") != "" {
-			middleware.L(ctx).
+			log.L(ctx).
 				WithField("response", m).
 				Infof("DEBUG: response")
 		}

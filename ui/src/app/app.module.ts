@@ -6,7 +6,7 @@ import { AppComponent } from './app.component';
 import { AUTH_SERVICE, SELF_SERVICE, TRANSPORT, authServiceFactory, selfServiceFactory, transportFactory } from './clients';
 
 import { HttpClient, HttpClientModule } from '@angular/common/http';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { map } from 'rxjs';
 import { ConfigService, RemoteConfig } from './config.service';
 
@@ -39,7 +39,7 @@ const loadConfigFactory = (client: HttpClient) => {
     {
       provide: TRANSPORT,
       useFactory: transportFactory,
-      deps: [ActivatedRoute]
+      deps: [ActivatedRoute, Router]
     },
     {
       provide: AUTH_SERVICE,

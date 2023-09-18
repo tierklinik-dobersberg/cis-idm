@@ -1,0 +1,70 @@
+---
+bodyClass: bg-gray-postmark-lighter
+---
+{{ define "user_invitation:subject" }}Erstelle dein neues {{ .SiteName }}-Konto{{ end }}
+{{ define "user_invitation" }}
+<extends src="src/layouts/main.html">
+  <block name="template">
+    <table class="w-full font-sans email-wrapper bg-gray-postmark-lighter">
+      <tr>
+        <td align="center">
+          <table class="w-full email-content">
+            <component src="src/components/header.html"></component>
+            <raw>
+              <tr>
+                <td class="w-full bg-white email-body">
+                  <table align="center" class="email-body_inner w-[570px] bg-white mx-auto sm:w-full">
+                    <tr>
+                      <td class="p-[45px]">
+                        <div class="text-base">
+                          <h1 class="mt-0 text-2xl font-bold text-left text-gray-postmark-darker">
+                            Hi, {{ .Name }}!
+                          </h1>
+                          <p class="mt-1.5 mb-[5px] text-base leading-6 text-gray-postmark-dark">
+                            {{ .Inviter.DisplayName }} hat dich eingeladen ein {{ .SiteName }}-Konto zu erstellen.
+                            Benütze die Schlatfläche unten um die Registrierung abzuschließen.
+                          </p>
+                          <table align="center" class="w-full text-center my-7.5 mx-auto">
+                            <tr>
+                              <td align="center">
+                                <table class="w-full">
+                                  <tr>
+                                    <td align="center" class="text-base">
+                                      <a href="{{ .RegisterURL }}" class="button button--blue">Konto erstellen</a>
+                                    </td>
+                                  </tr>
+                                </table>
+                              </td>
+                            </tr>
+                          </table>
+                          <p class="mt-1.5 mb-[5px] text-base leading-6 text-gray-postmark-dark">
+                            Willkommen an Bord!
+                            <br>Das {{ .SiteName }}-Team
+                          </p>
+                          <table class="body-sub">
+                            <tr>
+                              <td>
+                                <p class="mt-1.5 mb-[5px] text-xs leading-6 text-gray-postmark-dark">
+                                  Sollte die Schaltfläche oben nicht funktionieren kopiere einfach folgenden Link in deinen Web-Browser:
+                                </p>
+                                <p class="mt-1.5 mb-[5px] text-xs leading-6 text-gray-postmark-dark">
+                                  {{ .RegisterURL }}
+                                </p>
+                              </td>
+                            </tr>
+                          </table>
+                        </div>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </raw>
+            <component src="src/components/footer.html"></component>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </block>
+</extends>
+{{ end }}

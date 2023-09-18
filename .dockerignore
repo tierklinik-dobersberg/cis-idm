@@ -2,3 +2,6 @@ ui/node_modules
 ui/.angular
 ui/.vscode
 fakes3
+go.work
+go.work.sum
+

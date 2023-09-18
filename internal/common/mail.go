@@ -6,29 +6,30 @@ import (
 	"fmt"
 
 	"github.com/bufbuild/connect-go"
+	"github.com/tierklinik-dobersberg/apis/pkg/log"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/config"
-	"github.com/tierklinik-dobersberg/cis-idm/internal/middleware"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/repo/models"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/repo/stmts"
 )
 
-func (svc *Service) AddEmailAddressToUser(ctx context.Context, mailModel models.EMail) ([]models.EMail, error) {
+func (svc *Service) AddEmailAddressToUser(ctx context.Context, mailModel models.EMail) (*models.EMail, []models.EMail, error) {
 	userID := mailModel.UserID
 
 	if !svc.cfg.FeatureEnabled(config.FeatureEMails) {
-		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("email: %w", config.ErrFeatureDisabled))
+		return nil, nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("email: %w", config.ErrFeatureDisabled))
 	}
 
-	if _, err := svc.repo.CreateUserEmail(ctx, mailModel); err != nil {
-		return nil, fmt.Errorf("failed to store new email address: %w", err)
+	addedMail, err := svc.repo.CreateUserEmail(ctx, mailModel)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to store new email address: %w", err)
 	}
 
 	mails, err := svc.repo.GetUserEmails(ctx, userID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get existing user emails: %w", err)
+		return &addedMail, nil, fmt.Errorf("failed to get existing user emails: %w", err)
 	}
 
-	return mails, nil
+	return &addedMail, mails, nil
 }
 
 func (svc *Service) DeleteEmailAddressFromUser(ctx context.Context, userID string, mailID string) ([]models.EMail, error) {
@@ -36,7 +37,7 @@ func (svc *Service) DeleteEmailAddressFromUser(ctx context.Context, userID strin
 		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("email: %w", config.ErrFeatureDisabled))
 	}
 
-	middleware.L(ctx).WithField("email_id", mailID).Infof("deleting email address from user")
+	log.L(ctx).WithField("email_id", mailID).Infof("deleting email address from user")
 
 	if err := svc.repo.DeleteEMailFromUser(ctx, userID, mailID); err != nil {
 		return nil, fmt.Errorf("failed to delete email from user: %w", err)
