@@ -12,6 +12,17 @@ RUN npx browserslist@latest --update-db
 COPY ./ui .
 RUN npm run build
 
+# Build the mails
+FROM node:16 as mailbuild
+
+WORKDIR /app/mails
+
+COPY mails/package.json mails/package-lock.json ./
+RUN npm install
+
+COPY ./mails .
+RUN npm run build
+
 # Build the gobinary
 
 FROM golang:1.19 as gobuild
@@ -29,6 +40,7 @@ RUN go mod verify
 
 COPY ./ ./
 COPY --from=builder /app/cmds/userd/static/ui /go/src/app/cmds/userd/static/ui
+COPY --from=mailbuild /app/mails/dist /go/src/app/internal/tmpl/templates/mail/
 
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /go/bin/userd ./cmds/userd
 

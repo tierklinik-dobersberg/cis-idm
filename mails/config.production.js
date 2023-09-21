@@ -13,7 +13,7 @@ module.exports = {
   build: {
     templates: {
       destination: {
-        path: '../internal/tmpl/templates/mail',
+        path: './dist'
       },
     },
   },
