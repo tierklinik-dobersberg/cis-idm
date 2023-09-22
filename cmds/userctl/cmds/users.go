@@ -55,6 +55,7 @@ func GetUsersCommand(root *cli.Root) *cobra.Command {
 		GetGenerateRegistrationTokenCommand(root),
 		GetInviteUserCommand(root),
 		GetUpdateUserCommand(root),
+		GetCreateUserCommand(root),
 	)
 
 	return cmd
@@ -206,6 +207,80 @@ func GetInviteUserCommand(root *cli.Root) *cobra.Command {
 	}
 
 	cmd.Flags().StringSliceVar(&roles, "roles", nil, "Automatically assign the given roles upon user registration")
+
+	return cmd
+}
+
+func GetCreateUserCommand(root *cli.Root) *cobra.Command {
+	var (
+		user      = new(idmv1.User)
+		emails    []string
+		phone     []string
+		password  string
+		bcrypt    bool
+		roleIds   []string
+		roleNames []string
+	)
+
+	cmd := &cobra.Command{
+		Use: "create",
+		Run: func(cmd *cobra.Command, args []string) {
+			req := &idmv1.CreateUserRequest{
+				Profile: &idmv1.Profile{
+					User: user,
+				},
+				Password:         password,
+				PasswordIsBcrypt: bcrypt,
+			}
+
+			for _, m := range emails {
+				req.Profile.EmailAddresses = append(req.Profile.EmailAddresses, &idmv1.EMail{
+					Address: m,
+				})
+			}
+
+			for idx, p := range phone {
+				req.Profile.PhoneNumbers = append(req.Profile.PhoneNumbers, &idmv1.PhoneNumber{
+					Number:   p,
+					Verified: true,
+					Primary:  idx == 0,
+				})
+			}
+
+			for _, id := range roleIds {
+				req.Profile.Roles = append(req.Profile.Roles, &idmv1.Role{
+					Id: id,
+				})
+			}
+
+			for _, name := range roleNames {
+				req.Profile.Roles = append(req.Profile.Roles, &idmv1.Role{
+					Name: name,
+				})
+			}
+
+			res, err := root.Users().CreateUser(context.Background(), connect.NewRequest(req))
+			if err != nil {
+				logrus.Fatal(err)
+			}
+
+			root.Print(res.Msg)
+		},
+	}
+
+	f := cmd.Flags()
+	{
+		f.StringVar(&user.FirstName, "first-name", "", "")
+		f.StringVar(&user.LastName, "last-name", "", "")
+		f.StringVar(&user.Username, "name", "", "")
+		f.StringVar(&user.DisplayName, "display-name", "", "")
+		f.StringVar(&password, "password", "", "")
+		f.BoolVar(&bcrypt, "bcrypt", false, "")
+		f.StringSliceVar(&emails, "email", nil, "")
+		f.StringSliceVar(&phone, "phone", nil, "")
+		f.StringSliceVar(&roleIds, "role-id", nil, "")
+		f.StringSliceVar(&roleNames, "role", nil, "")
+	}
 
 	return cmd
 }
