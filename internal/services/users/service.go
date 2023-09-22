@@ -227,6 +227,30 @@ func (svc *Service) CreateUser(ctx context.Context, req *connect.Request[idmv1.C
 		}
 	}
 
+	// assign the user to all roles specified in the request.
+	for _, role := range req.Msg.GetProfile().GetRoles() {
+		err = errors.New("")
+
+		if role.Id != "" {
+			_, err = svc.Datastore.GetRoleByID(ctx, role.Id)
+		}
+
+		if err != nil || role.Id == "" {
+			roleModel, err := svc.Datastore.GetRoleByName(ctx, role.Name)
+			if err != nil {
+				merr.Errors = append(merr.Errors, fmt.Errorf("role %q", role.Id))
+
+				continue
+			}
+
+			role.Id = roleModel.ID
+		}
+
+		if err := svc.Datastore.AssignRoleToUser(ctx, userModel.ID, role.Id); err != nil {
+			merr.Errors = append(merr.Errors, fmt.Errorf("failed to assigne user %q to role %q", userModel.ID, role.Id))
+		}
+	}
+
 	if err := merr.ErrorOrNil(); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
