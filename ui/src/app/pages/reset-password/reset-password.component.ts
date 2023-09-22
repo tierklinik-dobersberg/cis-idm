@@ -1,8 +1,9 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { ConnectError } from '@bufbuild/connect';
 import { AUTH_SERVICE } from 'src/app/clients';
 import { ConfigService } from 'src/app/config.service';
 
@@ -20,18 +21,22 @@ import { ConfigService } from 'src/app/config.service';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ResetPasswordComponent implements OnInit {
-  authService = inject(AUTH_SERVICE);
-  config = inject(ConfigService).config;
-  route = inject(ActivatedRoute)
-  router = inject(Router)
-  destroyRef = inject(DestroyRef);
+  private readonly authService = inject(AUTH_SERVICE);
+  private readonly route = inject(ActivatedRoute)
+  private readonly router = inject(Router)
+  private readonly cdr = inject(ChangeDetectorRef)
+  private readonly destroyRef = inject(DestroyRef);
+
+  readonly config = inject(ConfigService).config;
+
   newPassword = '';
   newPasswordRepeat = '';
 
-  display: 'request-reset' | 'reset' = 'request-reset';
+  display: 'request-reset' | 'reset' | 'sent' = 'request-reset';
 
   username = '';
   token = '';
+  resetError: string | null = null;
 
   ngOnInit(): void {
     this.route
@@ -53,7 +58,8 @@ export class ResetPasswordComponent implements OnInit {
   }
 
   async submit() {
-    debugger;
+    this.resetError = null;
+    this.cdr.markForCheck();
 
     try {
       if (this.display === 'request-reset') {
@@ -63,6 +69,9 @@ export class ResetPasswordComponent implements OnInit {
             value: this.username
           }
         })
+
+        this.display = 'sent'
+        this.cdr.markForCheck();
 
         return
       }
@@ -80,7 +89,9 @@ export class ResetPasswordComponent implements OnInit {
       this.router.navigate(['/login']);
 
     } catch (err) {
-      console.error(err)
+      const cerr = ConnectError.from(err)
+      this.resetError = cerr.rawMessage
+      this.cdr.markForCheck()
     }
   }
 }
