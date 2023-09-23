@@ -215,22 +215,26 @@ func (svc *AuthService) Logout(ctx context.Context, req *connect.Request[idmv1.L
 	}
 
 	// mark the token as rejected
-	if err := svc.Datastore.MarkTokenRejected(ctx, models.RejectedToken{
-		TokenID:   claims.ID,
-		UserID:    claims.Subject,
-		IssuedAt:  claims.IssuedAt,
-		ExpiresAt: claims.ExpiresAt,
+	if err := common.Timing(ctx, "reject-access-token", func() error {
+		return svc.Datastore.MarkTokenRejected(ctx, models.RejectedToken{
+			TokenID:   claims.ID,
+			UserID:    claims.Subject,
+			IssuedAt:  claims.IssuedAt,
+			ExpiresAt: claims.ExpiresAt,
+		})
 	}); err != nil {
 		return nil, fmt.Errorf("failed to mark token as rejected: %w", err)
 	}
 
 	// also mark the parent (refresh) token as rejected
 	if claims.AppMetadata != nil && claims.AppMetadata.ParentTokenID != "" {
-		if err := svc.Datastore.MarkTokenRejected(ctx, models.RejectedToken{
-			TokenID:   claims.AppMetadata.ParentTokenID,
-			UserID:    claims.Subject,
-			IssuedAt:  claims.IssuedAt,
-			ExpiresAt: claims.ExpiresAt,
+		if err := common.Timing(ctx, "reject-refresh-token", func() error {
+			return svc.Datastore.MarkTokenRejected(ctx, models.RejectedToken{
+				TokenID:   claims.AppMetadata.ParentTokenID,
+				UserID:    claims.Subject,
+				IssuedAt:  claims.IssuedAt,
+				ExpiresAt: claims.ExpiresAt,
+			})
 		}); err != nil {
 			return nil, fmt.Errorf("failed to mark token as rejected: %w", err)
 		}

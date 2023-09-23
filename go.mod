@@ -21,7 +21,7 @@ require (
 	github.com/rqlite/gorqlite v0.0.0-20230310040812-ec5e524a562e
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.7.0
-	github.com/tierklinik-dobersberg/apis v0.0.0-20230830070430-0f0b053cc127
+	github.com/tierklinik-dobersberg/apis v0.0.0-20230922111016-36177f3c3cdf
 	github.com/vincent-petithory/dataurl v1.0.0
 	golang.org/x/crypto v0.11.0
 	golang.org/x/exp v0.0.0-20230801115018-d63ba01acd4b
@@ -34,9 +34,11 @@ require (
 	github.com/Masterminds/semver/v3 v3.2.0 // indirect
 	github.com/antlr/antlr4/runtime/Go/antlr/v4 v4.0.0-20230512164433-5d1fd1a340c9 // indirect
 	github.com/boombuler/barcode v1.0.1-0.20190219062509-6c824513bacc // indirect
+	github.com/felixge/httpsnoop v1.0.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.4.0 // indirect
 	github.com/go-webauthn/revoke v0.1.9 // indirect
 	github.com/golang-jwt/jwt/v4 v4.5.0 // indirect
+	github.com/golang/gddo v0.0.0-20180823221919-9d8ff1c67be5 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/cel-go v0.17.1 // indirect
 	github.com/google/go-tpm v0.3.3 // indirect
@@ -48,6 +50,7 @@ require (
 	github.com/kevinburke/go-types v0.0.0-20210723172823-2deba1f80ba7 // indirect
 	github.com/kevinburke/rest v0.0.0-20210506044642-5611499aa33c // indirect
 	github.com/mitchellh/copystructure v1.0.0 // indirect
+	github.com/mitchellh/go-server-timing v1.0.1 // indirect
 	github.com/mitchellh/reflectwalk v1.0.0 // indirect
 	github.com/rs/cors v1.9.0 // indirect
 	github.com/shopspring/decimal v1.2.0 // indirect
