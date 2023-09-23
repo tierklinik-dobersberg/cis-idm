@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"os"
 	"strings"
 
 	"github.com/bufbuild/connect-go"
@@ -193,6 +194,11 @@ func setupPublicServer(providers *app.Providers) (*http.Server, error) {
 
 	// Setup the forward auth handler
 	serveMux.Handle("/validate", auth.NewForwardAuthHandler(providers))
+
+	// If we're in debug mode, add some debug endpoints
+	if os.Getenv("DEBUG") != "" {
+		serveMux.Handle("/debug/cpu", http.HandlerFunc(CPUProfileHandler))
+	}
 
 	// finally, return a http.Server that uses h2c for HTTP/2 support and
 	// wrap the finnal handler in CORS and a JWT middleware.
