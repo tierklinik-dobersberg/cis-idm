@@ -8,3 +8,5 @@ go.work
 go.work.sum
 mails/build_local
 internal/tmpl/templates
+/userctl
+/userd

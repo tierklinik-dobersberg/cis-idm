@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/cobra"
 	idmv1 "github.com/tierklinik-dobersberg/apis/gen/go/tkd/idm/v1"
 	"github.com/tierklinik-dobersberg/apis/pkg/cli"
+	"github.com/vincent-petithory/dataurl"
 	"golang.org/x/crypto/ssh/terminal"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
@@ -220,6 +221,7 @@ func GetCreateUserCommand(root *cli.Root) *cobra.Command {
 		bcrypt    bool
 		roleIds   []string
 		roleNames []string
+		avatar    string
 	)
 
 	cmd := &cobra.Command{
@@ -231,6 +233,23 @@ func GetCreateUserCommand(root *cli.Root) *cobra.Command {
 				},
 				Password:         password,
 				PasswordIsBcrypt: bcrypt,
+			}
+
+			if avatar != "" {
+				switch {
+				case strings.HasPrefix(avatar, "http"):
+					req.Profile.User.Avatar = avatar
+				case strings.HasPrefix(avatar, "/"),
+					strings.HasPrefix(avatar, "."):
+					content, err := os.ReadFile(avatar)
+					if err != nil {
+						logrus.Fatal(err)
+					}
+
+					req.Profile.User.Avatar = dataurl.EncodeBytes(content)
+				default:
+					logrus.Fatalf("--avatar must either be a URL or file path")
+				}
 			}
 
 			for _, m := range emails {
@@ -280,6 +299,7 @@ func GetCreateUserCommand(root *cli.Root) *cobra.Command {
 		f.StringSliceVar(&phone, "phone", nil, "")
 		f.StringSliceVar(&roleIds, "role-id", nil, "")
 		f.StringSliceVar(&roleNames, "role", nil, "")
+		f.StringVar(&avatar, "avatar", "", "")
 	}
 
 	return cmd
