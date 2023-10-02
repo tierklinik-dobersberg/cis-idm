@@ -104,7 +104,7 @@ func GetSendNotificationCommand(root *cli.Root) *cobra.Command {
 				}
 			}
 
-			cli := idmv1connect.NewNotifyServiceClient(root.HttpClient, root.BaseURLS.Idm)
+			cli := idmv1connect.NewNotifyServiceClient(root.HttpClient, root.Config().BaseURLS.Idm)
 
 			switch cmd.CalledAs() {
 			case "mail":
