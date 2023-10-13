@@ -43,8 +43,9 @@ func UserProtoFromUser(ctx context.Context, user models.User) *idmv1.User {
 
 func ProfileProtoFromUser(ctx context.Context, user models.User, useropts ...UserOption) *idmv1.Profile {
 	profile := &idmv1.Profile{
-		User:        UserProtoFromUser(ctx, user),
-		TotpEnabled: user.TOTPSecret != "",
+		User:                UserProtoFromUser(ctx, user),
+		TotpEnabled:         user.TOTPSecret != "",
+		PasswordAuthEnabled: user.Password != "",
 	}
 
 	for _, fn := range useropts {

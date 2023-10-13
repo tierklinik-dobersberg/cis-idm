@@ -23,7 +23,7 @@
     "@bufbuild/connect": "^0.9.1",
     "@bufbuild/connect-web": "^0.9.1",
     "@simplewebauthn/browser": "^7.2.0",
-    "@tkd/apis": "github:tierklinik-dobersberg/apis#f8170a5",
+    "@tkd/apis": "github:tierklinik-dobersberg/apis#main",
     "blueimp-load-image": "^5.16.0",
     "countries-list": "^2.6.1",
     "cropperjs": "^1.5.13",

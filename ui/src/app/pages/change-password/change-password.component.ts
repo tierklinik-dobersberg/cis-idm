@@ -3,7 +3,10 @@ import { Component, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { ConnectError } from '@bufbuild/connect';
+import { Profile } from '@tkd/apis';
+import { Observable } from 'rxjs';
 import { SELF_SERVICE } from 'src/app/clients';
+import { ProfileService } from 'src/services/profile.service';
 
 @Component({
   selector: 'app-change-password',
@@ -17,8 +20,10 @@ import { SELF_SERVICE } from 'src/app/clients';
   styleUrls: ['./change-password.component.css']
 })
 export class ChangePasswordComponent {
-  selfService = inject(SELF_SERVICE);
-  router = inject(Router);
+  private readonly selfService = inject(SELF_SERVICE);
+  private readonly router = inject(Router);
+
+  readonly profile: Observable<Profile | null> = inject(ProfileService).profile;
 
   changePasswordError: string | null = null;
 
