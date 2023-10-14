@@ -125,18 +125,23 @@ func (svc *Service) GetRole(ctx context.Context, req *connect.Request[idmv1.GetR
 		err  error
 	)
 
+	selector := ""
 	switch v := req.Msg.Search.(type) {
 	case *idmv1.GetRoleRequest_Id:
 		role, err = svc.Datastore.GetRoleByID(ctx, v.Id)
+		selector = fmt.Sprintf("id=%q", v.Id)
+
 	case *idmv1.GetRoleRequest_Name:
 		role, err = svc.Datastore.GetRoleByName(ctx, v.Name)
+		selector = fmt.Sprintf("name=%q", v.Name)
+
 	default:
 		return nil, connect.NewError(connect.CodeInvalidArgument, nil)
 	}
 
 	if err != nil {
 		if errors.Is(err, stmts.ErrNoResults) {
-			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("role not found"))
+			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("role %s not found", selector))
 		}
 		return nil, err
 	}

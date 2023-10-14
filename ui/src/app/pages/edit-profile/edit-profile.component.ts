@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { PartialMessage } from '@bufbuild/protobuf';
 import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { ProfileService } from 'src/services/profile.service';
@@ -7,6 +8,7 @@ import { take } from 'rxjs';
 import { User } from '@tkd/apis/gen/es/tkd/idm/v1/user_pb.js';
 import { SELF_SERVICE } from 'src/app/clients';
 import { ConfigService } from 'src/app/config.service';
+import { UpdateProfileRequest } from '@tkd/apis';
 
 @Component({
   selector: 'app-edit-profile',
@@ -36,7 +38,7 @@ export class EditProfileComponent implements OnInit {
 
   ngOnInit(): void {
     this.profileService.profile
-      .pipe(take(1)) 
+      .pipe(take(1))
       .subscribe(profile => {
         this.firstName.setValue(profile?.user?.firstName || '');
         this.lastName.setValue(profile?.user?.lastName || '');
@@ -49,7 +51,7 @@ export class EditProfileComponent implements OnInit {
   }
 
   async saveProfile() {
-    let user: Partial<User> = {};
+    let user: PartialMessage<UpdateProfileRequest> = {};
     let fieldSet: string[] = [];
 
     if (this.firstName.dirty) {
