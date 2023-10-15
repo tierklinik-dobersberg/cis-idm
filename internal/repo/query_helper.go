@@ -27,7 +27,7 @@ func Query[T any](ctx context.Context, stmt stmts.Statement[T], conn *gorqlite.C
 		return nil, err
 	}
 
-	if os.Getenv("DEBUG") != "" {
+	if os.Getenv("DEBUG_SQL") != "" {
 		log.L(ctx).
 			Infof(pStmt.Query)
 	}
@@ -46,7 +46,7 @@ func Query[T any](ctx context.Context, stmt stmts.Statement[T], conn *gorqlite.C
 			return results, err
 		}
 
-		if os.Getenv("DEBUG") != "" {
+		if os.Getenv("DEBUG_SQL") != "" {
 			log.L(ctx).
 				WithField("response", m).
 				Infof("DEBUG: response")
