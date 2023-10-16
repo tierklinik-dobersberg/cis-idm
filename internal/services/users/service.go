@@ -148,6 +148,16 @@ func (svc *Service) CreateUser(ctx context.Context, req *connect.Request[idmv1.C
 		Birthday:    usr.Birthday,
 	}
 
+	if usr.Extra != nil {
+		m := usr.Extra.AsMap()
+		blob, err := json.Marshal(m)
+		if err != nil {
+			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("failed to convert user extra data: %w", err))
+		}
+
+		userModel.Extra = string(blob)
+	}
+
 	if req.Msg.Password != "" {
 		if req.Msg.PasswordIsBcrypt {
 			userModel.Password = req.Msg.Password
