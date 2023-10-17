@@ -17,12 +17,15 @@ import (
 	"github.com/tierklinik-dobersberg/cis-idm/internal/config"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/conv"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/mailer"
+	"github.com/tierklinik-dobersberg/cis-idm/internal/middleware"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/repo"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/repo/models"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/repo/stmts"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/sms"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/tmpl"
+	"golang.org/x/exp/slices"
 	"google.golang.org/protobuf/reflect/protoregistry"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 type Providers struct {
@@ -123,6 +126,20 @@ func (p *Providers) GenerateRegistrationToken(ctx context.Context, creator model
 	return tokenModel.Token, nil
 }
 
+func getCurrentFieldVisiblity(ctx context.Context, id string) config.FieldVisibility {
+	if claims := middleware.ClaimsFromContext(ctx); claims != nil {
+		if claims.AppMetadata != nil && claims.AppMetadata.Authorization != nil && slices.Contains(claims.AppMetadata.Authorization.Roles, "idm_superuser") {
+			return config.FieldVisibilityPrivate
+		} else if claims.Subject == id {
+			return config.FieldVisibilitySelf
+		} else {
+			return config.FieldVisibilityAuthenticated
+		}
+	}
+
+	return config.FieldVisibilityPublic
+}
+
 func (p *Providers) GetUserProfileProto(ctx context.Context, usr models.User) (*idmv1.Profile, error) {
 	addresses, err := p.Datastore.GetUserAddresses(ctx, usr.ID)
 	if err != nil {
@@ -174,7 +191,7 @@ func (p *Providers) GetUserProfileProto(ctx context.Context, usr models.User) (*
 		}
 	}
 
-	return conv.ProfileProtoFromUser(
+	profile := conv.ProfileProtoFromUser(
 		ctx,
 		usr,
 		conv.WithAddresses(addresses...),
@@ -184,5 +201,40 @@ func (p *Providers) GetUserProfileProto(ctx context.Context, usr models.User) (*
 		conv.WithPrimaryMail(primaryMail),
 		conv.WithPrimaryPhone(primaryPhone),
 		conv.WithUserHasRecoveryCodes(hasBackupCodes),
-	), nil
+	)
+
+	if extra := profile.GetUser().GetExtra(); extra != nil {
+		currentVisiblity := getCurrentFieldVisiblity(ctx, usr.ID)
+
+		for key, propertyConfig := range p.Config.ExtraDataConfig {
+			value := extra.Fields[key]
+			if value == nil {
+				continue
+			}
+
+			value = propertyConfig.ApplyVisibility(currentVisiblity, value)
+			if value == nil {
+				delete(extra.Fields, key)
+			} else {
+				extra.Fields[key] = value
+			}
+		}
+	}
+
+	return profile, nil
+}
+
+func (p *Providers) ValidateUserExtraData(pb *structpb.Struct) error {
+	for key, value := range pb.Fields {
+		propertyConfig, ok := p.Config.ExtraDataConfig[key]
+		if !ok {
+			return fmt.Errorf("%s: key not allowed", key)
+		}
+
+		if err := propertyConfig.Validate(value); err != nil {
+			return fmt.Errorf("%s: %w", key, err)
+		}
+	}
+
+	return nil
 }

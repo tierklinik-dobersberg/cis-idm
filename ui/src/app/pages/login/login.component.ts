@@ -1,6 +1,7 @@
 import { CommonModule } from "@angular/common";
 import { HttpClient, HttpClientModule } from "@angular/common/http";
-import { ChangeDetectorRef, Component, OnInit, TrackByFunction, inject } from "@angular/core";
+import { ChangeDetectorRef, Component, DestroyRef, OnInit, TrackByFunction, inject } from "@angular/core";
+import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import { FormsModule, ReactiveFormsModule } from "@angular/forms";
 import { ActivatedRoute, Router, RouterModule } from "@angular/router";
 import { ConnectError } from "@bufbuild/connect";
@@ -24,6 +25,16 @@ interface LoggedInUserHistory {
 }
 
 type States = 'user-select' | 'username-input' | 'password-input' | 'totp-input' ;
+const allStates: States[] = [
+  'user-select',
+  'username-input',
+  'password-input',
+  'totp-input'
+]
+
+function isValidState(s: any): s is States {
+  return allStates.includes(s)
+}
 
 @Component({
   standalone: true,
@@ -38,15 +49,29 @@ type States = 'user-select' | 'username-input' | 'password-input' | 'totp-input'
   ]
 })
 export class LoginComponent implements OnInit {
-  client = inject(AUTH_SERVICE);
-  profile = inject(ProfileService);
-  router = inject(Router);
-  config = inject(ConfigService).config;
-  currentRoute = inject(ActivatedRoute)
-  cdr = inject(ChangeDetectorRef)
-  http = inject(HttpClient);
+  private readonly client = inject(AUTH_SERVICE);
+  private readonly profile = inject(ProfileService);
+  private readonly router = inject(Router);
+  private readonly currentRoute = inject(ActivatedRoute)
+  private readonly cdr = inject(ChangeDetectorRef)
+  private readonly http = inject(HttpClient);
+  private readonly destroyRef = inject(DestroyRef);
 
-  display: States = 'username-input';
+  readonly config = inject(ConfigService).config;
+
+  set display(s: States) {
+    this._display = s
+
+    this.router.navigate(['.'], {
+      queryParams: {
+        s: this._display
+      }
+    })
+  }
+  get display(): States {
+    return this._display
+  }
+  private _display: States = 'username-input';
 
   username = '';
   password = '';
@@ -65,6 +90,17 @@ export class LoginComponent implements OnInit {
   selectedUser: LoggedInUser | null = null;
 
   async ngOnInit() {
+    this.currentRoute.queryParamMap
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(params => {
+        const s = params.get("s")
+        if (isValidState(s)) {
+          this._display = s
+
+          this.cdr.markForCheck();
+        }
+      })
+
     this.autofillSupported = await browserSupportsWebAuthnAutofill();
 
     try {

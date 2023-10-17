@@ -170,6 +170,9 @@ type Config struct {
 
 	// MailConfig is required for all email related features.
 	MailConfig *MailConfig `json:"mail" envPrefix:"MAIL__"`
+
+	// ExtraDataConfig defines the schema and visibility for the user extra data.
+	ExtraDataConfig map[string]*FieldConfig `json:"extraData"`
 }
 
 func LoadFile(path string) (*Config, error) {
@@ -282,6 +285,15 @@ func (file *Config) applyDefaults() error {
 
 	if file.MailConfig == nil {
 		file.MailConfig = new(MailConfig)
+	}
+
+	// validate the user extra data.
+	if len(file.ExtraDataConfig) > 0 {
+		for key, cfg := range file.ExtraDataConfig {
+			if err := cfg.ValidateConfig(FieldVisibilityPublic); err != nil {
+				return fmt.Errorf("extraData: %s: %w", key, err)
+			}
+		}
 	}
 
 	return nil

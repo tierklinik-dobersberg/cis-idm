@@ -8,6 +8,8 @@ import (
 	"strings"
 
 	"github.com/ory/mail"
+	"github.com/tidwall/sjson"
+	"google.golang.org/protobuf/types/known/structpb"
 
 	"github.com/bufbuild/connect-go"
 	"github.com/hashicorp/go-multierror"
@@ -150,6 +152,16 @@ func (svc *Service) CreateUser(ctx context.Context, req *connect.Request[idmv1.C
 
 	if usr.Extra != nil {
 		m := usr.Extra.AsMap()
+
+		value, err := structpb.NewStruct(m)
+		if err != nil {
+			return nil, err
+		}
+
+		if err := svc.ValidateUserExtraData(value); err != nil {
+			return nil, connect.NewError(connect.CodeInvalidArgument, err)
+		}
+
 		blob, err := json.Marshal(m)
 		if err != nil {
 			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("failed to convert user extra data: %w", err))
@@ -338,6 +350,15 @@ func (svc *Service) UpdateUser(ctx context.Context, req *connect.Request[idmv1.U
 					existing[key] = value
 				}
 
+				value, err := structpb.NewStruct(existing)
+				if err != nil {
+					return nil, err
+				}
+
+				if err := svc.ValidateUserExtraData(value); err != nil {
+					return nil, connect.NewError(connect.CodeInvalidArgument, err)
+				}
+
 				blob, err := json.Marshal(existing)
 				if err != nil {
 					return nil, err
@@ -425,4 +446,65 @@ func (svc *Service) InviteUser(ctx context.Context, req *connect.Request[idmv1.I
 	}
 
 	return connect.NewResponse(&idmv1.InviteUserResponse{}), nil
+}
+
+func (svc *Service) SetUserExtraKey(ctx context.Context, req *connect.Request[idmv1.SetUserExtraKeyRequest]) (*connect.Response[idmv1.SetUserExtraKeyResponse], error) {
+	usr, err := svc.Datastore.GetUserByID(ctx, req.Msg.UserId)
+	if err != nil {
+		return nil, err
+	}
+
+	if usr.Extra == "" {
+		usr.Extra = "{}"
+	}
+
+	if _, ok := req.Msg.Value.Kind.(*structpb.Value_NullValue); ok {
+		usr.Extra, err = sjson.Delete(usr.Extra, req.Msg.Path)
+	} else {
+		usr.Extra, err = sjson.Set(usr.Extra, req.Msg.Path, req.Msg.Value.AsInterface())
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	var m map[string]any
+	if err := json.Unmarshal([]byte(usr.Extra), &m); err != nil {
+		return nil, err
+	}
+
+	value, err := structpb.NewStruct(m)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := svc.ValidateUserExtraData(value); err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+
+	if err := svc.Datastore.UpdateUser(ctx, usr); err != nil {
+		return nil, err
+	}
+
+	return connect.NewResponse(&idmv1.SetUserExtraKeyResponse{}), nil
+}
+
+func (svc *Service) DeleteUserExtraKey(ctx context.Context, req *connect.Request[idmv1.DeleteUserExtraKeyRequest]) (*connect.Response[idmv1.DeleteUserExtraKeyResponse], error) {
+	usr, err := svc.Datastore.GetUserByID(ctx, req.Msg.UserId)
+	if err != nil {
+		return nil, err
+	}
+
+	if usr.Extra != "" {
+		usr.Extra, err = sjson.Delete(usr.Extra, req.Msg.Path)
+		if err != nil {
+			return nil, err
+		}
+
+		if err := svc.Datastore.UpdateUser(ctx, usr); err != nil {
+			return nil, err
+		}
+	}
+
+	return connect.NewResponse(&idmv1.DeleteUserExtraKeyResponse{}), nil
 }

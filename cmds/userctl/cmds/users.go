@@ -2,6 +2,7 @@ package cmds
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strconv"
@@ -57,6 +58,7 @@ func GetUsersCommand(root *cli.Root) *cobra.Command {
 		GetInviteUserCommand(root),
 		GetUpdateUserCommand(root),
 		GetCreateUserCommand(root),
+		GetSetUserExtraKeyCommand(root),
 	)
 
 	return cmd
@@ -301,6 +303,60 @@ func GetCreateUserCommand(root *cli.Root) *cobra.Command {
 		f.StringSliceVar(&roleNames, "role", nil, "")
 		f.StringVar(&avatar, "avatar", "", "")
 	}
+
+	return cmd
+}
+
+func GetSetUserExtraKeyCommand(root *cli.Root) *cobra.Command {
+	var userByName bool
+
+	cmd := &cobra.Command{
+		Use:  "set-extra",
+		Args: cobra.ExactArgs(3),
+		Run: func(cmd *cobra.Command, args []string) {
+			user := args[0]
+			path := args[1]
+			value := args[2]
+
+			var m any
+			if err := json.Unmarshal([]byte(value), &m); err != nil {
+				logrus.Fatalf("failed to parse value: %s", err)
+			}
+
+			if userByName {
+				res, err := root.Users().GetUser(root.Context(), connect.NewRequest(&idmv1.GetUserRequest{
+					Search: &idmv1.GetUserRequest_Name{
+						Name: user,
+					},
+					FieldMask: &fieldmaskpb.FieldMask{
+						Paths: []string{"profile.user.id"},
+					},
+				}))
+
+				if err != nil {
+					logrus.Fatalf("failed to resolve user: %s", err)
+				}
+
+				user = res.Msg.Profile.User.Id
+			}
+
+			valuepb, err := structpb.NewValue(m)
+			if err != nil {
+				logrus.Fatalf("failed to perpare value: %s", err)
+			}
+
+			_, err = root.Users().SetUserExtraKey(root.Context(), connect.NewRequest(&idmv1.SetUserExtraKeyRequest{
+				UserId: user,
+				Path:   path,
+				Value:  valuepb,
+			}))
+			if err != nil {
+				logrus.Fatalf("failed to set user extra key: %s", err)
+			}
+		},
+	}
+
+	cmd.Flags().BoolVar(&userByName, "by-name", false, "User is specified by name rather than ID")
 
 	return cmd
 }
