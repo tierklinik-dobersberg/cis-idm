@@ -10,3 +10,5 @@ mails/build_local
 internal/tmpl/templates
 /userctl
 /userd
+.angulardoc.json
+.vscode/

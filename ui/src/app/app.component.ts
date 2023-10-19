@@ -1,4 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
+import { ConfigService } from './config.service';
+import { DOCUMENT } from '@angular/common';
 
 @Component({
   selector: 'app-root',
@@ -6,8 +8,12 @@ import { Component, OnInit } from '@angular/core';
   styleUrls: ['./app.component.css']
 })
 export class AppComponent implements OnInit {
-  title = 'ui';
+  private readonly config = inject(ConfigService);
+  private readonly document = inject(DOCUMENT);
 
-  async ngOnInit() {
+  ngOnInit() {
+    if (!!this.config.config.siteName) {
+      this.document.querySelector('title')!.innerText = this.config.config.siteName;
+    }
   }
 }
