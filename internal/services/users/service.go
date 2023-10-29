@@ -16,6 +16,7 @@ import (
 	"github.com/mennanov/fmutils"
 	idmv1 "github.com/tierklinik-dobersberg/apis/gen/go/tkd/idm/v1"
 	"github.com/tierklinik-dobersberg/apis/gen/go/tkd/idm/v1/idmv1connect"
+	"github.com/tierklinik-dobersberg/apis/pkg/data"
 	"github.com/tierklinik-dobersberg/apis/pkg/log"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/app"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/common"
@@ -54,6 +55,14 @@ func (svc *Service) ListUsers(ctx context.Context, req *connect.Request[idmv1.Li
 		profileProto, err := svc.GetUserProfileProto(ctx, usr)
 		if err != nil {
 			log.L(ctx).Errorf("failed to get user profile for user %s: %s", usr.ID, err)
+		}
+
+		if len(req.Msg.FilterByRoles) > 0 {
+			if !data.SliceOverlapsFunc(req.Msg.FilterByRoles, profileProto.Roles, func(role *idmv1.Role) string {
+				return role.Id
+			}) {
+				continue
+			}
 		}
 
 		res.Users = append(res.Users, profileProto)

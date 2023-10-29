@@ -10,7 +10,7 @@ RUN npm install
 RUN npx browserslist@latest --update-db
 
 COPY ./ui .
-RUN npm run build
+RUN npm run build && rm -r .angular/cache node_modules
 
 # Build the mails
 FROM node:16 as mailbuild

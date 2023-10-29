@@ -28,7 +28,21 @@ func NewService(p *app.Providers) *Service {
 }
 
 func (svc *Service) CreateRole(ctx context.Context, req *connect.Request[idmv1.CreateRoleRequest]) (*connect.Response[idmv1.CreateRoleResponse], error) {
+	if req.Msg.Id != "" {
+		_, err := svc.Datastore.GetRoleByID(ctx, req.Msg.Id)
+		if err != nil {
+			if !errors.Is(err, stmts.ErrNoResults) {
+				return nil, fmt.Errorf("failed to query for conflicting roles: %w", err)
+			}
+		}
+
+		if err == nil {
+			return nil, connect.NewError(connect.CodeAlreadyExists, fmt.Errorf("role with id %q already exists", req.Msg.Id))
+		}
+	}
+
 	roleModel := models.Role{
+		ID:              req.Msg.Id,
 		Name:            req.Msg.Name,
 		Description:     req.Msg.Description,
 		DeleteProtected: req.Msg.DeleteProtection,
