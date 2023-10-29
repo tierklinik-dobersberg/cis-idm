@@ -1,7 +1,6 @@
 package cmds
 
 import (
-	"context"
 	"fmt"
 	"os"
 
@@ -17,11 +16,28 @@ import (
 )
 
 func GetProfileCommand(root *cli.Root) *cobra.Command {
+	var (
+		readMaskPaths []string
+		excludeFields bool
+	)
+
 	cmd := &cobra.Command{
 		Use:     "profile [sub-command]",
 		Aliases: []string{"self", "self-service", "selfservice"},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			res, err := root.Auth().Introspect(context.Background(), connect.NewRequest(&idmv1.IntrospectRequest{}))
+			req := &idmv1.IntrospectRequest{}
+
+			if len(readMaskPaths) > 0 {
+				req.ReadMask = &fieldmaskpb.FieldMask{
+					Paths: readMaskPaths,
+				}
+
+				req.ExcludeFields = excludeFields
+			} else if excludeFields {
+				logrus.Fatalf("--exclude-fields can only be used if --fields is specified")
+			}
+
+			res, err := root.Auth().Introspect(root.Context(), connect.NewRequest(req))
 			if err != nil {
 				return err
 			}
@@ -33,6 +49,9 @@ func GetProfileCommand(root *cli.Root) *cobra.Command {
 			return nil
 		},
 	}
+
+	cmd.Flags().StringSliceVar(&readMaskPaths, "fields", nil, "Include/Exclude specified fields")
+	cmd.Flags().BoolVar(&excludeFields, "exclude-fields", false, "Use --fields for exclusion rather than inclusion")
 
 	cmd.AddCommand(
 		GetChangePasswordCommand(root),
@@ -79,7 +98,7 @@ func GetChangePasswordCommand(root *cli.Root) *cobra.Command {
 				req.NewPassword = string(pwd)
 			}
 
-			_, err := root.SelfService().ChangePassword(context.Background(), connect.NewRequest(&req))
+			_, err := root.SelfService().ChangePassword(root.Context(), connect.NewRequest(&req))
 			if err != nil {
 				return err
 			}
@@ -106,7 +125,7 @@ func GetAddEmailCommand(root *cli.Root) *cobra.Command {
 				Email: args[0],
 			}
 
-			_, err := root.SelfService().AddEmailAddress(context.Background(), connect.NewRequest(msg))
+			_, err := root.SelfService().AddEmailAddress(root.Context(), connect.NewRequest(msg))
 			if err != nil {
 				logrus.Fatal(err.Error())
 			}
@@ -125,7 +144,7 @@ func GetDeleteEmailCommand(root *cli.Root) *cobra.Command {
 				Id: args[0],
 			}
 
-			_, err := root.SelfService().DeleteEmailAddress(context.Background(), connect.NewRequest(msg))
+			_, err := root.SelfService().DeleteEmailAddress(root.Context(), connect.NewRequest(msg))
 			if err != nil {
 				logrus.Fatal(err.Error())
 			}
@@ -141,7 +160,7 @@ func GetAddAddressCommand(root *cli.Root) *cobra.Command {
 		Use: "add-address",
 		Run: func(cmd *cobra.Command, args []string) {
 
-			_, err := root.SelfService().AddAddress(context.Background(), connect.NewRequest(&msg))
+			_, err := root.SelfService().AddAddress(root.Context(), connect.NewRequest(&msg))
 			if err != nil {
 				logrus.Fatal(err.Error())
 			}
@@ -164,7 +183,7 @@ func GetDeleteAddressCommand(root *cli.Root) *cobra.Command {
 		Use:  "delete-address",
 		Args: cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			_, err := root.SelfService().DeleteAddress(context.Background(), connect.NewRequest(&idmv1.DeleteAddressRequest{
+			_, err := root.SelfService().DeleteAddress(root.Context(), connect.NewRequest(&idmv1.DeleteAddressRequest{
 				Id: args[0],
 			}))
 
@@ -199,7 +218,7 @@ func GetUpdateAddressCommand(root *cli.Root) *cobra.Command {
 				msg.FieldMask.Paths = append(msg.FieldMask.Paths, "extra")
 			}
 
-			_, err := root.SelfService().UpdateAddress(context.Background(), connect.NewRequest(&msg))
+			_, err := root.SelfService().UpdateAddress(root.Context(), connect.NewRequest(&msg))
 			if err != nil {
 				logrus.Fatal(err.Error())
 			}
@@ -239,7 +258,7 @@ func GetUpdateProfileCommand(root *cli.Root) *cobra.Command {
 				}
 			}
 
-			_, err := root.SelfService().UpdateProfile(context.Background(), connect.NewRequest(&msg))
+			_, err := root.SelfService().UpdateProfile(root.Context(), connect.NewRequest(&msg))
 			if err != nil {
 				logrus.Fatal(err.Error())
 			}
@@ -268,7 +287,7 @@ func GetEnrollTotpCommand(root *cli.Root) *cobra.Command {
 		Use: "enroll-totp",
 		Run: func(cmd *cobra.Command, args []string) {
 
-			res, err := root.SelfService().Enroll2FA(context.Background(), connect.NewRequest(&idmv1.Enroll2FARequest{
+			res, err := root.SelfService().Enroll2FA(root.Context(), connect.NewRequest(&idmv1.Enroll2FARequest{
 				Kind: &idmv1.Enroll2FARequest_TotpStep1{},
 			}))
 			if err != nil {
@@ -288,7 +307,7 @@ func GetEnrollTotpCommand(root *cli.Root) *cobra.Command {
 				logrus.Fatal(err)
 			}
 
-			_, err = root.SelfService().Enroll2FA(context.Background(), connect.NewRequest(&idmv1.Enroll2FARequest{
+			_, err = root.SelfService().Enroll2FA(root.Context(), connect.NewRequest(&idmv1.Enroll2FARequest{
 				Kind: &idmv1.Enroll2FARequest_TotpStep2{
 					TotpStep2: &idmv1.EnrollTOTPRequestStep2{
 						VerifyCode: string(code),
@@ -320,7 +339,7 @@ func GetDisable2FACommand(root *cli.Root) *cobra.Command {
 				logrus.Fatal(err)
 			}
 
-			_, err = root.SelfService().Remove2FA(context.Background(), connect.NewRequest(&idmv1.Remove2FARequest{
+			_, err = root.SelfService().Remove2FA(root.Context(), connect.NewRequest(&idmv1.Remove2FARequest{
 				Kind: &idmv1.Remove2FARequest_TotpCode{
 					TotpCode: string(code),
 				},
@@ -339,7 +358,7 @@ func GetGenerateRecoveryCodesCommand(root *cli.Root) *cobra.Command {
 		Use: "generate-recovery-codes",
 		Run: func(cmd *cobra.Command, args []string) {
 
-			res, err := root.SelfService().GenerateRecoveryCodes(context.Background(), connect.NewRequest(&idmv1.GenerateRecoveryCodesRequest{}))
+			res, err := root.SelfService().GenerateRecoveryCodes(root.Context(), connect.NewRequest(&idmv1.GenerateRecoveryCodesRequest{}))
 			if err != nil {
 				logrus.Fatal(err)
 			}
@@ -377,7 +396,7 @@ func GetSetAvatarCommand(root *cli.Root) *cobra.Command {
 				url = dataurl.EncodeBytes(content)
 			}
 
-			_, err := root.SelfService().UpdateProfile(context.Background(), connect.NewRequest(&idmv1.UpdateProfileRequest{
+			_, err := root.SelfService().UpdateProfile(root.Context(), connect.NewRequest(&idmv1.UpdateProfileRequest{
 				Avatar: url,
 				FieldMask: &fieldmaskpb.FieldMask{
 					Paths: []string{"avatar"},

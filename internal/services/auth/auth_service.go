@@ -12,6 +12,7 @@ import (
 
 	"github.com/bufbuild/connect-go"
 	"github.com/hashicorp/go-multierror"
+	"github.com/mennanov/fmutils"
 	"github.com/pquerna/otp/totp"
 	"github.com/sirupsen/logrus"
 	idmv1 "github.com/tierklinik-dobersberg/apis/gen/go/tkd/idm/v1"
@@ -333,6 +334,14 @@ func (svc *AuthService) Introspect(ctx context.Context, req *connect.Request[idm
 	profile, err := svc.GetUserProfileProto(ctx, user)
 	if err != nil {
 		return nil, err
+	}
+
+	if paths := req.Msg.GetReadMask().GetPaths(); len(paths) > 0 {
+		if req.Msg.ExcludeFields {
+			fmutils.Prune(profile, paths)
+		} else {
+			fmutils.Filter(profile, paths)
+		}
 	}
 
 	return connect.NewResponse(&idmv1.IntrospectResponse{

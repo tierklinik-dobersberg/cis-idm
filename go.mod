@@ -22,7 +22,7 @@ require (
 	github.com/rqlite/gorqlite v0.0.0-20230310040812-ec5e524a562e
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.7.0
-	github.com/tierklinik-dobersberg/apis v0.0.0-20231029070933-aca80266df8d
+	github.com/tierklinik-dobersberg/apis v0.0.0-20231029073555-be5720a37ba2
 	github.com/vincent-petithory/dataurl v1.0.0
 	golang.org/x/crypto v0.13.0
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9
