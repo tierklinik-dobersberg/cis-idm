@@ -68,6 +68,10 @@ func GetRoleCommand(root *cli.Root) *cobra.Command {
 }
 
 func GetImportRolesCommand(root *cli.Root) *cobra.Command {
+	var (
+		ignoreExisting bool
+	)
+
 	cmd := &cobra.Command{
 		Use:  "import",
 		Args: cobra.ExactArgs(1),
@@ -97,6 +101,29 @@ func GetImportRolesCommand(root *cli.Root) *cobra.Command {
 			ctx := root.Context()
 
 			for _, role := range listResponse.Roles {
+				if ignoreExisting {
+					// check if a role with the same ID or name exists and skip it otherwise
+					existing, err := resolveRole(root, role.Id)
+					if err != nil {
+						logrus.Fatalf("failed to check if role id=%q name=%q exists: %s", role.Id, role.Name, err)
+					}
+
+					if existing != nil {
+						logrus.Infof("skipping import of existing role id=%q", role.Id)
+						continue
+					}
+
+					existing, err = resolveRole(root, role.Name)
+					if err != nil {
+						logrus.Fatalf("failed to check if role id=%q name=%q exists: %s", role.Id, role.Name, err)
+					}
+
+					if existing != nil {
+						logrus.Infof("skipping import of existing role name=%q", role.Name)
+						continue
+					}
+				}
+
 				_, err := cli.CreateRole(ctx, connect.NewRequest(&idmv1.CreateRoleRequest{
 					Id:               role.Id,
 					Name:             role.Name,
@@ -110,6 +137,8 @@ func GetImportRolesCommand(root *cli.Root) *cobra.Command {
 			}
 		},
 	}
+
+	cmd.Flags().BoolVar(&ignoreExisting, "ignore-existing", false, "Do not try to import roles where the ID or Name is already used")
 
 	return cmd
 }

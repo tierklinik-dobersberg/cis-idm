@@ -2,7 +2,6 @@ package cmds
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -42,34 +41,15 @@ func GetUsersCommand(root *cli.Root) *cobra.Command {
 			req.ExcludeFields = excludeFields
 
 			if len(filterByRoles) > 0 {
-				cli := root.Roles()
-
 				for _, roleNameOrId := range filterByRoles {
-					// resolve all roles by either ID or Name
-					role, err := cli.GetRole(root.Context(), connect.NewRequest(&idmv1.GetRoleRequest{
-						Search: &idmv1.GetRoleRequest_Id{
-							Id: roleNameOrId,
-						},
-					}))
-
-					var cerr *connect.Error
-					switch {
-					case err == nil:
-					case errors.As(err, &cerr) && cerr.Code() == connect.CodeNotFound:
-						role, err = cli.GetRole(root.Context(), connect.NewRequest(&idmv1.GetRoleRequest{
-							Search: &idmv1.GetRoleRequest_Name{
-								Name: roleNameOrId,
-							},
-						}))
-
-						if err != nil {
-							logrus.Fatalf("failed to resolve role %q: %s", roleNameOrId, err)
-						}
-					default:
+					role, err := resolveRole(root, roleNameOrId)
+					if err != nil {
 						logrus.Fatalf("failed to resolve role %q: %s", roleNameOrId, err)
 					}
 
-					req.FilterByRoles = append(req.FilterByRoles, role.Msg.Role.Id)
+					if role != nil {
+						req.FilterByRoles = append(req.FilterByRoles, role.Id)
+					}
 				}
 			}
 
