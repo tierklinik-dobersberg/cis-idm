@@ -1,8 +1,8 @@
 package cmds
 
 import (
-	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -24,6 +24,7 @@ import (
 func GetUsersCommand(root *cli.Root) *cobra.Command {
 	var (
 		fm            []string
+		filterByRoles []string
 		excludeFields bool
 	)
 
@@ -40,7 +41,39 @@ func GetUsersCommand(root *cli.Root) *cobra.Command {
 			}
 			req.ExcludeFields = excludeFields
 
-			users, err := root.Users().ListUsers(context.Background(), connect.NewRequest(req))
+			if len(filterByRoles) > 0 {
+				cli := root.Roles()
+
+				for _, roleNameOrId := range filterByRoles {
+					// resolve all roles by either ID or Name
+					role, err := cli.GetRole(root.Context(), connect.NewRequest(&idmv1.GetRoleRequest{
+						Search: &idmv1.GetRoleRequest_Id{
+							Id: roleNameOrId,
+						},
+					}))
+
+					var cerr *connect.Error
+					switch {
+					case err == nil:
+					case errors.As(err, &cerr) && cerr.Code() == connect.CodeNotFound:
+						role, err = cli.GetRole(root.Context(), connect.NewRequest(&idmv1.GetRoleRequest{
+							Search: &idmv1.GetRoleRequest_Name{
+								Name: roleNameOrId,
+							},
+						}))
+
+						if err != nil {
+							logrus.Fatalf("failed to resolve role %q: %s", roleNameOrId, err)
+						}
+					default:
+						logrus.Fatalf("failed to resolve role %q: %s", roleNameOrId, err)
+					}
+
+					req.FilterByRoles = append(req.FilterByRoles, role.Msg.Role.Id)
+				}
+			}
+
+			users, err := root.Users().ListUsers(root.Context(), connect.NewRequest(req))
 			if err != nil {
 				logrus.Fatal(err.Error())
 			}
@@ -50,6 +83,7 @@ func GetUsersCommand(root *cli.Root) *cobra.Command {
 	}
 
 	cmd.Flags().StringSliceVar(&fm, "fields", nil, "A list of fields to include")
+	cmd.Flags().StringSliceVar(&filterByRoles, "filter-roles", nil, "Filter users by assigned role IDs")
 	cmd.Flags().BoolVar(&excludeFields, "exclude-fields", false, "Use --fields as an exclude list rather than an include list")
 
 	cmd.AddCommand(
@@ -69,7 +103,7 @@ func GetDeleteUserCommand(root *cli.Root) *cobra.Command {
 		Use:  "delete",
 		Args: cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			_, err := root.Users().DeleteUser(context.Background(), connect.NewRequest(&idmv1.DeleteUserRequest{
+			_, err := root.Users().DeleteUser(root.Context(), connect.NewRequest(&idmv1.DeleteUserRequest{
 				Id: args[0],
 			}))
 
@@ -120,7 +154,7 @@ func GetRegisterUserCommand(root *cli.Root) *cobra.Command {
 				RegistrationToken: regToken,
 			}
 
-			res, err := root.Auth().RegisterUser(context.Background(), connect.NewRequest(msg))
+			res, err := root.Auth().RegisterUser(root.Context(), connect.NewRequest(msg))
 			if err != nil {
 				logrus.Fatal(err)
 			}
@@ -159,7 +193,7 @@ func GetGenerateRegistrationTokenCommand(root *cli.Root) *cobra.Command {
 			}
 
 			req := connect.NewRequest(msg)
-			res, err := root.Auth().GenerateRegistrationToken(context.Background(), req)
+			res, err := root.Auth().GenerateRegistrationToken(root.Context(), req)
 			if err != nil {
 				logrus.Fatal(err)
 			}
@@ -202,7 +236,7 @@ func GetInviteUserCommand(root *cli.Root) *cobra.Command {
 				}
 			}
 
-			_, err := root.Users().InviteUser(context.Background(), connect.NewRequest(req))
+			_, err := root.Users().InviteUser(root.Context(), connect.NewRequest(req))
 			if err != nil {
 				logrus.Fatal(err)
 			}
@@ -280,7 +314,7 @@ func GetCreateUserCommand(root *cli.Root) *cobra.Command {
 				})
 			}
 
-			res, err := root.Users().CreateUser(context.Background(), connect.NewRequest(req))
+			res, err := root.Users().CreateUser(root.Context(), connect.NewRequest(req))
 			if err != nil {
 				logrus.Fatal(err)
 			}
@@ -443,7 +477,7 @@ func GetUpdateUserCommand(root *cli.Root) *cobra.Command {
 				}
 			}
 
-			_, err := root.Users().UpdateUser(context.Background(), connect.NewRequest(&msg))
+			_, err := root.Users().UpdateUser(root.Context(), connect.NewRequest(&msg))
 			if err != nil {
 				logrus.Fatal(err.Error())
 			}
