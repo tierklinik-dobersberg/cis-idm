@@ -325,7 +325,7 @@ func GetSetUserExtraKeyCommand(root *cli.Root) *cobra.Command {
 	var userByName bool
 
 	cmd := &cobra.Command{
-		Use:  "set-extra",
+		Use:  "set-extra [user] [path] [value]",
 		Args: cobra.ExactArgs(3),
 		Run: func(cmd *cobra.Command, args []string) {
 			user := args[0]

@@ -92,7 +92,7 @@ func GetImportRolesCommand(root *cli.Root) *cobra.Command {
 				logrus.Fatalf("failed to read from %q: %s", args[0], err)
 			}
 
-			listResponse := &idmv1.ListRolesResponse{}
+			var listResponse []*idmv1.Role
 			if err := json.Unmarshal(content, &listResponse); err != nil {
 				logrus.Fatalf("failed to parse ListRolesResponse: %s", err)
 			}
@@ -100,7 +100,7 @@ func GetImportRolesCommand(root *cli.Root) *cobra.Command {
 			cli := root.Roles()
 			ctx := root.Context()
 
-			for _, role := range listResponse.Roles {
+			for _, role := range listResponse {
 				if ignoreExisting {
 					// check if a role with the same ID or name exists and skip it otherwise
 					existing, err := resolveRole(root, role.Id)
