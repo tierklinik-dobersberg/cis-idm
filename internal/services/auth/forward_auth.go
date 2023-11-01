@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -16,18 +17,53 @@ import (
 	"github.com/tierklinik-dobersberg/cis-idm/internal/app"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/jwt"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/middleware"
+	"github.com/tierklinik-dobersberg/cis-idm/internal/repo/stmts"
 )
+
+func parseXForwardedForHeader(r *http.Request) []net.IP {
+	h := r.Header.Get("X-Forwarded-For")
+	if h == "" {
+		return nil
+	}
+
+	result := make([]net.IP, 0)
+
+	ips := strings.Split(h, ",")
+	for _, ip := range ips {
+		i := net.ParseIP(strings.TrimSpace(ip))
+		if i == nil {
+			log.L(r.Context()).Errorf("received invalid x-forwarded-for header: %s", h)
+
+			return nil
+		}
+
+		result = append(result, i)
+	}
+
+	return result
+}
 
 func NewForwardAuthHandler(providers *app.Providers) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 
 		method := r.Header.Get("x-forwarded-method")
-		requestURL := (&url.URL{
+		u := &url.URL{
 			Scheme: r.Header.Get("x-forwarded-proto"),
 			Host:   r.Header.Get("x-forwarded-host"),
 			Path:   r.Header.Get("x-forwarded-uri"),
-		}).String()
+		}
+		requestURL := u.String()
+
+		l := log.L(ctx).
+			WithField("method", method).
+			WithField("host", u.Host).
+			WithField("path", u.Path)
+
+		ips := parseXForwardedForHeader(r)
+		if len(ips) > 0 {
+			l = l.WithField("clientIP", ips[0].String())
+		}
 
 		var redirectUrl = requestURL
 
@@ -44,7 +80,7 @@ func NewForwardAuthHandler(providers *app.Providers) http.Handler {
 			redirectUrl = r.Referer()
 
 			if _, err := url.Parse(redirectUrl); err != nil {
-				log.L(ctx).Errorf("failed to parse redirect URL: %s", redirectUrl)
+				l.Errorf("failed to parse redirect URL: %s", redirectUrl)
 				redirectUrl = ""
 			}
 
@@ -55,7 +91,6 @@ func NewForwardAuthHandler(providers *app.Providers) http.Handler {
 			}
 		}
 
-		l := log.L(ctx)
 		fae, required, err := providers.Config.AuthRequiredForURL(method, requestURL)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -100,7 +135,11 @@ func NewForwardAuthHandler(providers *app.Providers) http.Handler {
 				primaryMail = mail.Address
 				primaryMailVerified = mail.Verified
 			} else {
-				l.Infof("failed to get primary user mail: %s", err)
+				if !errors.Is(err, stmts.ErrNoResults) {
+					l.Errorf("failed to get primary user mail: %s", err)
+				} else {
+					l.Debugf("user does not have a primary mail address configured")
+				}
 			}
 
 			displayName = user.DisplayName
@@ -111,7 +150,6 @@ func NewForwardAuthHandler(providers *app.Providers) http.Handler {
 			if claims.AppMetadata != nil && claims.AppMetadata.Authorization != nil {
 				roles = claims.AppMetadata.Authorization.Roles
 			}
-
 		} else {
 			// check if the token has been expired, and if, redirect the user to
 			// the RefreshRedirectURL.
