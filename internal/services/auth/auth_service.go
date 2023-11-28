@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math/rand"
 	"net/http"
 	"strings"
 	"time"
@@ -515,15 +514,8 @@ func (svc *AuthService) RequestPasswordReset(ctx context.Context, req *connect.R
 			v.Email = primaryMail.Address
 		}
 
-		// Generate a new security code
-		source := rand.NewSource(time.Now().UnixNano())
-		rand := rand.New(source)
-		code := fmt.Sprintf("%d", rand.Intn(999999-100000)+100000)
-
-		// store the code in cache
-		cacheKey := fmt.Sprintf("password-reset:%s", code)
-
-		if err := svc.Cache.PutKeyTTL(ctx, cacheKey, user.ID, time.Hour*24); err != nil {
+		code, cacheKey, err := svc.Common.GeneratePasswordResetToken(ctx, user.ID)
+		if err != nil {
 			return nil, err
 		}
 

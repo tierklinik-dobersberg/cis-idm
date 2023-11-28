@@ -41,6 +41,13 @@ type (
 		ResetLink string
 	}
 
+	AccountCreationNoticeCtx struct {
+		BaseContext
+		Creator   models.User
+		User      models.User
+		ResetLink string
+	}
+
 	VerifyMailCtx struct {
 		BaseContext
 		User       models.User
@@ -68,6 +75,11 @@ var (
 
 	RequestPasswordReset = Known[*RequestPasswordResetCtx]{
 		Name: "request_password_reset",
+		Kind: KindMail,
+	}
+
+	AccountCreationNotice = Known[*AccountCreationNoticeCtx]{
+		Name: "account_creation_notice",
 		Kind: KindMail,
 	}
 

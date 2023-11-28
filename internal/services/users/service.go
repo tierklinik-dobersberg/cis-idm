@@ -523,3 +523,66 @@ func (svc *Service) DeleteUserExtraKey(ctx context.Context, req *connect.Request
 
 	return connect.NewResponse(&idmv1.DeleteUserExtraKeyResponse{}), nil
 }
+
+func (svc *Service) SendAccountCreationNotice(ctx context.Context, req *connect.Request[idmv1.SendAccountCreationNoticeRequest]) (*connect.Response[idmv1.SendAccountCreationNoticeResponse], error) {
+	claims := middleware.ClaimsFromContext(ctx)
+	if claims == nil {
+		return nil, fmt.Errorf("no request claims associated with request")
+	}
+
+	creator, err := svc.Providers.Datastore.GetUserByID(ctx, claims.Subject)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("failed to find authenticated user in database"))
+	}
+
+	merr := new(multierror.Error)
+
+	for _, userId := range req.Msg.UserIds {
+		target, err := svc.Datastore.GetUserByID(ctx, userId)
+		if err != nil {
+			merr.Errors = append(merr.Errors, fmt.Errorf("failed to find user %q: %w", userId, err))
+
+			continue
+		}
+
+		primaryMail, err := svc.Datastore.GetUserPrimaryMail(ctx, userId)
+		if err != nil {
+			merr.Errors = append(merr.Errors, fmt.Errorf("failed to get primary email for user %q: %w", userId, err))
+
+			continue
+		}
+
+		code, cacheKey, err := svc.Common.GeneratePasswordResetToken(ctx, target.ID)
+		if err != nil {
+			merr.Errors = append(merr.Errors, fmt.Errorf("failed to generate password reset token for user %q: %w", userId, err))
+
+			continue
+		}
+
+		// Send a text message to the user
+		msg := mailer.Message{
+			From: svc.Config.MailConfig.From,
+			To:   []string{primaryMail.Address},
+		}
+
+		if err := mailer.SendTemplate(ctx, svc.Config, svc.TemplateEngine, svc.Mailer, msg, tmpl.AccountCreationNotice, &tmpl.AccountCreationNoticeCtx{
+			Creator:   creator,
+			User:      target,
+			ResetLink: fmt.Sprintf(svc.Config.PasswordResetURL, code),
+		}); err != nil {
+			defer func() {
+				_ = svc.Cache.DeleteKey(ctx, cacheKey)
+			}()
+
+			merr.Errors = append(merr.Errors, fmt.Errorf("failed to send account creation notice to user %q: %w", userId, err))
+
+			log.L(ctx).Errorf("failed to send account creation notice to user %q: %s", userId, err)
+		}
+	}
+
+	if err := merr.ErrorOrNil(); err != nil {
+		return nil, connect.NewError(connect.CodeUnknown, err)
+	}
+
+	return connect.NewResponse(new(idmv1.SendAccountCreationNoticeResponse)), nil
+}

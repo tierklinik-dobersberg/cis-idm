@@ -15,10 +15,11 @@ type Service struct {
 	cache cache.Cache
 }
 
-func New(repo *repo.Repo, cfg config.Config) *Service {
+func New(repo *repo.Repo, cfg config.Config, cache cache.Cache) *Service {
 	return &Service{
-		repo: repo,
-		cfg:  cfg,
+		repo:  repo,
+		cfg:   cfg,
+		cache: cache,
 	}
 }
 

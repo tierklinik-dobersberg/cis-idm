@@ -131,7 +131,8 @@ func setupAppProviders(ctx context.Context, cfg config.Config) (*app.Providers, 
 		mailSender = new(mailer.NoOpMailer)
 	}
 
-	commonService := common.New(datastore, cfg)
+	cache := cache.NewInMemoryCache()
+	commonService := common.New(datastore, cfg, cache)
 
 	providers := &app.Providers{
 		TemplateEngine: tmplEngine,
@@ -142,7 +143,7 @@ func setupAppProviders(ctx context.Context, cfg config.Config) (*app.Providers, 
 		Common:         commonService,
 		ProtoRegistry:  reg,
 		Validator:      validator,
-		Cache:          cache.NewInMemoryCache(), // TODO(ppacher): support redis here for HA
+		Cache:          cache,
 	}
 
 	return providers, nil

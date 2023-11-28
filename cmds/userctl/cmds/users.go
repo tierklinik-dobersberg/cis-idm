@@ -73,6 +73,7 @@ func GetUsersCommand(root *cli.Root) *cobra.Command {
 		GetUpdateUserCommand(root),
 		GetCreateUserCommand(root),
 		GetSetUserExtraKeyCommand(root),
+		GetSendAccountCreationNoticeCommand(root),
 	)
 
 	return cmd
@@ -84,7 +85,7 @@ func GetDeleteUserCommand(root *cli.Root) *cobra.Command {
 		Args: cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			_, err := root.Users().DeleteUser(root.Context(), connect.NewRequest(&idmv1.DeleteUserRequest{
-				Id: args[0],
+				Id: mustResolveUserToId(root, args[0]),
 			}))
 
 			if err != nil {
@@ -322,13 +323,12 @@ func GetCreateUserCommand(root *cli.Root) *cobra.Command {
 }
 
 func GetSetUserExtraKeyCommand(root *cli.Root) *cobra.Command {
-	var userByName bool
-
 	cmd := &cobra.Command{
 		Use:  "set-extra [user] [path] [value]",
 		Args: cobra.ExactArgs(3),
 		Run: func(cmd *cobra.Command, args []string) {
-			user := args[0]
+			userId := mustResolveUserToId(root, args[0])
+
 			path := args[1]
 			value := args[2]
 
@@ -337,30 +337,13 @@ func GetSetUserExtraKeyCommand(root *cli.Root) *cobra.Command {
 				logrus.Fatalf("failed to parse value: %s", err)
 			}
 
-			if userByName {
-				res, err := root.Users().GetUser(root.Context(), connect.NewRequest(&idmv1.GetUserRequest{
-					Search: &idmv1.GetUserRequest_Name{
-						Name: user,
-					},
-					FieldMask: &fieldmaskpb.FieldMask{
-						Paths: []string{"profile.user.id"},
-					},
-				}))
-
-				if err != nil {
-					logrus.Fatalf("failed to resolve user: %s", err)
-				}
-
-				user = res.Msg.Profile.User.Id
-			}
-
 			valuepb, err := structpb.NewValue(m)
 			if err != nil {
 				logrus.Fatalf("failed to perpare value: %s", err)
 			}
 
 			_, err = root.Users().SetUserExtraKey(root.Context(), connect.NewRequest(&idmv1.SetUserExtraKeyRequest{
-				UserId: user,
+				UserId: userId,
 				Path:   path,
 				Value:  valuepb,
 			}))
@@ -369,8 +352,6 @@ func GetSetUserExtraKeyCommand(root *cli.Root) *cobra.Command {
 			}
 		},
 	}
-
-	cmd.Flags().BoolVar(&userByName, "by-name", false, "User is specified by name rather than ID")
 
 	return cmd
 }
@@ -385,8 +366,10 @@ func GetUpdateUserCommand(root *cli.Root) *cobra.Command {
 		Use:  "update",
 		Args: cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
+			userId := mustResolveUserToId(root, args[0])
+
 			msg.FieldMask = &fieldmaskpb.FieldMask{}
-			msg.Id = args[0]
+			msg.Id = userId
 
 			flagsToFieldmask := [][2]string{
 				{"username", "username"},
@@ -473,6 +456,30 @@ func GetUpdateUserCommand(root *cli.Root) *cobra.Command {
 		flags.StringVar(&msg.Avatar, "avatar", "", "The new avatar value")
 		flags.StringVar(&msg.Birthday, "birthday", "", "The birthday of the user")
 		flags.StringSliceVar(&extraData, "extra", nil, "Format is key:type:value")
+	}
+
+	return cmd
+}
+
+func GetSendAccountCreationNoticeCommand(root *cli.Root) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:     "send-account-notice",
+		Aliases: []string{"send-creation-notice"},
+		Args:    cobra.MinimumNArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			userIds := mustResolveUserIds(root, args)
+
+			req := &idmv1.SendAccountCreationNoticeRequest{
+				UserIds: userIds,
+			}
+
+			res, err := root.Users().SendAccountCreationNotice(root.Context(), connect.NewRequest(req))
+			if err != nil {
+				logrus.Fatalf("failed to send account creation notice: %s", err)
+			}
+
+			root.Print(res)
+		},
 	}
 
 	return cmd
