@@ -57,6 +57,7 @@ type Claims struct {
 	NotBefore   int64        `json:"nbf,omitempty" xml:"nbf" yaml:"nbf,omitempty"`
 	Subject     string       `json:"sub,omitempty" xml:"sub" yaml:"sub,omitempty"`
 	Name        string       `json:"name,omitempty" xml:"name" yaml:"name,omitempty"`
+	DisplayName string       `json:"displayName,omitempty" xml:"displayName" yaml:"displayName"`
 	Scopes      []Scope      `json:"scopes,omitempty" xml:"scopes" yaml:"scopes,omitempty"`
 	Email       string       `json:"email,omitempty" xml:"email" yaml:"email,omitempty"`
 	AppMetadata *AppMetadata `json:"app_metadata,omitempty" xml:"app_metadata" yaml:"app_metadata,omitempty"`

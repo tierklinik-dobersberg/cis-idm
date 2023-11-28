@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/base64"
 	"net/url"
+	"strings"
 
 	"github.com/tierklinik-dobersberg/apis/pkg/log"
-	"golang.org/x/exp/slices"
 )
 
 func (p *Providers) HandleRequestedRedirect(ctx context.Context, requestedRedirect string) (string, error) {
@@ -21,13 +21,19 @@ func (p *Providers) HandleRequestedRedirect(ctx context.Context, requestedRedire
 			return "", err
 		}
 
-		if slices.Contains(p.Config.AllowedDomainRedirects, u.Host) {
-			log.L(ctx).Infof("redirecting user to %s", u.String())
-			return u.String(), nil
+		for _, allowedDomain := range p.Config.AllowedDomainRedirects {
+			if strings.HasPrefix(allowedDomain, ".") {
+				if strings.HasSuffix(u.Host, allowedDomain) {
+					return u.String(), nil
+				}
+			}
 
-		} else {
-			log.L(ctx).Warnf("requested redirect to %s is not allowed", string(decoded))
+			if u.Host == allowedDomain {
+				return u.String(), nil
+			}
 		}
+
+		log.L(ctx).Warnf("requested redirect to %s is not allowed (%v)", string(decoded), p.Config.AllowedDomainRedirects)
 	}
 
 	return "", nil

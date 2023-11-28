@@ -135,6 +135,9 @@ func PrepareFunctionMap() map[string]any {
 }
 
 var customMap = map[string]any{
+	"safeHTML": func(input string) htmlTemplate.HTML {
+		return htmlTemplate.HTML(input)
+	},
 	"primaryEmail": func(input *idmv1.Profile) string {
 		if pm := input.User.PrimaryMail; pm != nil {
 			return pm.Address

@@ -56,15 +56,16 @@ func (p *Providers) CreateSignedJWT(user models.User, roles []models.Role, paren
 	expiresAt := time.Now().Add(ttl)
 
 	claims := jwt.Claims{
-		Audience:  p.Config.Audience,
-		ExpiresAt: expiresAt.Unix(),
-		ID:        tokenID.String(),
-		IssuedAt:  time.Now().Unix(),
-		Issuer:    p.Config.Domain,
-		NotBefore: time.Now().Unix(),
-		Subject:   user.ID,
-		Name:      user.Username,
-		Scopes:    scopes,
+		Audience:    p.Config.Audience,
+		ExpiresAt:   expiresAt.Unix(),
+		ID:          tokenID.String(),
+		IssuedAt:    time.Now().Unix(),
+		Issuer:      p.Config.Domain,
+		NotBefore:   time.Now().Unix(),
+		Subject:     user.ID,
+		Name:        user.Username,
+		DisplayName: user.DisplayName,
+		Scopes:      scopes,
 		AppMetadata: &jwt.AppMetadata{
 			TokenVersion:  "1",
 			ParentTokenID: parentTokenID,

@@ -22,7 +22,8 @@ require (
 	github.com/rqlite/gorqlite v0.0.0-20230310040812-ec5e524a562e
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.7.0
-	github.com/tierklinik-dobersberg/apis v0.0.0-20231029073555-be5720a37ba2
+	github.com/tidwall/sjson v1.2.5
+	github.com/tierklinik-dobersberg/apis v0.0.0-20231127085141-7999104320a5
 	github.com/vincent-petithory/dataurl v1.0.0
 	golang.org/x/crypto v0.13.0
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9
@@ -53,6 +54,7 @@ require (
 	github.com/mitchellh/copystructure v1.0.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.0 // indirect
 	github.com/rs/cors v1.10.1 // indirect
+	github.com/sebest/xff v0.0.0-20210106013422-671bd2870b3a // indirect
 	github.com/shopspring/decimal v1.3.1 // indirect
 	github.com/spf13/cast v1.5.1 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
@@ -60,7 +62,6 @@ require (
 	github.com/tidwall/gjson v1.14.2 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect
-	github.com/tidwall/sjson v1.2.5 // indirect
 	github.com/ttacon/builder v0.0.0-20170518171403-c099f663e1c2 // indirect
 	github.com/ttacon/libphonenumber v1.2.1 // indirect
 	github.com/x448/float16 v0.8.4 // indirect

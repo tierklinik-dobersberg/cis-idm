@@ -32,10 +32,24 @@ type MailConfig struct {
 	UseSSL        *bool  `json:"useTLS" env:"USE_TLS"`
 }
 
+type DryRun struct {
+	MailTarget string `json:"mail"`
+	SMSTarget  string `json:"sms"`
+}
+
 type Config struct {
 	// ForwardAuth configures domains and URLs that require authentication
 	// when passed to the /validate endpoint.
-	ForwardAuth []*ForwardAuthEntry `json:"forwardAuth" yaml:"forwardAuth"`
+	ForwardAuth []*ForwardAuthEntry `json:"forwardAuth"`
+
+	// DryRun may be set to enable dry-run mode which allows overwriting
+	// notification targets.
+	DryRun *DryRun `json:"dryRun"`
+
+	// TrustedNetworks is a list of CIDR network addresses that are considered
+	// trusted. Any X-Forwareded-For header from these networks will be parsed
+	// and applied.
+	TrustedNetworks []string `json:"trustedNetworks"`
 
 	// Audience is the JWT audience that should be used when issuing access tokens.
 	Audience string `json:"audience"`

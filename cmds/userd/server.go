@@ -202,22 +202,23 @@ func setupPublicServer(providers *app.Providers) (*http.Server, error) {
 
 	// finally, return a http.Server that uses h2c for HTTP/2 support and
 	// wrap the finnal handler in CORS and a JWT middleware.
-	return server.Create(
+	return server.CreateWithOptions(
 		providers.Config.PublicListenAddr,
-		cors.Wrap(
-			corsOpts,
-			middleware.NewJWTMiddleware(providers.Config, providers.Datastore, serveMux, func(r *http.Request) bool {
-				// Skip JWT token verification for the /validate endpoint as
-				// the ForwardAuthHanlder will take care of this on it's own due to special
-				// handling of rejected or expired tokens.
-				if r.URL.Path == "/validate" || strings.HasPrefix(r.URL.Path, "/webauthn") {
-					return true
-				}
 
-				return false
-			}),
-		),
-	), nil
+		middleware.NewJWTMiddleware(providers.Config, providers.Datastore, serveMux, func(r *http.Request) bool {
+			// Skip JWT token verification for the /validate endpoint as
+			// the ForwardAuthHanlder will take care of this on it's own due to special
+			// handling of rejected or expired tokens.
+			if r.URL.Path == "/validate" || strings.HasPrefix(r.URL.Path, "/webauthn") {
+				return true
+			}
+
+			return false
+		}),
+
+		server.WithCORS(corsOpts),
+		server.WithTrustedProxies(providers.Config.TrustedNetworks),
+	)
 }
 
 func setupAdminServer(providers *app.Providers) (*http.Server, error) {
@@ -273,7 +274,7 @@ func setupAdminServer(providers *app.Providers) (*http.Server, error) {
 
 	serveMux.Handle("/validate", auth.NewForwardAuthHandler(providers))
 
-	return server.Create(
+	return server.CreateWithOptions(
 		providers.Config.AdminListenAddr,
 		middleware.NewJWTMiddleware(
 			providers.Config,
@@ -319,7 +320,9 @@ func setupAdminServer(providers *app.Providers) (*http.Server, error) {
 				return false
 			},
 		),
-	), nil
+
+		server.WithTrustedProxies(providers.Config.TrustedNetworks),
+	)
 }
 
 func startServer(providers *app.Providers) error {

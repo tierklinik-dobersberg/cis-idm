@@ -84,6 +84,16 @@ func PrepareTemplate[T tmpl.Context](ctx context.Context, cfg config.Config, eng
 }
 
 func SendTemplate[T tmpl.Context](ctx context.Context, cfg config.Config, engine *tmpl.Engine, m Mailer, email Message, template tmpl.Known[T], args T) error {
+	// In dry-run mode, we replace the target address by fixed one
+	if cfg.DryRun != nil && cfg.DryRun.MailTarget != "" {
+		log.L(ctx).Infof("replacing e-mail receipients %v with %s in dry-run mode", email.To, cfg.DryRun.MailTarget)
+
+		c := new(Message)
+		*c = email
+
+		c.To = []string{cfg.DryRun.MailTarget}
+	}
+
 	msg, err := PrepareTemplate(ctx, cfg, engine, email, template, args)
 	if err != nil {
 		return err

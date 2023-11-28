@@ -432,6 +432,12 @@ func (svc *Service) InviteUser(ctx context.Context, req *connect.Request[idmv1.I
 			To:   []string{userInvite.Email},
 		}
 
+		if dr := svc.Providers.Config.DryRun; dr != nil && dr.MailTarget != "" {
+			log.L(ctx).Infof("dry-run enabled, redirecting mails from %s to %s", userInvite.Email, dr.MailTarget)
+
+			msg.To = []string{dr.MailTarget}
+		}
+
 		mail, err := mailer.PrepareTemplate(ctx, svc.Config, svc.TemplateEngine, msg, tmpl.InviteMail, &tmpl.InviteMailCtx{
 			Name:        userInvite.Name,
 			Inviter:     creator,

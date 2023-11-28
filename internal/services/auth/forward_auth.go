@@ -5,43 +5,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 
 	gojwt "github.com/dgrijalva/jwt-go"
 	"github.com/tierklinik-dobersberg/apis/pkg/log"
 	"github.com/tierklinik-dobersberg/apis/pkg/spa"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/app"
-	"github.com/tierklinik-dobersberg/cis-idm/internal/jwt"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/middleware"
-	"github.com/tierklinik-dobersberg/cis-idm/internal/repo/stmts"
 )
-
-func parseXForwardedForHeader(r *http.Request) []net.IP {
-	h := r.Header.Get("X-Forwarded-For")
-	if h == "" {
-		return nil
-	}
-
-	result := make([]net.IP, 0)
-
-	ips := strings.Split(h, ",")
-	for _, ip := range ips {
-		i := net.ParseIP(strings.TrimSpace(ip))
-		if i == nil {
-			log.L(r.Context()).Errorf("received invalid x-forwarded-for header: %s", h)
-
-			return nil
-		}
-
-		result = append(result, i)
-	}
-
-	return result
-}
 
 func NewForwardAuthHandler(providers *app.Providers) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -59,11 +32,6 @@ func NewForwardAuthHandler(providers *app.Providers) http.Handler {
 			WithField("method", method).
 			WithField("host", u.Host).
 			WithField("path", u.Path)
-
-		ips := parseXForwardedForHeader(r)
-		if len(ips) > 0 {
-			l = l.WithField("clientIP", ips[0].String())
-		}
 
 		var redirectUrl = requestURL
 
@@ -89,124 +57,67 @@ func NewForwardAuthHandler(providers *app.Providers) http.Handler {
 					redirectUrl = origin.String()
 				}
 			}
+
+			l.Debugf("redirect URL is set to %q", redirectUrl)
 		}
 
-		fae, required, err := providers.Config.AuthRequiredForURL(method, requestURL)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+		// auhenticate the request
+		reqCopy := r.Clone(ctx)
+		reqCopy.URL = u
+		reqCopy.Method = method
+
+		claims, isAllowed, err := middleware.AuthenticateRequest(providers.Config, providers.Datastore, reqCopy)
+		if !isAllowed {
+			var (
+				verr = new(gojwt.ValidationError)
+			)
+
+			switch {
+			case err == nil:
+				l.Debugf("request not allowed")
+				handleRedirect(w, r, providers.Config.LoginRedirectURL, redirectUrl)
+
+			case errors.As(err, verr) && (verr.Errors&gojwt.ValidationErrorExpired) > 0:
+				l.Debugf("request not allowed: JWT token expired")
+				handleRedirect(w, r, providers.Config.RefreshRedirectURL, redirectUrl)
+
+			default:
+				l.Debugf("request not allowed: %s", err)
+				handleRedirect(w, r, "", "")
+			}
+
 			return
 		}
 
-		token := middleware.TokenFromContext(ctx)
-
-		// if authentication is required but there's not even a token, redirect to
-		// the login URL or deny access
-		if token == "" && required {
+		if err != nil {
+			l.Errorf("request not allowed due to errors: %s", err)
 			handleRedirect(w, r, providers.Config.LoginRedirectURL, redirectUrl)
 
 			return
 		}
 
-		var (
-			userId              string
-			primaryMail         string
-			primaryMailVerified bool
-			displayName         string
-			roles               []string
-		)
+		if claims != nil {
+			w.Header().Add("X-Remote-User-ID", claims.Subject)
+			w.Header().Add("X-Remote-User", claims.Name)
+			w.Header().Add("X-Remote-Avatar-URL", fmt.Sprintf("%s/avatar/%s", providers.Config.PublicURL, claims.Subject))
 
-		// first, try to parse the token as a JWT
-		claims, tokenErr := jwt.ParseAndVerify([]byte(providers.Config.JWTSecret), token)
-
-		if tokenErr == nil {
-			// we have a valid JWT here so load the user, primary mail
-			userId = claims.Subject
-			user, err := providers.Datastore.GetUserByID(ctx, claims.Subject)
-			if err != nil {
-				l.Errorf("failed to find user by ID: %s", claims.Subject)
-
-				http.Error(w, "access token subject not found", http.StatusForbidden)
-
-				return
+			if claims.DisplayName != "" {
+				w.Header().Add("X-Remote-User-Display-Name", claims.DisplayName)
 			}
 
-			mail, err := providers.Datastore.GetUserPrimaryMail(ctx, claims.Subject)
-			if err == nil {
-				primaryMail = mail.Address
-				primaryMailVerified = mail.Verified
-			} else {
-				if !errors.Is(err, stmts.ErrNoResults) {
-					l.Errorf("failed to get primary user mail: %s", err)
-				} else {
-					l.Debugf("user does not have a primary mail address configured")
-				}
-			}
-
-			displayName = user.DisplayName
-			if displayName == "" {
-				displayName = user.Username
+			if claims.Email != "" {
+				w.Header().Add("X-Remote-Mail", claims.Email)
 			}
 
 			if claims.AppMetadata != nil && claims.AppMetadata.Authorization != nil {
-				roles = claims.AppMetadata.Authorization.Roles
-			}
-		} else {
-			// check if the token has been expired, and if, redirect the user to
-			// the RefreshRedirectURL.
-			if verr := new(gojwt.ValidationError); errors.As(tokenErr, verr) {
-				switch {
-				case (verr.Errors&gojwt.ValidationErrorExpired) > 0 && required:
-					handleRedirect(w, r, providers.Config.RefreshRedirectURL, redirectUrl)
-
-					return
-
-				case (verr.Errors&gojwt.ValidationErrorMalformed) > 0 && fae != nil:
-					// this seems to don't event be a JWT, so try to verify using static tokens
-					// from the ForwardAuthEntry.
-					for _, staticToken := range fae.Tokens {
-						if staticToken.Tokens == token {
-							userId = staticToken.SubjectID
-							roles = staticToken.Roles
-
-							break
-						}
-					}
-
-				default:
-					// forbidden, there's something wrong with the JWT
-					handleRedirect(w, r, "", "")
-
-					return
+				for _, r := range claims.AppMetadata.Authorization.Roles {
+					w.Header().Add("X-Remote-Role", r)
 				}
 			}
-		}
 
-		if required && userId == "" {
-			// auth is required but we failed to authenticate the request.
-			// also, there was a token present so the user tried to authenticate.
-			// don't redirect to the login-page here (if the token would just have been expired,
-			// the user would have been redirected to the refresh-page already)
-			handleRedirect(w, r, "", "")
-
-			return
-		}
-
-		// Add forward-auth headers
-		if displayName != "" {
-			w.Header().Add("X-Remote-User", displayName)
-		}
-		if userId != "" {
-			w.Header().Add("X-Remote-User-ID", userId)
-			w.Header().Add("X-Remote-Avatar-URL", fmt.Sprintf("%s/avatar/%s", providers.Config.PublicURL, userId))
-		}
-		if primaryMail != "" {
-			w.Header().Add("X-Remote-Mail", primaryMail)
-			w.Header().Add("X-Remote-Mail-Verified", strconv.FormatBool(primaryMailVerified))
-		}
-		if len(roles) > 0 {
-			for _, role := range roles {
-				w.Header().Add("X-Remote-Role", role)
-			}
+			l.Infof("request by user %s (name=%q) is allowed", claims.Subject, claims.Name)
+		} else {
+			l.Infof("anonymous request is allowed")
 		}
 
 		w.WriteHeader(http.StatusOK)

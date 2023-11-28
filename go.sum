@@ -680,6 +680,8 @@ github.com/rs/cors v1.10.1/go.mod h1:XyqrcTp5zjWr1wsJ8PIRZssZ8b/WMcMf71DJnit4EMU
 github.com/russross/blackfriday v1.5.2/go.mod h1:JO/DiYxRf+HjHt06OyowR9PTA263kcR/rfWxYHBV53g=
 github.com/russross/blackfriday/v2 v2.0.1/go.mod h1:+Rmxgy9KzJVeS9/2gXHxylqXiyQDYRxCVz55jmeOWTM=
 github.com/russross/blackfriday/v2 v2.1.0/go.mod h1:+Rmxgy9KzJVeS9/2gXHxylqXiyQDYRxCVz55jmeOWTM=
+github.com/sebest/xff v0.0.0-20210106013422-671bd2870b3a h1:iLcLb5Fwwz7g/DLK89F+uQBDeAhHhwdzB5fSlVdhGcM=
+github.com/sebest/xff v0.0.0-20210106013422-671bd2870b3a/go.mod h1:wozgYq9WEBQBaIJe4YZ0qTSFAMxmcwBhQH0fO0R34Z0=
 github.com/shopspring/decimal v1.2.0/go.mod h1:DKyhrW/HYNuLGql+MJL6WCR6knT2jwCFRcu2hWCYk4o=
 github.com/shopspring/decimal v1.3.1 h1:2Usl1nmF/WZucqkFZhnfFYxxxu8LG21F6nPQBE5gKV8=
 github.com/shopspring/decimal v1.3.1/go.mod h1:DKyhrW/HYNuLGql+MJL6WCR6knT2jwCFRcu2hWCYk4o=
@@ -749,6 +751,8 @@ github.com/tierklinik-dobersberg/apis v0.0.0-20231029073433-229f619b60ed h1:OZbu
 github.com/tierklinik-dobersberg/apis v0.0.0-20231029073433-229f619b60ed/go.mod h1:UxfBUf+0aIjeNnKcc+wP+4BBZJkCFvwhS+icM4+M81U=
 github.com/tierklinik-dobersberg/apis v0.0.0-20231029073555-be5720a37ba2 h1:kSQrJz4j6Ga9ut8VYwGA4mxHbap2RipaMmu/W2ckpR8=
 github.com/tierklinik-dobersberg/apis v0.0.0-20231029073555-be5720a37ba2/go.mod h1:UxfBUf+0aIjeNnKcc+wP+4BBZJkCFvwhS+icM4+M81U=
+github.com/tierklinik-dobersberg/apis v0.0.0-20231127085141-7999104320a5 h1:C/Gf8XzVtzdlANSrl27OkZcIiQgRHduQw0pgnWcseqQ=
+github.com/tierklinik-dobersberg/apis v0.0.0-20231127085141-7999104320a5/go.mod h1:0uxyEzRMVO6Y/m0zf9ZGVd+9TMYetOy4HbfwJ54oWOc=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/ttacon/builder v0.0.0-20170518171403-c099f663e1c2 h1:5u+EJUQiosu3JFX0XS0qTf5FznsMOzTjGqavBGuCbo0=
 github.com/ttacon/builder v0.0.0-20170518171403-c099f663e1c2/go.mod h1:4kyMkleCiLkgY6z8gK5BkI01ChBtxR0ro3I1ZDcGM3w=
