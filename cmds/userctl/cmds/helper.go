@@ -88,7 +88,7 @@ func mustResolveUserToId(root *cli.Root, userNameOrId string) string {
 	}
 
 	if user == nil {
-		logrus.Fatal(fmt.Errorf("user not found %q: %s", userNameOrId, err.Error()))
+		logrus.Fatal(fmt.Errorf("user not found %q", userNameOrId))
 	}
 
 	return user.Id

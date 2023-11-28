@@ -124,6 +124,12 @@ func (svc *Service) SendNotification(ctx context.Context, req *connect.Request[i
 		for uisr, addr := range targetAddrs {
 			log.L(ctx).Infof("preparing mail for user %s to address %s", uisr, addr)
 
+			if dr := svc.Config.DryRun; dr != nil && dr.MailTarget != "" {
+				log.L(ctx).Infof("replacing receipient address %s with %s in dry-run mode", addr, dr.MailTarget)
+
+				addr = dr.MailTarget
+			}
+
 			m := mail.NewMessage()
 			m.SetHeaders(map[string][]string{
 				"From":    {svc.Config.MailConfig.From},
