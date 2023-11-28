@@ -160,9 +160,13 @@ func (r *Rule) Matches(req *http.Request) (bool, error) {
 		return false, r.parseError
 	}
 
-	// get the creal client IP address.
+	l := log.L(req.Context())
+
+	// get the real client IP address.
 	clientIP := server.RealIPFromContext(req.Context())
 	if clientIP == nil {
+		l.Warnf("no real client ip associated with request context, usring RemoteAddr %q instead", req.RemoteAddr)
+
 		sip, _, err := net.SplitHostPort(req.RemoteAddr)
 		if err != nil {
 			return false, fmt.Errorf("failed to split client host:port (%q): %w", req.RemoteAddr, err)
@@ -173,8 +177,6 @@ func (r *Rule) Matches(req *http.Request) (bool, error) {
 			return false, fmt.Errorf("no client ip associated with request context and failed to parse IP %q", sip)
 		}
 	}
-
-	l := log.L(req.Context())
 
 	// check if the IP matches
 	if r.ip != nil {
@@ -189,12 +191,12 @@ func (r *Rule) Matches(req *http.Request) (bool, error) {
 	// check if the IP originates from a specified network.
 	if r.network != nil {
 		if r.network.Contains(clientIP) {
-			l.Infof("client IP matches rule.network: %s", r.network.String())
+			l.Infof("client IP %s matches rule.network: %s", clientIP, r.network.String())
 
 			return true, nil
 		}
 
-		l.Debugf("client IP does not match rule.network: %s", r.network.String())
+		l.Debugf("client IP %s does not match rule.network: %s", clientIP, r.network.String())
 	}
 
 	// check if there's a static token configured.

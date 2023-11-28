@@ -170,6 +170,8 @@ func NewJWTMiddleware(cfg config.Config, repo *repo.Repo, next http.Handler, ski
 			r = r.WithContext(ctx)
 		}
 
+		ips := server.RealIPFromContext(ctx)
+
 		// Fix the request URL by adding host/scheme
 		r.URL.Host = r.Host
 		r.URL.Scheme = "http"
@@ -177,7 +179,13 @@ func NewJWTMiddleware(cfg config.Config, repo *repo.Repo, next http.Handler, ski
 		l := log.L(ctx).
 			WithField("method", r.Method).
 			WithField("host", r.URL.Host).
-			WithField("path", r.URL.Path)
+			WithField("path", r.URL.Path).
+			WithField("clientIP", ips)
+
+		// For debugging
+		if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+			l = l.WithField("xff", xff)
+		}
 
 		if r.TLS != nil {
 			r.URL.Scheme = "https"
