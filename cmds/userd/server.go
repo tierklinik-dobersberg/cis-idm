@@ -83,6 +83,32 @@ func getStaticFilesHandler(path string) (http.Handler, error) {
 	return spa.ServeSPA(http.Dir(path), "index.html"), nil
 }
 
+func getExtraFilesHandler(path string) (http.Handler, error) {
+	if path == "" {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			http.Error(w, "", http.StatusNotFound)
+		}), nil
+	}
+
+	if strings.HasPrefix(path, "http") {
+		remote, err := url.Parse(path)
+		if err != nil {
+			return nil, err
+		}
+
+		handler := func(p *httputil.ReverseProxy) http.Handler {
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				r.Host = remote.Host
+				p.ServeHTTP(w, r)
+			})
+		}
+
+		return handler(httputil.NewSingleHostReverseProxy(remote)), nil
+	}
+
+	return http.FileServer(http.Dir(path)), nil
+}
+
 func setupPublicServer(providers *app.Providers) (*http.Server, error) {
 	// prepare middlewares and interceptors
 	loggingInterceptor := log.NewLoggingInterceptor()
@@ -176,6 +202,13 @@ func setupPublicServer(providers *app.Providers) (*http.Server, error) {
 	}
 
 	serveMux.Handle("/", staticFilesHandler)
+
+	extraFilesHandler, err := getExtraFilesHandler(providers.Config.ExtraAssetsDirectory)
+	if err != nil {
+		return nil, err
+	}
+
+	serveMux.Handle("/files/", http.StripPrefix("/files", extraFilesHandler))
 
 	// Setup the avatar handler. This does not use connect-go since we need
 	// to response with either HTTP redirects (if the user avatar is a URL)

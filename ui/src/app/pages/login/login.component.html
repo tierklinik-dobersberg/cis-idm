@@ -2,6 +2,8 @@
   <div class="m-auto w-96 tkd-card">
     <content>
       <section>
+        <img *ngIf="config.logoURL" [attr.src]="config.logoURL" class="max-w-full max-h-24 aspect-auto">
+
         <h1 class="w-full mt-2 text-2xl font-medium">Anmeldung</h1>
         <span class="mb-4 -mt-4 text-sm font-light">mit deinem
           <a [attr.href]="config.siteNameUrl">{{ config.siteName }}</a>

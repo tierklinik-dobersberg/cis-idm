@@ -20,6 +20,7 @@ export interface RemoteConfig {
     features: {
         [key in FeatureFlags]: boolean
     };
+    logoURL: string;
 }
 
 @Injectable({providedIn: 'root'})

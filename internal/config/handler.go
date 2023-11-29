@@ -23,6 +23,7 @@ func NewConfigHandler(cfg Config) http.Handler {
 			"siteNameUrl":               cfg.SiteNameURL,
 			"registrationRequiresToken": cfg.RegistrationRequiresToken,
 			"features":                  cfg.featureMap,
+			"logoURL":                   cfg.LogoURL,
 		}); err != nil {
 			http.Error(w, "failed to encode config", http.StatusInternalServerError)
 

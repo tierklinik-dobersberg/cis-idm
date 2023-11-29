@@ -130,6 +130,14 @@ type Config struct {
 	// and set StaticFiles to "http://localhost:4200/"
 	StaticFiles string `json:"staticFiles"`
 
+	// ExtraAssetsDirectory can be set to a directory (or HTTP URL)
+	// that will be used to serve additional files at the /files endpoint.
+	ExtraAssetsDirectory string `json:"extraAssets"`
+
+	// LogoURL may be set to a path or HTTP resource that should be displayed as the
+	// application logo on the login screen.
+	LogoURL string `json:"logoURL"`
+
 	// RegistrationRequiresToken defines whether or not users are allowed to sign
 	// up without a registration token.
 	RegistrationRequiresToken bool `json:"registrationRequiresToken"`
@@ -366,14 +374,14 @@ func (file *Config) parseFeatureSet() error {
 			continue
 		}
 
-		if !slices.Contains(AllFeatures, feat) {
-			return fmt.Errorf("unknown feature flag %q", feat)
-		}
-
 		allowed := true
 		if strings.HasPrefix(string(feat), "!") {
 			feat = Feature(strings.TrimPrefix(string(feat), "!"))
 			allowed = false
+		}
+
+		if !slices.Contains(AllFeatures, feat) {
+			return fmt.Errorf("unknown feature flag %q", feat)
 		}
 
 		file.featureMap[feat] = allowed
