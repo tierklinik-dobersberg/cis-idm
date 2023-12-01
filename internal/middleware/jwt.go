@@ -37,6 +37,17 @@ func AuthenticateRequest(cfg config.Config, ds *repo.Repo, req *http.Request) (*
 	if tokenErr == nil {
 		l.Debugf("found valid JWT for user %s (name=%q)", claims.Subject, claims.Name)
 
+		mail, err := ds.GetUserPrimaryMail(ctx, claims.Subject)
+		if err == nil {
+			claims.Email = mail.Address
+		} else {
+			if !errors.Is(err, stmts.ErrNoResults) {
+				l.Errorf("failed to get primary user mail: %s", err)
+			} else {
+				l.Debugf("user does not have a primary mail address configured")
+			}
+		}
+
 		return claims, true, nil
 	} else if token != "" {
 		l.Infof("failed to parse JWT: %s", tokenErr)

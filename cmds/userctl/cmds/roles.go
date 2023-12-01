@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 	idmv1 "github.com/tierklinik-dobersberg/apis/gen/go/tkd/idm/v1"
 	"github.com/tierklinik-dobersberg/apis/pkg/cli"
+	"google.golang.org/protobuf/types/known/fieldmaskpb"
 )
 
 func GetRoleCommand(root *cli.Root) *cobra.Command {
@@ -59,6 +60,7 @@ func GetRoleCommand(root *cli.Root) *cobra.Command {
 	cmd.AddCommand(
 		GetImportRolesCommand(root),
 		GetCreateRoleCommand(root),
+		GetUpdateRoleCommand(root),
 		GetDeleteRoleCommand(root),
 		GetAssignRoleCommand(root),
 		GetUnassignRoleCommand(root),
@@ -179,6 +181,64 @@ func GetCreateRoleCommand(root *cli.Root) *cobra.Command {
 	return cmd
 }
 
+func GetUpdateRoleCommand(root *cli.Root) *cobra.Command {
+	var (
+		name            string
+		description     string
+		deleteProtected bool
+	)
+
+	cmd := &cobra.Command{
+		Use:  "update",
+		Args: cobra.ExactArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			role, err := resolveRole(root, args[0])
+			if err != nil {
+				logrus.Fatalf("failed to resolve role: %s", err)
+			}
+
+			fm := &fieldmaskpb.FieldMask{}
+
+			cases := [][]string{
+				{"name", "name"},
+				{"description", "description"},
+				{"deleted_protection", "delete-protected"},
+			}
+
+			for _, s := range cases {
+				if cmd.Flag(s[1]).Changed {
+					fm.Paths = append(fm.Paths, s[0])
+				}
+			}
+
+			if len(fm.Paths) == 0 {
+				logrus.Fatalf("nothing changed")
+			}
+
+			res, err := root.Roles().UpdateRole(context.Background(), connect.NewRequest(&idmv1.UpdateRoleRequest{
+				RoleId:           role.Id,
+				Name:             name,
+				Description:      description,
+				DeleteProtection: deleteProtected,
+				FieldMask:        fm,
+			}))
+			if err != nil {
+				logrus.Fatal(err)
+			}
+
+			root.Print(res.Msg.Role)
+		},
+	}
+
+	cmd.Flags().StringVar(&name, "name", "", "The name for the new role")
+	cmd.Flags().StringVar(&description, "description", "", "The description for the new role")
+	cmd.Flags().BoolVar(&deleteProtected, "delete-protected", false, "Whether or not the new role should be delete protected")
+
+	cmd.MarkFlagRequired("name")
+
+	return cmd
+}
+
 func GetDeleteRoleCommand(root *cli.Root) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "delete",
@@ -199,8 +259,7 @@ func GetDeleteRoleCommand(root *cli.Root) *cobra.Command {
 
 func GetAssignRoleCommand(root *cli.Root) *cobra.Command {
 	var (
-		userIDs    []string
-		roleByName bool
+		users []string
 	)
 
 	cmd := &cobra.Command{
@@ -208,25 +267,16 @@ func GetAssignRoleCommand(root *cli.Root) *cobra.Command {
 		Args: cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 
-			var roleID string
-			if roleByName {
-				res, err := root.Roles().GetRole(context.Background(), connect.NewRequest(&idmv1.GetRoleRequest{
-					Search: &idmv1.GetRoleRequest_Name{
-						Name: args[0],
-					},
-				}))
-				if err != nil {
-					logrus.Fatal(err)
-				}
-
-				roleID = res.Msg.Role.Id
-			} else {
-				roleID = args[0]
+			role, err := resolveRole(root, args[0])
+			if err != nil {
+				logrus.Fatalf("failed to resolve role: %s", err)
 			}
 
-			_, err := root.Roles().AssignRoleToUser(context.Background(), connect.NewRequest(&idmv1.AssignRoleToUserRequest{
-				RoleId: roleID,
-				UserId: userIDs,
+			users = mustResolveUserIds(root, users)
+
+			_, err = root.Roles().AssignRoleToUser(context.Background(), connect.NewRequest(&idmv1.AssignRoleToUserRequest{
+				RoleId: role.Id,
+				UserId: users,
 			}))
 			if err != nil {
 				logrus.Fatal(err)
@@ -234,8 +284,7 @@ func GetAssignRoleCommand(root *cli.Root) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringSliceVar(&userIDs, "user", nil, "A list of users ids to assign the role to")
-	cmd.Flags().BoolVar(&roleByName, "role-name", false, "Search for the role by name first")
+	cmd.Flags().StringSliceVar(&users, "to", nil, "A list of users ids to assign the role to")
 
 	cmd.MarkFlagRequired("user")
 
@@ -244,33 +293,24 @@ func GetAssignRoleCommand(root *cli.Root) *cobra.Command {
 
 func GetUnassignRoleCommand(root *cli.Root) *cobra.Command {
 	var (
-		userIDs    []string
-		roleByName bool
+		users []string
 	)
 
 	cmd := &cobra.Command{
 		Use:  "unassign",
 		Args: cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			var roleID string
-			if roleByName {
-				res, err := root.Roles().GetRole(context.Background(), connect.NewRequest(&idmv1.GetRoleRequest{
-					Search: &idmv1.GetRoleRequest_Name{
-						Name: args[0],
-					},
-				}))
-				if err != nil {
-					logrus.Fatal(err)
-				}
 
-				roleID = res.Msg.Role.Id
-			} else {
-				roleID = args[0]
+			role, err := resolveRole(root, args[0])
+			if err != nil {
+				logrus.Fatalf("failed to resolve role: %s", err)
 			}
 
-			_, err := root.Roles().UnassignRoleFromUser(context.Background(), connect.NewRequest(&idmv1.UnassignRoleFromUserRequest{
-				RoleId: roleID,
-				UserId: userIDs,
+			users = mustResolveUserIds(root, users)
+
+			_, err = root.Roles().UnassignRoleFromUser(context.Background(), connect.NewRequest(&idmv1.UnassignRoleFromUserRequest{
+				RoleId: role.Id,
+				UserId: users,
 			}))
 			if err != nil {
 				logrus.Fatal(err)
@@ -278,10 +318,9 @@ func GetUnassignRoleCommand(root *cli.Root) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringSliceVar(&userIDs, "user", nil, "A list of users ids to assign the role to")
-	cmd.Flags().BoolVar(&roleByName, "role-name", false, "Search for the role by name first")
+	cmd.Flags().StringSliceVar(&users, "from", nil, "A list of users ids to unassign the role")
 
-	cmd.MarkFlagRequired("user")
+	cmd.MarkFlagRequired("from")
 
 	return cmd
 }

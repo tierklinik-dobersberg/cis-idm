@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -58,7 +59,17 @@ func GetUsersCommand(root *cli.Root) *cobra.Command {
 				logrus.Fatal(err.Error())
 			}
 
-			root.Print(users.Msg.Users)
+			var profiles []*idmv1.Profile
+			if len(args) == 0 {
+				profiles = users.Msg.Users
+			} else {
+				for _, u := range users.Msg.Users {
+					if slices.Contains(args, u.User.Id) || slices.Contains(args, u.User.Username) {
+						profiles = append(profiles, u)
+					}
+				}
+			}
+			root.Print(profiles)
 		},
 	}
 

@@ -93,6 +93,7 @@ func (svc *Service) UpdateRole(ctx context.Context, req *connect.Request[idmv1.U
 	return connect.NewResponse(&idmv1.UpdateRoleResponse{
 		Role: &idmv1.Role{
 			Id:              role.ID,
+			Name:            role.Name,
 			Description:     role.Description,
 			DeleteProtected: role.DeleteProtected,
 		},
