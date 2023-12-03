@@ -174,6 +174,7 @@ func (r *Rule) Matches(req *http.Request) (bool, error) {
 
 		clientIP = net.ParseIP(sip)
 		if clientIP == nil {
+
 			return false, fmt.Errorf("no client ip associated with request context and failed to parse IP %q", sip)
 		}
 	}
@@ -182,6 +183,7 @@ func (r *Rule) Matches(req *http.Request) (bool, error) {
 	if r.ip != nil {
 		if clientIP.Equal(r.ip) {
 			l.Infof("client IP matches rule.ip: %s", clientIP.String())
+
 			return true, nil
 		}
 

@@ -13,6 +13,7 @@ import (
 
 	"github.com/ghodss/yaml"
 	"github.com/hashicorp/go-multierror"
+	"github.com/tierklinik-dobersberg/apis/pkg/log"
 	"golang.org/x/exp/slices"
 )
 
@@ -324,20 +325,26 @@ func (file *Config) applyDefaults() error {
 	return nil
 }
 
-func (file Config) AuthRequiredForURL(method string, url string) (*ForwardAuthEntry, bool, error) {
+func (file Config) AuthRequiredForURL(ctx context.Context, method string, url string) (*ForwardAuthEntry, bool, error) {
 	merr := new(multierror.Error)
+	l := log.L(ctx)
 
-	for _, fae := range file.ForwardAuth {
+	for idx, fae := range file.ForwardAuth {
 		matches, err := fae.Matches(method, url)
 		if err != nil {
+			l.Debugf("forward-auth[%d] failed to match: %s", idx, err)
+
 			merr.Errors = append(merr.Errors, fmt.Errorf("invalid regex %q: %w", fae.URL, err))
+
 			continue
 		}
 
 		if matches {
-			if fae.IsRequired() {
-				return fae, true, merr.ErrorOrNil()
-			}
+			l.Debugf("forward-auth[%d] entry matches request to %s %s", idx, method, url)
+
+			return fae, fae.IsRequired(), merr.ErrorOrNil()
+		} else {
+			l.Debugf("forward-auth[%d] entry does not match request to %s %s", idx, method, url)
 		}
 	}
 
