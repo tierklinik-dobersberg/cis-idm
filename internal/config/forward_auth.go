@@ -205,10 +205,14 @@ func (r *Rule) Matches(req *http.Request) (bool, error) {
 			bearer, token, ok := strings.Cut(h, " ")
 
 			if !ok {
+				l.Debugf("invalid Authorization header %q", h)
+
 				return false, nil
 			}
 
 			if strings.ToLower(bearer) != "bearer" {
+				l.Debugf("invalid Authoriziation header %q", h)
+
 				return false, nil
 			}
 
@@ -218,6 +222,8 @@ func (r *Rule) Matches(req *http.Request) (bool, error) {
 				l.Info("client token matches static config token")
 
 				return true, nil
+			} else {
+				l.Debugf("Authorization header set but token %q does not match", token)
 			}
 		}
 	}
