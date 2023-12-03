@@ -201,6 +201,8 @@ func (r *Rule) Matches(req *http.Request) (bool, error) {
 
 	// check if there's a static token configured.
 	if r.Token != "" {
+		l.Debugf("checking for authorization bearer token")
+
 		if h := req.Header.Get("Authorization"); h != "" {
 			bearer, token, ok := strings.Cut(h, " ")
 
@@ -226,6 +228,8 @@ func (r *Rule) Matches(req *http.Request) (bool, error) {
 				l.Debugf("Authorization header set but token %q does not match", token)
 			}
 		}
+	} else {
+		l.Debugf("no authorization bearer token defined, request not allowed by rule")
 	}
 
 	return false, nil
