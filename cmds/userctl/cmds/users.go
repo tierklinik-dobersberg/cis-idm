@@ -43,7 +43,7 @@ func GetUsersCommand(root *cli.Root) *cobra.Command {
 
 			if len(filterByRoles) > 0 {
 				for _, roleNameOrId := range filterByRoles {
-					role, err := resolveRole(root, roleNameOrId)
+					role, err := root.ResolveRole(roleNameOrId)
 					if err != nil {
 						logrus.Fatalf("failed to resolve role %q: %s", roleNameOrId, err)
 					}
@@ -96,7 +96,7 @@ func GetDeleteUserCommand(root *cli.Root) *cobra.Command {
 		Args: cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			_, err := root.Users().DeleteUser(root.Context(), connect.NewRequest(&idmv1.DeleteUserRequest{
-				Id: mustResolveUserToId(root, args[0]),
+				Id: root.MustResolveUserToId(args[0]),
 			}))
 
 			if err != nil {
@@ -242,14 +242,13 @@ func GetInviteUserCommand(root *cli.Root) *cobra.Command {
 
 func GetCreateUserCommand(root *cli.Root) *cobra.Command {
 	var (
-		user      = new(idmv1.User)
-		emails    []string
-		phone     []string
-		password  string
-		bcrypt    bool
-		roleIds   []string
-		roleNames []string
-		avatar    string
+		user     = new(idmv1.User)
+		emails   []string
+		phone    []string
+		password string
+		bcrypt   bool
+		roles    []string
+		avatar   string
 	)
 
 	cmd := &cobra.Command{
@@ -294,15 +293,11 @@ func GetCreateUserCommand(root *cli.Root) *cobra.Command {
 				})
 			}
 
+			roleIds := root.MustResolveRoleIds(roles)
+
 			for _, id := range roleIds {
 				req.Profile.Roles = append(req.Profile.Roles, &idmv1.Role{
 					Id: id,
-				})
-			}
-
-			for _, name := range roleNames {
-				req.Profile.Roles = append(req.Profile.Roles, &idmv1.Role{
-					Name: name,
 				})
 			}
 
@@ -325,8 +320,7 @@ func GetCreateUserCommand(root *cli.Root) *cobra.Command {
 		f.BoolVar(&bcrypt, "bcrypt", false, "")
 		f.StringSliceVar(&emails, "email", nil, "")
 		f.StringSliceVar(&phone, "phone", nil, "")
-		f.StringSliceVar(&roleIds, "role-id", nil, "")
-		f.StringSliceVar(&roleNames, "role", nil, "")
+		f.StringSliceVar(&roles, "role", nil, "")
 		f.StringVar(&avatar, "avatar", "", "")
 	}
 
@@ -338,7 +332,7 @@ func GetSetUserExtraKeyCommand(root *cli.Root) *cobra.Command {
 		Use:  "set-extra [user] [path] [value]",
 		Args: cobra.ExactArgs(3),
 		Run: func(cmd *cobra.Command, args []string) {
-			userId := mustResolveUserToId(root, args[0])
+			userId := root.MustResolveUserToId(args[0])
 
 			path := args[1]
 			value := args[2]
@@ -377,7 +371,7 @@ func GetUpdateUserCommand(root *cli.Root) *cobra.Command {
 		Use:  "update",
 		Args: cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			userId := mustResolveUserToId(root, args[0])
+			userId := root.MustResolveUserToId(args[0])
 
 			msg.FieldMask = &fieldmaskpb.FieldMask{}
 			msg.Id = userId
@@ -478,7 +472,7 @@ func GetSendAccountCreationNoticeCommand(root *cli.Root) *cobra.Command {
 		Aliases: []string{"send-creation-notice"},
 		Args:    cobra.MinimumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			userIds := mustResolveUserIds(root, args)
+			userIds := root.MustResolveUserIds(args)
 
 			req := &idmv1.SendAccountCreationNoticeRequest{
 				UserIds: userIds,

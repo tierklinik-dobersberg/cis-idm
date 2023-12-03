@@ -105,7 +105,7 @@ func GetImportRolesCommand(root *cli.Root) *cobra.Command {
 			for _, role := range listResponse {
 				if ignoreExisting {
 					// check if a role with the same ID or name exists and skip it otherwise
-					existing, err := resolveRole(root, role.Id)
+					existing, err := root.ResolveRole(role.Id)
 					if err != nil {
 						logrus.Fatalf("failed to check if role id=%q name=%q exists: %s", role.Id, role.Name, err)
 					}
@@ -115,7 +115,7 @@ func GetImportRolesCommand(root *cli.Root) *cobra.Command {
 						continue
 					}
 
-					existing, err = resolveRole(root, role.Name)
+					existing, err = root.ResolveRole(role.Name)
 					if err != nil {
 						logrus.Fatalf("failed to check if role id=%q name=%q exists: %s", role.Id, role.Name, err)
 					}
@@ -192,7 +192,7 @@ func GetUpdateRoleCommand(root *cli.Root) *cobra.Command {
 		Use:  "update",
 		Args: cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			role, err := resolveRole(root, args[0])
+			role, err := root.ResolveRole(args[0])
 			if err != nil {
 				logrus.Fatalf("failed to resolve role: %s", err)
 			}
@@ -267,12 +267,12 @@ func GetAssignRoleCommand(root *cli.Root) *cobra.Command {
 		Args: cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 
-			role, err := resolveRole(root, args[0])
+			role, err := root.ResolveRole(args[0])
 			if err != nil {
 				logrus.Fatalf("failed to resolve role: %s", err)
 			}
 
-			users = mustResolveUserIds(root, users)
+			users = root.MustResolveUserIds(users)
 
 			_, err = root.Roles().AssignRoleToUser(context.Background(), connect.NewRequest(&idmv1.AssignRoleToUserRequest{
 				RoleId: role.Id,
@@ -301,12 +301,12 @@ func GetUnassignRoleCommand(root *cli.Root) *cobra.Command {
 		Args: cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 
-			role, err := resolveRole(root, args[0])
+			role, err := root.ResolveRole(args[0])
 			if err != nil {
 				logrus.Fatalf("failed to resolve role: %s", err)
 			}
 
-			users = mustResolveUserIds(root, users)
+			users = root.MustResolveUserIds(users)
 
 			_, err = root.Roles().UnassignRoleFromUser(context.Background(), connect.NewRequest(&idmv1.UnassignRoleFromUserRequest{
 				RoleId: role.Id,
