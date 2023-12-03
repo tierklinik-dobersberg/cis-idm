@@ -38,6 +38,9 @@ type DryRun struct {
 }
 
 type Config struct {
+	// LogLevel defines the log level to use.
+	LogLevel string `json:"logLevel"`
+
 	// ForwardAuth configures domains and URLs that require authentication
 	// when passed to the /validate endpoint.
 	ForwardAuth []*ForwardAuthEntry `json:"forwardAuth"`

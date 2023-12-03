@@ -35,6 +35,17 @@ func main() {
 	}
 	logrus.Infof("sucessfully loaded configuration")
 
+	if cfg.LogLevel != "" {
+		logrus.Infof("switching log level to %q", cfg.LogLevel)
+
+		lvl, err := logrus.ParseLevel(cfg.LogLevel)
+		if err != nil {
+			logrus.Fatalf("failed to parse log level %q: %w", cfg.LogLevel, err)
+		}
+
+		logrus.SetLevel(lvl)
+	}
+
 	// prepare all application providers.
 	providers, err := setupAppProviders(ctx, cfg)
 	if err != nil {
