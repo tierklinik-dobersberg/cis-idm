@@ -21,7 +21,6 @@ import (
 	"github.com/tierklinik-dobersberg/cis-idm/internal/app"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/common"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/config"
-	"github.com/tierklinik-dobersberg/cis-idm/internal/conv"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/mailer"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/middleware"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/repo/models"
@@ -286,14 +285,13 @@ func (svc *Service) CreateUser(ctx context.Context, req *connect.Request[idmv1.C
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
+	profile, err := svc.Providers.GetUserProfileProto(ctx, userModel)
+	if err != nil {
+		return nil, err
+	}
+
 	return connect.NewResponse(&idmv1.CreateUserResponse{
-		Profile: conv.ProfileProtoFromUser(
-			ctx,
-			userModel,
-			conv.WithAddresses(userAddresses...),
-			conv.WithEmailAddresses(userEmails...),
-			conv.WithPhoneNumbers(userPhoneNumbers...),
-		),
+		Profile: profile,
 	}), nil
 }
 
