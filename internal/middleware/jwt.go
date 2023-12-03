@@ -56,7 +56,7 @@ func AuthenticateRequest(cfg config.Config, ds *repo.Repo, req *http.Request) (*
 	// search for a forward-auth entry that might allow this request
 	l.Debugf("searching for forward-auth entry for %s %s", req.Method, req.URL.String())
 
-	fae, required, err := cfg.AuthRequiredForURL(req.Method, req.URL.String())
+	fae, required, err := cfg.AuthRequiredForURL(req.Context(), req.Method, req.URL.String())
 	if err != nil {
 		return nil, false, fmt.Errorf("failed to get forward auth entry: %w", err)
 	}
@@ -95,7 +95,7 @@ func AuthenticateRequest(cfg config.Config, ds *repo.Repo, req *http.Request) (*
 		return nil, !required, tokenErr
 	}
 
-	l.Debug("checking forwared auth entry")
+	l.Debug("checking forward-auth entry")
 
 	subject, isAllowed, err := fae.Allowed(req)
 	if err != nil {
