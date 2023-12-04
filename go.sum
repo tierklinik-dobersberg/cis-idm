@@ -775,6 +775,8 @@ github.com/tierklinik-dobersberg/apis v0.0.0-20231128100959-9dfda0a06fd8 h1:mEPA
 github.com/tierklinik-dobersberg/apis v0.0.0-20231128100959-9dfda0a06fd8/go.mod h1:0uxyEzRMVO6Y/m0zf9ZGVd+9TMYetOy4HbfwJ54oWOc=
 github.com/tierklinik-dobersberg/apis v0.0.0-20231203084638-9b7fd62c1cf6 h1:LSbsBAvfxvp+fTTWnvFFh36d/VIbLhIHV2Brd2DDNcU=
 github.com/tierklinik-dobersberg/apis v0.0.0-20231203084638-9b7fd62c1cf6/go.mod h1:0uxyEzRMVO6Y/m0zf9ZGVd+9TMYetOy4HbfwJ54oWOc=
+github.com/tierklinik-dobersberg/apis v0.0.0-20231204073903-b2c2c366234e h1:7RBBE7/Y5DzplJkjogfDwq0F5mWm2oTmQTgPU6fJPRs=
+github.com/tierklinik-dobersberg/apis v0.0.0-20231204073903-b2c2c366234e/go.mod h1:0uxyEzRMVO6Y/m0zf9ZGVd+9TMYetOy4HbfwJ54oWOc=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/ttacon/builder v0.0.0-20170518171403-c099f663e1c2 h1:5u+EJUQiosu3JFX0XS0qTf5FznsMOzTjGqavBGuCbo0=
 github.com/ttacon/builder v0.0.0-20170518171403-c099f663e1c2/go.mod h1:4kyMkleCiLkgY6z8gK5BkI01ChBtxR0ro3I1ZDcGM3w=

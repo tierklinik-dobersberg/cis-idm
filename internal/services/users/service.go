@@ -43,6 +43,36 @@ func NewService(providers *app.Providers) (*Service, error) {
 	return svc, nil
 }
 
+func (svc *Service) Impersonate(ctx context.Context, req *connect.Request[idmv1.ImpersonateRequest]) (*connect.Response[idmv1.ImpersonateResponse], error) {
+	user, err := svc.Datastore.GetUserByID(ctx, req.Msg.UserId)
+	if err != nil {
+		if errors.Is(err, stmts.ErrNoResults) {
+			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("user %q not found", req.Msg.UserId))
+		}
+	}
+
+	roles, err := svc.Datastore.GetUserRoles(ctx, user.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	tokenMessage := &idmv1.ImpersonateResponse{}
+	res := connect.NewResponse(tokenMessage)
+
+	token, _, err := svc.AddAccessToken(user, roles, svc.Config.AccessTokenTTL.AsDuration(), "", res.Header())
+	if err != nil {
+		return nil, err
+	}
+
+	authUser := middleware.ClaimsFromContext(ctx)
+
+	log.L(ctx).Infof("user %s (%q) impersonated %s (%q)", authUser.Subject, authUser.Name, user.ID, user.Username)
+
+	tokenMessage.AccessToken = token
+
+	return res, nil
+}
+
 func (svc *Service) ListUsers(ctx context.Context, req *connect.Request[idmv1.ListUsersRequest]) (*connect.Response[idmv1.ListUsersResponse], error) {
 	users, err := svc.Datastore.GetUsers(ctx)
 	if err != nil {

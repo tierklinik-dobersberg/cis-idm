@@ -85,6 +85,7 @@ func GetUsersCommand(root *cli.Root) *cobra.Command {
 		GetCreateUserCommand(root),
 		GetSetUserExtraKeyCommand(root),
 		GetSendAccountCreationNoticeCommand(root),
+		GetImpersonateCommand(root),
 	)
 
 	return cmd
@@ -198,6 +199,29 @@ func GetGenerateRegistrationTokenCommand(root *cli.Root) *cobra.Command {
 	{
 		f.DurationVar(&ttl, "ttl", 0, "The time-to-live for the access token")
 		f.IntVar(&maxUsage, "max-usage", 1, "How often the token can be used")
+	}
+
+	return cmd
+}
+
+func GetImpersonateCommand(root *cli.Root) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:  "impersonate [user]",
+		Args: cobra.ExactArgs(1),
+
+		Run: func(cmd *cobra.Command, args []string) {
+			userId := root.MustResolveUserToId(args[0])
+
+			res, err := root.Users().Impersonate(root.Context(), connect.NewRequest(&idmv1.ImpersonateRequest{
+				UserId: userId,
+			}))
+
+			if err != nil {
+				logrus.Fatalf("failed to impersonate user: %s", err)
+			}
+
+			root.Print(res.Msg)
+		},
 	}
 
 	return cmd
