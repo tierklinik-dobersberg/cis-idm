@@ -222,13 +222,13 @@ func (r *Rule) Matches(req *http.Request) (bool, error) {
 			case "basic":
 				username, password, ok := strings.Cut(token, ":")
 				if !ok {
-					l.Debugf("invalid Basic authorization header")
+					l.Debugf("invalid Basic authorization header: %q", token)
 
 					return false, nil
 				}
 
 				if username != "token" {
-					l.Debugf("invalid Basic authorization header: unsupported username %q", username)
+					l.Debugf("invalid Basic authorization header %q: unsupported username %q", token, username)
 
 					return false, nil
 				}
@@ -245,7 +245,7 @@ func (r *Rule) Matches(req *http.Request) (bool, error) {
 			}
 		}
 	} else {
-		l.Debugf("no authorization bearer token defined, request not allowed by rule")
+		l.Debugf("no authorization token defined, request not allowed by rule")
 	}
 
 	return false, nil
