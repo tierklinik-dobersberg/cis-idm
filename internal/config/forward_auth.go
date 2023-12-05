@@ -220,7 +220,7 @@ func (r *Rule) Matches(req *http.Request) (bool, error) {
 			case "bearer":
 				// fallthrough
 			case "basic":
-				username, password, ok := strings.Cut(h, ":")
+				username, password, ok := strings.Cut(token, ":")
 				if !ok {
 					l.Debugf("invalid Basic authorization header")
 
