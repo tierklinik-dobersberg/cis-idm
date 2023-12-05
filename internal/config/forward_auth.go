@@ -203,7 +203,7 @@ func (r *Rule) Matches(req *http.Request) (bool, error) {
 
 	// check if there's a static token configured.
 	if r.Token != "" {
-		l.Debugf("checking for authorization bearer token")
+		l.Debugf("checking for authorization token")
 
 		if h := req.Header.Get("Authorization"); h != "" {
 			bearer, token, ok := strings.Cut(h, " ")
@@ -214,13 +214,27 @@ func (r *Rule) Matches(req *http.Request) (bool, error) {
 				return false, nil
 			}
 
-			if strings.ToLower(bearer) != "bearer" {
-				l.Debugf("invalid Authoriziation header %q", h)
-
-				return false, nil
-			}
-
 			token = strings.TrimSpace(token)
+
+			switch strings.ToLower(bearer) {
+			case "bearer":
+				// fallthrough
+			case "basic":
+				username, password, ok := strings.Cut(h, ":")
+				if !ok {
+					l.Debugf("invalid Basic authorization header")
+
+					return false, nil
+				}
+
+				if username != "token" {
+					l.Debugf("invalid Basic authorization header: unsupported username %q", username)
+
+					return false, nil
+				}
+
+				token = password
+			}
 
 			if r.Token == token {
 				l.Info("client token matches static config token")
