@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"net"
@@ -220,7 +221,12 @@ func (r *Rule) Matches(req *http.Request) (bool, error) {
 			case "bearer":
 				// fallthrough
 			case "basic":
-				username, password, ok := strings.Cut(token, ":")
+				decoded, err := base64.URLEncoding.DecodeString(token)
+				if err != nil {
+					l.Debugf("failed to decode basic authentication token %q: %s", token, err)
+				}
+
+				username, password, ok := strings.Cut(string(decoded), ":")
 				if !ok {
 					l.Debugf("invalid Basic authorization header: %q", token)
 
