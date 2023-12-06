@@ -11,7 +11,9 @@ export const authGuard = () => {
     .pipe(
       switchMap(() => profileService.profile),
       map(value => {
-        return value === null ? router.navigate(['/login']) : true
+        return value === null ? router.navigate(['/login'], {
+          queryParamsHandling: 'merge',
+        }) : true
       })
     )
 }
