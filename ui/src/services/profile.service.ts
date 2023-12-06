@@ -1,6 +1,6 @@
 import { Injectable, inject } from "@angular/core";
 import { ConnectError } from "@bufbuild/connect";
-import { Profile } from "@tkd/apis/gen/es/tkd/idm/v1/user_pb";
+import { Profile } from "@tierklinik-dobersberg/apis/gen/es/tkd/idm/v1/user_pb";
 import { BehaviorSubject, Observable, filter } from "rxjs";
 import { AUTH_SERVICE } from "src/app/clients";
 

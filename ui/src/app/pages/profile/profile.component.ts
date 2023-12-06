@@ -1,7 +1,7 @@
 import { CommonModule } from "@angular/common";
 import { Component, inject } from "@angular/core";
 import { Router, RouterModule } from "@angular/router";
-import { Profile } from '@tkd/apis/gen/es/tkd/idm/v1/user_pb';
+import { Profile } from '@tierklinik-dobersberg/apis/gen/es/tkd/idm/v1/user_pb';
 import { Observable } from 'rxjs';
 import { AUTH_SERVICE } from "src/app/clients";
 import { ConfigService } from "src/app/config.service";

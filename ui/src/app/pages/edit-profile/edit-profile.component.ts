@@ -5,10 +5,10 @@ import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { ProfileService } from 'src/services/profile.service';
 import { take } from 'rxjs';
-import { User } from '@tkd/apis/gen/es/tkd/idm/v1/user_pb.js';
+import { User } from '@tierklinik-dobersberg/apis/gen/es/tkd/idm/v1/user_pb.js';
 import { SELF_SERVICE } from 'src/app/clients';
 import { ConfigService } from 'src/app/config.service';
-import { UpdateProfileRequest } from '@tkd/apis';
+import { UpdateProfileRequest } from '@tierklinik-dobersberg/apis';
 
 @Component({
   selector: 'app-edit-profile',

@@ -5,7 +5,7 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ConnectError } from '@bufbuild/connect';
 import { startRegistration } from '@simplewebauthn/browser';
-import { EnrollTOTPResponseStep1, RegisteredPasskey } from '@tkd/apis';
+import { EnrollTOTPResponseStep1, RegisteredPasskey } from '@tierklinik-dobersberg/apis';
 import { firstValueFrom, from, switchMap } from 'rxjs';
 import { SELF_SERVICE } from 'src/app/clients';
 import { SecurityCodeComponent } from 'src/app/shared/security-code/security-code.component';

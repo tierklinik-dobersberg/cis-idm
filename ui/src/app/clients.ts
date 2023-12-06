@@ -2,7 +2,7 @@ import { InjectionToken } from "@angular/core";
 import { ActivatedRoute, Router } from "@angular/router";
 import { Code, ConnectError, Interceptor, PromiseClient, Transport, createPromiseClient } from "@bufbuild/connect";
 import { createConnectTransport } from "@bufbuild/connect-web";
-import { AuthService, SelfServiceService } from "@tkd/apis";
+import { AuthService, SelfServiceService } from "@tierklinik-dobersberg/apis";
 
 export const TRANSPORT = new InjectionToken<Transport>('TRANSPORT');
 export const AUTH_SERVICE = new InjectionToken<AuthServiceClient>('AUTH_SERVICE');

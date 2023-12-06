@@ -4,7 +4,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { ConnectError } from '@bufbuild/connect';
-import { Address } from '@tkd/apis';
+import { Address } from '@tierklinik-dobersberg/apis';
 import { combineLatest } from 'rxjs';
 import { SELF_SERVICE } from 'src/app/clients';
 import { ProfileService } from 'src/services/profile.service';

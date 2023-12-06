@@ -6,7 +6,7 @@ import { FormsModule, ReactiveFormsModule } from "@angular/forms";
 import { ActivatedRoute, Router, RouterModule } from "@angular/router";
 import { ConnectError } from "@bufbuild/connect";
 import { browserSupportsWebAuthn, browserSupportsWebAuthnAutofill, startAuthentication } from '@simplewebauthn/browser';
-import { AuthType, LoginResponse, RequiredMFAKind } from "@tkd/apis";
+import { AuthType, LoginResponse, RequiredMFAKind } from "@tierklinik-dobersberg/apis";
 import { firstValueFrom, from, switchMap } from "rxjs";
 import { AUTH_SERVICE } from "src/app/clients";
 import { ConfigService } from "src/app/config.service";

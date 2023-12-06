@@ -3,7 +3,7 @@ import { Component, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { ConnectError } from '@bufbuild/connect';
-import { Profile } from '@tkd/apis';
+import { Profile } from '@tierklinik-dobersberg/apis';
 import { Observable } from 'rxjs';
 import { SELF_SERVICE } from 'src/app/clients';
 import { ProfileService } from 'src/services/profile.service';

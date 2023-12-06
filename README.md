@@ -88,7 +88,7 @@ A full reference of all available configuration keys can be found in [./internal
 
 ### Important Warning
 
-For the time being cisidm depends on tierklinik-dobersberg/apis (for Go) and on '@tkd/apis' (for JS/TypeScript). These are not yet released! The Dockerfile provided in this repository expected a `tkd/apis:latest` image on your machine.
+For the time being cisidm depends on tierklinik-dobersberg/apis (for Go) and on '@tierklinik-dobersberg/apis' (for JS/TypeScript). These are not yet released! The Dockerfile provided in this repository expected a `tkd/apis:latest` image on your machine.
 
 Just clone [tierklinik-dobersberg/apis](https://github.com/tierklinik-dobersberg/apis) and execute
  `docker build -t tkd/apis:latest .` once before running `docker-compose build` from this repo.
