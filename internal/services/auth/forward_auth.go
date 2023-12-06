@@ -20,12 +20,20 @@ func NewForwardAuthHandler(providers *app.Providers) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 
+		parsedForwardedUri, err := url.ParseRequestURI(r.Header.Get("x-forwarded-uri"))
+		if err != nil {
+			log.L(ctx).Errorf("failed to parse X-Forwareded-URI %q: %w", r.Header.Get("x-forwarded-uri"), err)
+		}
+
 		method := r.Header.Get("x-forwarded-method")
 		u := &url.URL{
-			Scheme: r.Header.Get("x-forwarded-proto"),
-			Host:   r.Header.Get("x-forwarded-host"),
-			Path:   r.Header.Get("x-forwarded-uri"),
+			Scheme:   r.Header.Get("x-forwarded-proto"),
+			Host:     r.Header.Get("x-forwarded-host"),
+			Path:     parsedForwardedUri.Path,
+			RawPath:  parsedForwardedUri.RawPath,
+			RawQuery: parsedForwardedUri.RawQuery,
 		}
+
 		requestURL := u.String()
 
 		l := log.L(ctx).
