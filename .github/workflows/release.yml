@@ -41,8 +41,6 @@ jobs:
           push: true
           secrets: |
             "github_token=${{ secrets.GITHUB_TOKEN }}"  
-          tags: |
-            ghcr.io/tierklinik-dobersberg/cis-idm:latest
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
   
