@@ -64,7 +64,8 @@ export class LoginComponent implements OnInit {
 
     this.router.navigate(['.'], {
       queryParams: {
-        s: this._display
+        s: this._display,
+        redirect: this.currentRoute.snapshot.paramMap.get("redirect")
       }
     })
   }
