@@ -2,7 +2,6 @@
 # Build the frontend
 FROM node:16 as builder
 
-
 WORKDIR /app/ui
 
 COPY ui/.npmrc ui/package.json ui/package-lock.json ./
