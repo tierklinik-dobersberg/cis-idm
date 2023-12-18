@@ -86,9 +86,38 @@ func GetUsersCommand(root *cli.Root) *cobra.Command {
 		GetSetUserExtraKeyCommand(root),
 		GetSendAccountCreationNoticeCommand(root),
 		GetImpersonateCommand(root),
+		GetSetUserPasswordCommand(root),
 	)
 
 	return cmd
+}
+
+func GetSetUserPasswordCommand(root *cli.Root) *cobra.Command {
+	return &cobra.Command{
+		Use:  "set-password [user]",
+		Args: cobra.ExactArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			userId := root.MustResolveUserToId(args[0])
+
+			req := &idmv1.SetUserPasswordRequest{
+				UserId: userId,
+			}
+
+			fmt.Print("Please enter new password: ")
+			pwd, err := terminal.ReadPassword(int(os.Stdin.Fd()))
+			fmt.Println()
+			if err != nil {
+				logrus.Fatal(err)
+			}
+
+			req.Password = string(pwd)
+
+			_, err = root.Users().SetUserPassword(root.Context(), connect.NewRequest(req))
+			if err != nil {
+				logrus.Fatal(err)
+			}
+		},
+	}
 }
 
 func GetDeleteUserCommand(root *cli.Root) *cobra.Command {

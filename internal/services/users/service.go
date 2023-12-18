@@ -109,6 +109,24 @@ func (svc *Service) ListUsers(ctx context.Context, req *connect.Request[idmv1.Li
 	return connect.NewResponse(res), nil
 }
 
+func (svc *Service) SetUserPassword(ctx context.Context, req *connect.Request[idmv1.SetUserPasswordRequest]) (*connect.Response[idmv1.SetUserPasswordResponse], error) {
+	_, err := svc.Datastore.GetUserByID(ctx, req.Msg.UserId)
+	if err != nil {
+		return nil, err
+	}
+
+	newHashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Msg.GetPassword()), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate password hash: %w", err)
+	}
+
+	if err := svc.Datastore.SetUserPassword(ctx, req.Msg.UserId, string(newHashedPassword)); err != nil {
+		return nil, fmt.Errorf("failed to save user password: %w", err)
+	}
+
+	return connect.NewResponse(new(idmv1.SetUserPasswordResponse)), nil
+}
+
 func (svc *Service) GetUser(ctx context.Context, req *connect.Request[idmv1.GetUserRequest]) (*connect.Response[idmv1.GetUserResponse], error) {
 	var (
 		user models.User

@@ -38,6 +38,14 @@ type DryRun struct {
 	SMSTarget  string `json:"sms"`
 }
 
+type Overwrite struct {
+	UserIDs []string `json:"users"`
+	RoleIDs []string `json:"roles"`
+
+	AccessTokenTTL  JSONDuration `json:"accessTokenTTL"`
+	RefreshTokenTTL JSONDuration `json:"refreshTokenTTL"`
+}
+
 type Config struct {
 	// LogLevel defines the log level to use.
 	LogLevel string `json:"logLevel"`
@@ -89,6 +97,9 @@ type Config struct {
 	// RefreshTokenCookieName is the name of the cookie used to store the
 	// refresh-token for browser requests. This defaults to cis_idm_refresh.
 	RefreshTokenCookieName string `json:"refreshTokenCookieName"`
+
+	// Overwrites may hold configuration overwrites per user or role.
+	Overwrites []Overwrite `json:"overwrites"`
 
 	// BootstrapRoles holds a list of role name that should be automatically
 	// created when cisidm is started. Those roles are created with deleteProtection

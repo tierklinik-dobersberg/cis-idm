@@ -297,7 +297,6 @@ export class LoginComponent implements OnInit {
             displayName: profile?.user?.displayName || profile?.user?.username || '',
             avatarUrl: `/avatar/${profile!.user!.id}`
           })
-
         }
 
         if (!!result.redirectTo) {
@@ -307,6 +306,7 @@ export class LoginComponent implements OnInit {
         }
 
         await this.router.navigate(['/profile'])
+
       } else {
         if (result.response.case === 'mfaRequired') {
           switch (result.response.value.kind) {

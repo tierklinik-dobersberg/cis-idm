@@ -2,15 +2,30 @@ package app
 
 import (
 	"net/http"
+	"slices"
 	"time"
 
 	"github.com/gofrs/uuid"
+	"github.com/tierklinik-dobersberg/apis/pkg/data"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/jwt"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/repo/models"
 )
 
 func (p *Providers) AddRefreshToken(user models.User, roles []models.Role, headers http.Header) (string, string, error) {
-	signedToken, tokenID, err := p.CreateSignedJWT(user, roles, "", p.Config.RefreshTokenTTL.AsDuration(), jwt.ScopeRefresh)
+	ttl := p.Config.RefreshTokenTTL.AsDuration()
+
+	for _, overwrite := range p.Config.Overwrites {
+		hasUser := slices.Contains(overwrite.UserIDs, user.ID)
+		hasRole := data.ElemInBothSlicesFunc(overwrite.RoleIDs, roles, func(r models.Role) string {
+			return r.ID
+		})
+
+		if (hasUser || hasRole) && overwrite.RefreshTokenTTL.AsDuration() > 0 {
+			ttl = overwrite.RefreshTokenTTL.AsDuration()
+		}
+	}
+
+	signedToken, tokenID, err := p.CreateSignedJWT(user, roles, "", ttl, jwt.ScopeRefresh)
 	if err != nil {
 		return "", "", err
 	}
@@ -24,6 +39,17 @@ func (p *Providers) AddRefreshToken(user models.User, roles []models.Role, heade
 
 func (p *Providers) AddAccessToken(user models.User, roles []models.Role, ttl time.Duration, parentTokenID string, headers http.Header) (string, string, error) {
 	defaultTTL := p.Config.AccessTokenTTL.AsDuration()
+
+	for _, overwrite := range p.Config.Overwrites {
+		hasUser := slices.Contains(overwrite.UserIDs, user.ID)
+		hasRole := data.ElemInBothSlicesFunc(overwrite.RoleIDs, roles, func(r models.Role) string {
+			return r.ID
+		})
+
+		if (hasUser || hasRole) && overwrite.AccessTokenTTL.AsDuration() > 0 {
+			defaultTTL = overwrite.AccessTokenTTL.AsDuration()
+		}
+	}
 
 	if ttl == 0 || ttl > defaultTTL {
 		ttl = defaultTTL
