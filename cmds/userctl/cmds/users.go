@@ -521,7 +521,7 @@ func GetUpdateUserCommand(root *cli.Root) *cobra.Command {
 
 func GetSendAccountCreationNoticeCommand(root *cli.Root) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "send-account-notice",
+		Use:     "send-account-notice [user-id ...]",
 		Aliases: []string{"send-creation-notice"},
 		Args:    cobra.MinimumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
