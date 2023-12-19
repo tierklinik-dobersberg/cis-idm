@@ -3,7 +3,6 @@ import { RouterModule, Routes } from '@angular/router';
 import { authGuard, notLoggedInGuard } from 'src/guards/auth.guard';
 
 const routes: Routes = [
-  { path: '', pathMatch: 'full', redirectTo: 'profile'},
   { path: "login", canActivate: [notLoggedInGuard], loadComponent: () => import('./pages/login/login.component').then(m => m.LoginComponent) },
   { path: "refresh", loadComponent: () => import('./pages/refresh/refresh.component').then(m => m.RefreshComponent) },
   { path: "registration", canActivate: [notLoggedInGuard], loadComponent: () => import('./pages/registration/registration.component').then(m => m.RegistrationComponent) },
@@ -22,6 +21,7 @@ const routes: Routes = [
   { path: "profile/verify-mail", canActivate: [authGuard], loadComponent: () => import('./pages/verify-mail/verify-mail.component').then(m => m.VerifyMailComponent) },
   { path: "profile/manage-mfa", canActivate: [authGuard], loadComponent: () => import('./pages/manage-mfa/manage-mfa.component').then(m => m.ManageMfaComponent)},
   { path: "profile/edit-avatar", canActivate: [authGuard], loadComponent: () => import('./pages/edit-avatar/edit-avatar.component').then(m => m.EditAvatarComponent)},
+  { path: "**", redirectTo: '/login' }
 ];
 
 @NgModule({

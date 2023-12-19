@@ -62,7 +62,7 @@ export class LoginComponent implements OnInit {
   set display(s: States) {
     this._display = s
 
-    this.router.navigate(['.'], {
+    this.router.navigate([], {
       queryParams: {
         s: this._display,
       },
