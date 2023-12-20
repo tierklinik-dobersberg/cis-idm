@@ -9,7 +9,7 @@ require (
 	github.com/bufbuild/protovalidate-go v0.4.3
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/ghodss/yaml v1.0.0
-	github.com/go-webauthn/webauthn v0.9.4
+	github.com/go-webauthn/webauthn v0.10.0
 	github.com/gofrs/uuid v4.4.0+incompatible
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/kevinburke/twilio-go v0.0.0-20231009225535-38b36b35294d
@@ -24,10 +24,10 @@ require (
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.8.0
 	github.com/tidwall/sjson v1.2.5
-	github.com/tierklinik-dobersberg/apis v0.0.0-20231219151110-55c863b7b719
+	github.com/tierklinik-dobersberg/apis v0.0.0-20231220110428-ad662905e648
 	github.com/vincent-petithory/dataurl v1.0.0
 	golang.org/x/crypto v0.17.0
-	golang.org/x/exp v0.0.0-20231214170342-aacd6d4b4611
+	golang.org/x/exp v0.0.0-20231219180239-dc181d75b848
 	google.golang.org/protobuf v1.31.0
 )
 
@@ -39,7 +39,7 @@ require (
 	github.com/boombuler/barcode v1.0.1 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/fxamacker/cbor/v2 v2.5.0 // indirect
-	github.com/go-webauthn/x v0.1.5 // indirect
+	github.com/go-webauthn/x v0.1.6 // indirect
 	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
 	github.com/golang-jwt/jwt/v5 v5.2.0 // indirect
 	github.com/golang/gddo v0.0.0-20210115222349-20d68f94ee1f // indirect

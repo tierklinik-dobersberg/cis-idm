@@ -101,46 +101,25 @@ func GetSendNotificationCommand(root *cli.Root) *cobra.Command {
 				}
 
 			case "web-push":
-				var blob []byte
+				n := &idmv1.SendNotificationRequest_Webpush{
+					Webpush: &idmv1.WebPushNotification{},
+				}
 
-				if !webpushRaw {
-					// TODO(ppacher): this is just testing code,
-					// remove and make that an actual usable thingy...
-					notify := map[string]any{
-						"notification": map[string]any{
-							"title": "CIS",
-							"body":  body,
-							"actions": []any{
-								map[string]any{
-									"action": "foo",
-									"title":  "Foo",
-								},
-								map[string]any{
-									"action": "bar",
-									"title":  "Bar",
-								},
-							},
-							"data": map[string]any{
-								"onActionClick": map[string]any{
-									"default": map[string]any{"operation": "openWindow"},
-									"foo":     map[string]any{"operation": "openWindow", "url": "https://account.dobersberg.vet"},
-								},
-							},
+				if webpushRaw {
+					n.Webpush.Kind = &idmv1.WebPushNotification_Binary{
+						Binary: []byte(body),
+					}
+				} else {
+					n.Webpush.Kind = &idmv1.WebPushNotification_Notification{
+						Notification: &idmv1.ServiceWorkerNotification{
+							Title:            subject,
+							Body:             body,
+							DefaultOperation: idmv1.Operation_OPERATION_FOCUS_LAST_FOCUSED_OR_OPEN,
 						},
 					}
-
-					blob, _ = json.Marshal(notify)
-				} else {
-					blob = []byte(body)
 				}
 
-				req.Message = &idmv1.SendNotificationRequest_Webpush{
-					Webpush: &idmv1.WebPushNotification{
-						Kind: &idmv1.WebPushNotification_Template{
-							Template: string(blob),
-						},
-					},
-				}
+				req.Message = n
 
 			default:
 				logrus.Fatalf("please use the 'notify' command using the alias 'sms' or 'mail'")

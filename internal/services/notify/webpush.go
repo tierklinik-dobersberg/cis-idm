@@ -3,6 +3,7 @@ package notify
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	textTemplate "text/template"
@@ -53,11 +54,11 @@ func (svc *Service) sendWebPushNotification(
 	case *idmv1.WebPushNotification_Binary:
 		content = kind.Binary
 
-	case *idmv1.WebPushNotification_Template:
+	case *idmv1.WebPushNotification_Notification:
+
+		notif := notifFromProto(kind.Notification)
 
 		if tmplCtx == nil {
-			content = []byte(kind.Template)
-		} else {
 			t := textTemplate.New("")
 
 			fm := textTemplate.FuncMap(tmpl.PrepareFunctionMap())
@@ -65,14 +66,16 @@ func (svc *Service) sendWebPushNotification(
 
 			t.Funcs(fm)
 
-			if _, err := t.Parse(kind.Template); err != nil {
+			if _, err := t.Parse(notif.Body); err != nil {
 				return nil, err
 			}
 
 			buf := new(bytes.Buffer)
 
 			if err := t.Execute(buf, tmplCtx); err == nil {
-				content = buf.Bytes()
+
+				notif.Body = buf.String()
+
 			} else {
 				deliveries = append(deliveries, &idmv1.DeliveryNotification{
 					TargetUser: userID,
@@ -83,6 +86,19 @@ func (svc *Service) sendWebPushNotification(
 				return deliveries, nil
 			}
 		}
+
+		blob, err := json.Marshal(notif)
+		if err != nil {
+			deliveries = append(deliveries, &idmv1.DeliveryNotification{
+				TargetUser: userID,
+				Error:      fmt.Errorf("failed to execute template: %w", err).Error(),
+				ErrorKind:  idmv1.ErrorKind_ERROR_KIND_TEMPLATE,
+			})
+
+			return deliveries, nil
+		}
+
+		content = blob
 
 	default:
 		deliveries = append(deliveries, &idmv1.DeliveryNotification{
@@ -151,4 +167,70 @@ func (svc *Service) sendWebPushNotification(
 	}
 
 	return deliveries, nil
+}
+
+type action struct {
+	Action string `json:"action"`
+	Title  string `json:"title"`
+}
+
+type swNotification struct {
+	Title   string         `json:"title,omitempty"`
+	Body    string         `json:"body,omitempty"`
+	Actions []action       `json:"actions,omitempty"`
+	Data    map[string]any `json:"data,omitempty"`
+}
+
+type operation struct {
+	Operation string `json:"operation,omitempty"`
+	URL       string `json:"url,omitempty"`
+}
+
+func notifFromProto(pb *idmv1.ServiceWorkerNotification) swNotification {
+	n := swNotification{
+		Title: pb.Title,
+		Body:  pb.Body,
+	}
+
+	handlers := make(map[string]operation)
+
+	for _, pbAction := range pb.Actions {
+		handlers[pbAction.Action] = operation{
+			Operation: operationFromProto(pbAction.Operation),
+			URL:       pbAction.Url,
+		}
+
+		n.Actions = append(n.Actions, action{
+			Action: pbAction.Action,
+			Title:  pbAction.Title,
+		})
+	}
+
+	if pb.DefaultOperation != idmv1.Operation_OPERATION_UNSPECIFIED {
+		handlers["default"] = operation{
+			Operation: operationFromProto(pb.DefaultOperation),
+			URL:       pb.DefaultOperationUrl,
+		}
+	}
+
+	n.Data = map[string]any{
+		"onActionClick": handlers,
+	}
+
+	return n
+}
+
+func operationFromProto(op idmv1.Operation) string {
+	switch op {
+	case idmv1.Operation_OPERATION_FOCUS_LAST_FOCUSED_OR_OPEN:
+		return "focusLastFocusedOrOpen"
+	case idmv1.Operation_OPERATION_NAVIGATE_LAST_FOCUSED_OR_OPEN:
+		return "navigateLastFocusedOrOpen"
+	case idmv1.Operation_OPERATION_OPEN_WINDOW:
+		return "openWindow"
+	case idmv1.Operation_OPERATION_SEND_REQUEST:
+		return "sendRequest"
+	}
+
+	return ""
 }
