@@ -14,8 +14,7 @@ func NewErrorInterceptor() connect.UnaryInterceptorFunc {
 			resp, err := uf(ctx, ar)
 			if err != nil {
 				if errors.Is(err, stmts.ErrNoResults) {
-					unwrapped := errors.Unwrap(err)
-					return nil, connect.NewError(connect.CodeNotFound, unwrapped)
+					return nil, connect.NewError(connect.CodeNotFound, err)
 				}
 			}
 

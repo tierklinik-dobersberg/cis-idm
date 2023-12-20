@@ -135,4 +135,20 @@ var (
 				ON DELETE CASCADE
 		)`,
 	}
+
+	CreateWebPushSubTable = Statement[any]{
+		Query: `CREATE TABLE IF NOT EXISTS webpush_subscriptions (
+			id TEXT PRIMARY KEY,
+			user_id TEXT NOT NULL,
+			user_agent TEXT,
+			endpoint TEXT NOT NULL UNIQUE,
+			auth TEXT NOT NULL,
+			key TEXT NOT NULL,
+			token_id TEXT NOT NULL,
+			CONSTRAINT fk_webpush_subscription_user
+				FOREIGN KEY(user_id) REFERENCES users(id)
+				ON DELETE CASCADE
+		)
+		`,
+	}
 )

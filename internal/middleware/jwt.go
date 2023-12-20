@@ -109,9 +109,15 @@ func AuthenticateRequest(cfg config.Config, ds *repo.Repo, req *http.Request) (*
 		return nil, !required, nil
 	}
 
-	claims = &jwt.Claims{}
+	if subject == "" {
+		l.Debugf("anonoumouse request authenticated by forward-auth")
+
+		return nil, true, nil
+	}
 
 	l.Debugf("request authenticated by forward-auth: loading user by id %q", subject)
+
+	claims = &jwt.Claims{}
 
 	l = l.WithField("subject", subject)
 

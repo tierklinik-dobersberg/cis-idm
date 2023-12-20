@@ -4,11 +4,12 @@ import { ChangeDetectorRef, Component, DestroyRef, OnInit, TrackByFunction, inje
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import { FormsModule, ReactiveFormsModule } from "@angular/forms";
 import { ActivatedRoute, Router, RouterModule } from "@angular/router";
+import { SwPush } from "@angular/service-worker";
 import { ConnectError } from "@bufbuild/connect";
 import { browserSupportsWebAuthn, browserSupportsWebAuthnAutofill, startAuthentication } from '@simplewebauthn/browser';
 import { AuthType, LoginResponse, RequiredMFAKind } from "@tierklinik-dobersberg/apis";
-import { firstValueFrom, from, switchMap } from "rxjs";
-import { AUTH_SERVICE } from "src/app/clients";
+import { first, firstValueFrom, from, switchMap } from "rxjs";
+import { AUTH_SERVICE, NOTIFY_SERVICE } from "src/app/clients";
 import { ConfigService } from "src/app/config.service";
 import { SecurityCodeComponent } from "src/app/shared/security-code/security-code.component";
 import { ProfileService } from "src/services/profile.service";
@@ -24,7 +25,7 @@ interface LoggedInUserHistory {
   users: LoggedInUser[];
 }
 
-type States = 'user-select' | 'username-input' | 'password-input' | 'totp-input' ;
+type States = 'user-select' | 'username-input' | 'password-input' | 'totp-input';
 const allStates: States[] = [
   'user-select',
   'username-input',
@@ -50,12 +51,14 @@ function isValidState(s: any): s is States {
 })
 export class LoginComponent implements OnInit {
   private readonly client = inject(AUTH_SERVICE);
+  private readonly notifyService = inject(NOTIFY_SERVICE);
   private readonly profile = inject(ProfileService);
   private readonly router = inject(Router);
   private readonly currentRoute = inject(ActivatedRoute)
   private readonly cdr = inject(ChangeDetectorRef)
   private readonly http = inject(HttpClient);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly swPush = inject(SwPush);
 
   readonly config = inject(ConfigService).config;
 
@@ -203,6 +206,29 @@ export class LoginComponent implements OnInit {
     localStorage.setItem("loggedInUsers", JSON.stringify(users));
   }
 
+  private async onLoginSuccess(redirectTo?: string) {
+    await this.profile.loadProfile();
+
+    if (this.rememberMe) {
+      const profile = await firstValueFrom(this.profile.profile)
+      this.addLoggedInUser({
+        id: profile!.user!.id,
+        username: profile!.user!.username,
+        displayName: profile?.user?.displayName || profile?.user?.username || '',
+        avatarUrl: `/avatar/${profile!.user!.id}`
+      })
+    }
+
+
+    if (!!redirectTo) {
+      window.location.replace(redirectTo);
+
+      return
+    }
+
+    await this.router.navigate(['/profile']);
+  }
+
   loginUsingWebAuthn() {
     this.http.post('/webauthn/login/begin/' + this.username, {}, {
       withCredentials: true,
@@ -222,25 +248,7 @@ export class LoginComponent implements OnInit {
       )
       .subscribe({
         next: async result => {
-          if (!!result.redirectTo) {
-            window.location.href = result.redirectTo;
-
-            return
-          }
-
-          await this.profile.loadProfile();
-
-          const user = await firstValueFrom(this.profile.profile)
-          if (this.rememberMe) {
-            this.addLoggedInUser({
-              id: user!.user!.id,
-              displayName: user!.user!.displayName || user!.user!.username,
-              username: user!.user!.username,
-              avatarUrl: `/avatar/${user!.user!.id}`
-            })
-          }
-
-          await this.router.navigate(['/profile']);
+          this.onLoginSuccess(result.redirectTo);
         },
         error: err => {
           console.error(err);
@@ -287,26 +295,7 @@ export class LoginComponent implements OnInit {
       }
 
       if (result.response.case === "accessToken") {
-        await this.profile.loadProfile();
-
-        if (this.rememberMe) {
-          const profile = await firstValueFrom(this.profile.profile)
-          this.addLoggedInUser({
-            id: profile!.user!.id,
-            username: profile!.user!.username,
-            displayName: profile?.user?.displayName || profile?.user?.username || '',
-            avatarUrl: `/avatar/${profile!.user!.id}`
-          })
-        }
-
-        if (!!result.redirectTo) {
-          window.location.href = result.redirectTo;
-
-          return
-        }
-
-        await this.router.navigate(['/profile'])
-
+        this.onLoginSuccess(result.redirectTo);
       } else {
         if (result.response.case === 'mfaRequired') {
           switch (result.response.value.kind) {

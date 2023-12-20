@@ -67,5 +67,9 @@ func (repo *Repo) Migrate(ctx context.Context) error {
 		return fmt.Errorf("failed to create webauthn_creds table: %w", err)
 	}
 
+	if err := stmts.CreateWebPushSubTable.Write(ctx, repo.Conn, nil); err != nil && !errors.Is(err, stmts.ErrNoRowsAffected) {
+		return fmt.Errorf("failed to create webpush_subscriptions table: %w", err)
+	}
+
 	return nil
 }

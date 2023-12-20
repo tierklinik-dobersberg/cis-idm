@@ -59,7 +59,7 @@ func (svc *Service) Impersonate(ctx context.Context, req *connect.Request[idmv1.
 	tokenMessage := &idmv1.ImpersonateResponse{}
 	res := connect.NewResponse(tokenMessage)
 
-	token, _, err := svc.AddAccessToken(user, roles, svc.Config.AccessTokenTTL.AsDuration(), "", res.Header())
+	token, _, err := svc.AddAccessToken(user, roles, svc.Config.AccessTokenTTL.AsDuration(), "", "impersonate", res.Header())
 	if err != nil {
 		return nil, err
 	}

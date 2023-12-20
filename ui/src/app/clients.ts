@@ -3,13 +3,16 @@ import { ActivatedRoute, Router } from "@angular/router";
 import { Code, ConnectError, Interceptor, PromiseClient, Transport, createPromiseClient } from "@bufbuild/connect";
 import { createConnectTransport } from "@bufbuild/connect-web";
 import { AuthService, SelfServiceService } from "@tierklinik-dobersberg/apis";
+import { NotifyService } from '@tierklinik-dobersberg/apis/gen/es/tkd/idm/v1/notify_service_connect';
 
 export const TRANSPORT = new InjectionToken<Transport>('TRANSPORT');
 export const AUTH_SERVICE = new InjectionToken<AuthServiceClient>('AUTH_SERVICE');
 export const SELF_SERVICE = new InjectionToken<SelfServiceClient>('SELF_SERVICE');
+export const NOTIFY_SERVICE = new InjectionToken<NotifyServiceClient>('NOTIFY_SERVICE');
 
 export type AuthServiceClient = PromiseClient<typeof AuthService>;
 export type SelfServiceClient = PromiseClient<typeof SelfServiceService>;
+export type NotifyServiceClient = PromiseClient<typeof NotifyService>;
 
 const retryRefreshToken: (transport: Transport, activatedRoute: ActivatedRoute, router: Router) => Interceptor = (transport, activatedRoute, router) => {
   let pendingRefresh: Promise<void> | null = null;
@@ -108,3 +111,6 @@ export function selfServiceFactory(transport: Transport): SelfServiceClient {
   return createPromiseClient(SelfServiceService, transport);
 }
 
+export function notifyServiceFactory(transport: Transport): NotifyServiceClient {
+  return createPromiseClient(NotifyService, transport);
+}

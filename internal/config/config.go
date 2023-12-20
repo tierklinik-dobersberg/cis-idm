@@ -46,6 +46,12 @@ type Overwrite struct {
 	RefreshTokenTTL JSONDuration `json:"refreshTokenTTL"`
 }
 
+type WebPush struct {
+	Admin           string `json:"admin"`
+	VAPIDpublicKey  string `json:"vapidPublicKey"`
+	VAPIDprivateKey string `json:"vapidPrivateKey"`
+}
+
 type Config struct {
 	// LogLevel defines the log level to use.
 	LogLevel string `json:"logLevel"`
@@ -210,6 +216,9 @@ type Config struct {
 
 	// ExtraDataConfig defines the schema and visibility for the user extra data.
 	ExtraDataConfig map[string]*FieldConfig `json:"extraData"`
+
+	// WebPush holds VAPID keys for web-push integration.
+	WebPush *WebPush `json:"webpush"`
 }
 
 func LoadFile(path string) (*Config, error) {

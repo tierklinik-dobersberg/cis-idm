@@ -45,12 +45,24 @@ func NewService(providers *app.Providers) *AuthService {
 }
 
 func (svc *AuthService) Login(ctx context.Context, req *connect.Request[idmv1.LoginRequest]) (*connect.Response[idmv1.LoginResponse], error) {
-	logrus.Infof("received authentication request")
 	r := req.Msg
 
 	var (
 		user models.User
 	)
+
+	// Log out any user that might still be logged-in.
+	claims := middleware.ClaimsFromContext(ctx)
+	if claims != nil {
+		// There's already a user logged in so this seems like a forced user-switch.
+		// In this case, we should invalidate the current token (and refresh token)
+		// as well as any web-push subscriptions
+		if err := svc.invalidateTokens(ctx, claims); err != nil {
+			return nil, err
+		}
+	}
+
+	kind := "password"
 
 	switch r.AuthType {
 	case idmv1.AuthType_AUTH_TYPE_PASSWORD:
@@ -147,6 +159,8 @@ func (svc *AuthService) Login(ctx context.Context, req *connect.Request[idmv1.Lo
 			}
 		}
 
+		kind = "mfa"
+
 		// continue outside of the switch block and issue access and refresh tokens
 	default:
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("unsupported authentication method"))
@@ -192,13 +206,13 @@ func (svc *AuthService) Login(ctx context.Context, req *connect.Request[idmv1.Lo
 	var refreshTokenID string
 
 	if !r.GetNoRefreshToken() {
-		_, refreshTokenID, err = svc.AddRefreshToken(user, roles, resp.Header())
+		_, refreshTokenID, err = svc.AddRefreshToken(user, roles, kind, resp.Header())
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	if token, _, err := svc.AddAccessToken(user, roles, req.Msg.Ttl.AsDuration(), refreshTokenID, resp.Header()); err != nil {
+	if token, _, err := svc.AddAccessToken(user, roles, req.Msg.Ttl.AsDuration(), refreshTokenID, kind, resp.Header()); err != nil {
 		return nil, err
 	} else {
 		response.Token = token
@@ -214,30 +228,8 @@ func (svc *AuthService) Logout(ctx context.Context, req *connect.Request[idmv1.L
 		return nil, fmt.Errorf("no claims associated with request context")
 	}
 
-	// mark the token as rejected
-	if err := common.Timing(ctx, "reject-access-token", func() error {
-		return svc.Datastore.MarkTokenRejected(ctx, models.RejectedToken{
-			TokenID:   claims.ID,
-			UserID:    claims.Subject,
-			IssuedAt:  claims.IssuedAt,
-			ExpiresAt: claims.ExpiresAt,
-		})
-	}); err != nil {
-		return nil, fmt.Errorf("failed to mark token as rejected: %w", err)
-	}
-
-	// also mark the parent (refresh) token as rejected
-	if claims.AppMetadata != nil && claims.AppMetadata.ParentTokenID != "" {
-		if err := common.Timing(ctx, "reject-refresh-token", func() error {
-			return svc.Datastore.MarkTokenRejected(ctx, models.RejectedToken{
-				TokenID:   claims.AppMetadata.ParentTokenID,
-				UserID:    claims.Subject,
-				IssuedAt:  claims.IssuedAt,
-				ExpiresAt: claims.ExpiresAt,
-			})
-		}); err != nil {
-			return nil, fmt.Errorf("failed to mark token as rejected: %w", err)
-		}
+	if err := svc.invalidateTokens(ctx, claims); err != nil {
+		return nil, err
 	}
 
 	resp := connect.NewResponse(new(idmv1.LogoutResponse))
@@ -265,7 +257,7 @@ func (svc *AuthService) Logout(ctx context.Context, req *connect.Request[idmv1.L
 
 	resp.Header().Add("Set-Cookie", clearRefreshCookie.String())
 	resp.Header().Add("Set-Cookie", clearAccessCookie.String())
-	resp.Header().Add("Clear-Site-Data", `"cache", "cookies"`) // we keep localStorage for the loggedInUsers key
+	resp.Header().Add("Clear-Site-Data", `"cookies"`)
 
 	return resp, nil
 }
@@ -309,7 +301,11 @@ func (svc *AuthService) RefreshToken(ctx context.Context, req *connect.Request[i
 		RedirectTo:  redirectTo,
 	})
 
-	token, _, err := svc.AddAccessToken(user, roles, req.Msg.Ttl.AsDuration(), claims.ID, resp.Header())
+	kind := ""
+	if claims.AppMetadata != nil {
+		kind = claims.AppMetadata.LoginKind
+	}
+	token, _, err := svc.AddAccessToken(user, roles, req.Msg.Ttl.AsDuration(), claims.ID, kind, resp.Header())
 	if err != nil {
 		return nil, err
 	}
@@ -426,12 +422,12 @@ func (svc *AuthService) RegisterUser(ctx context.Context, req *connect.Request[i
 		AccessToken: tokenResponse,
 	})
 
-	_, refreshTokenID, err := svc.AddRefreshToken(*userModel, roles, resp.Header())
+	_, refreshTokenID, err := svc.AddRefreshToken(*userModel, roles, "password", resp.Header())
 	if err != nil {
 		return nil, err
 	}
 
-	token, _, err := svc.AddAccessToken(*userModel, roles, 0, refreshTokenID, resp.Header())
+	token, _, err := svc.AddAccessToken(*userModel, roles, 0, refreshTokenID, "password", resp.Header())
 	if err != nil {
 		return nil, err
 	}
@@ -565,6 +561,44 @@ func (svc *AuthService) RequestPasswordReset(ctx context.Context, req *connect.R
 	}
 
 	return connect.NewResponse(&idmv1.RequestPasswordResetResponse{}), nil
+}
+
+func (svc *AuthService) invalidateTokens(ctx context.Context, claims *jwt.Claims) error {
+	// FIXME(ppacher): do not abort if access-token invalidation fails
+
+	// mark the token as rejected
+	if err := common.Timing(ctx, "reject-access-token", func() error {
+		// delete the web-push subscription for the access token
+		_ = svc.Datastore.DeleteWebPushSubscriptionForToken(ctx, claims.ID)
+
+		return svc.Datastore.MarkTokenRejected(ctx, models.RejectedToken{
+			TokenID:   claims.ID,
+			UserID:    claims.Subject,
+			IssuedAt:  claims.IssuedAt,
+			ExpiresAt: claims.ExpiresAt,
+		})
+	}); err != nil {
+		return fmt.Errorf("failed to mark token as rejected: %w", err)
+	}
+
+	// also mark the parent (refresh) token as rejected
+	if claims.AppMetadata != nil && claims.AppMetadata.ParentTokenID != "" {
+		if err := common.Timing(ctx, "reject-refresh-token", func() error {
+			// delete the web-push subscription for the refresh token
+			_ = svc.Datastore.DeleteWebPushSubscriptionForToken(ctx, claims.AppMetadata.ParentTokenID)
+
+			return svc.Datastore.MarkTokenRejected(ctx, models.RejectedToken{
+				TokenID:   claims.AppMetadata.ParentTokenID,
+				UserID:    claims.Subject,
+				IssuedAt:  claims.IssuedAt,
+				ExpiresAt: claims.ExpiresAt,
+			})
+		}); err != nil {
+			return fmt.Errorf("failed to mark token as rejected: %w", err)
+		}
+	}
+
+	return nil
 }
 
 var _ idmv1connect.AuthServiceHandler = new(AuthService)

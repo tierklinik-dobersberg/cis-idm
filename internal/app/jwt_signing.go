@@ -11,7 +11,7 @@ import (
 	"github.com/tierklinik-dobersberg/cis-idm/internal/repo/models"
 )
 
-func (p *Providers) AddRefreshToken(user models.User, roles []models.Role, headers http.Header) (string, string, error) {
+func (p *Providers) AddRefreshToken(user models.User, roles []models.Role, kind string, headers http.Header) (string, string, error) {
 	ttl := p.Config.RefreshTokenTTL.AsDuration()
 
 	for _, overwrite := range p.Config.Overwrites {
@@ -25,7 +25,7 @@ func (p *Providers) AddRefreshToken(user models.User, roles []models.Role, heade
 		}
 	}
 
-	signedToken, tokenID, err := p.CreateSignedJWT(user, roles, "", ttl, jwt.ScopeRefresh)
+	signedToken, tokenID, err := p.CreateSignedJWT(user, roles, "", ttl, kind, jwt.ScopeRefresh)
 	if err != nil {
 		return "", "", err
 	}
@@ -37,7 +37,7 @@ func (p *Providers) AddRefreshToken(user models.User, roles []models.Role, heade
 	return signedToken, tokenID, nil
 }
 
-func (p *Providers) AddAccessToken(user models.User, roles []models.Role, ttl time.Duration, parentTokenID string, headers http.Header) (string, string, error) {
+func (p *Providers) AddAccessToken(user models.User, roles []models.Role, ttl time.Duration, parentTokenID string, kind string, headers http.Header) (string, string, error) {
 	defaultTTL := p.Config.AccessTokenTTL.AsDuration()
 
 	for _, overwrite := range p.Config.Overwrites {
@@ -55,7 +55,7 @@ func (p *Providers) AddAccessToken(user models.User, roles []models.Role, ttl ti
 		ttl = defaultTTL
 	}
 
-	signedToken, tokenID, err := p.CreateSignedJWT(user, roles, parentTokenID, ttl, jwt.ScopeAccess)
+	signedToken, tokenID, err := p.CreateSignedJWT(user, roles, parentTokenID, ttl, kind, jwt.ScopeAccess)
 	if err != nil {
 		return "", "", err
 	}
@@ -68,7 +68,7 @@ func (p *Providers) AddAccessToken(user models.User, roles []models.Role, ttl ti
 
 }
 
-func (p *Providers) CreateSignedJWT(user models.User, roles []models.Role, parentTokenID string, ttl time.Duration, scopes ...jwt.Scope) (string, string, error) {
+func (p *Providers) CreateSignedJWT(user models.User, roles []models.Role, parentTokenID string, ttl time.Duration, kind string, scopes ...jwt.Scope) (string, string, error) {
 	auth := &jwt.Authorization{}
 	for _, g := range roles {
 		auth.Roles = append(auth.Roles, g.ID)
@@ -96,6 +96,7 @@ func (p *Providers) CreateSignedJWT(user models.User, roles []models.Role, paren
 			TokenVersion:  "1",
 			ParentTokenID: parentTokenID,
 			Authorization: auth,
+			LoginKind:     kind,
 		},
 	}
 

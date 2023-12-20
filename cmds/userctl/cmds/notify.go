@@ -11,49 +11,28 @@ import (
 	idmv1 "github.com/tierklinik-dobersberg/apis/gen/go/tkd/idm/v1"
 	"github.com/tierklinik-dobersberg/apis/gen/go/tkd/idm/v1/idmv1connect"
 	"github.com/tierklinik-dobersberg/apis/pkg/cli"
-	"google.golang.org/protobuf/types/known/fieldmaskpb"
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
 func GetSendNotificationCommand(root *cli.Root) *cobra.Command {
 	var (
-		targetRoleIDs   []string
-		targetUserIDs   []string
-		targetUserNames []string
+		targetUser []string
 
 		subject     string
 		body        string
 		bodyFile    string
 		contextFile string
+		webpushRaw  bool
 	)
 
 	cmd := &cobra.Command{
 		Use:     "send",
-		Aliases: []string{"sms", "mail"},
+		Aliases: []string{"sms", "mail", "web-push"},
 		Run: func(cmd *cobra.Command, args []string) {
 			ctx := context.Background()
 
-			targetUsers := make(map[string]struct{})
-
-			for _, usrId := range targetUserIDs {
-				targetUsers[usrId] = struct{}{}
-			}
-
-			for _, usrName := range targetUserNames {
-				usr, err := root.Users().GetUser(ctx, connect.NewRequest(&idmv1.GetUserRequest{
-					Search: &idmv1.GetUserRequest_Name{
-						Name: usrName,
-					},
-					FieldMask: &fieldmaskpb.FieldMask{
-						Paths: []string{"profile.user.id"},
-					},
-				}))
-				if err != nil {
-					logrus.Fatal(err)
-				}
-
-				targetUsers[usr.Msg.Profile.User.Id] = struct{}{}
-			}
+			targetUsers := root.MustResolveUserIds(targetUser)
+			logrus.Infof("target-users: %v", targetUsers)
 
 			if bodyFile != "" {
 				if body != "" {
@@ -120,17 +99,54 @@ func GetSendNotificationCommand(root *cli.Root) *cobra.Command {
 						Body: body,
 					},
 				}
+
+			case "web-push":
+				var blob []byte
+
+				if !webpushRaw {
+					// TODO(ppacher): this is just testing code,
+					// remove and make that an actual usable thingy...
+					notify := map[string]any{
+						"notification": map[string]any{
+							"title": "CIS",
+							"body":  body,
+							"actions": []any{
+								map[string]any{
+									"action": "foo",
+									"title":  "Foo",
+								},
+								map[string]any{
+									"action": "bar",
+									"title":  "Bar",
+								},
+							},
+							"data": map[string]any{
+								"onActionClick": map[string]any{
+									"default": map[string]any{"operation": "openWindow"},
+									"foo":     map[string]any{"operation": "openWindow", "url": "https://account.dobersberg.vet"},
+								},
+							},
+						},
+					}
+
+					blob, _ = json.Marshal(notify)
+				} else {
+					blob = []byte(body)
+				}
+
+				req.Message = &idmv1.SendNotificationRequest_Webpush{
+					Webpush: &idmv1.WebPushNotification{
+						Kind: &idmv1.WebPushNotification_Template{
+							Template: string(blob),
+						},
+					},
+				}
+
 			default:
 				logrus.Fatalf("please use the 'notify' command using the alias 'sms' or 'mail'")
 			}
 
-			targetUserSlice := make([]string, 0, len(targetUsers))
-			for usr := range targetUsers {
-				targetUserSlice = append(targetUserSlice, usr)
-			}
-
-			req.TargetRoles = targetRoleIDs
-			req.TargetUsers = targetUserSlice
+			req.TargetUsers = targetUsers
 
 			res, err := cli.SendNotification(ctx, connect.NewRequest(req))
 			if err != nil {
@@ -143,13 +159,12 @@ func GetSendNotificationCommand(root *cli.Root) *cobra.Command {
 
 	flags := cmd.Flags()
 	{
-		flags.StringSliceVar(&targetRoleIDs, "to-role-ids", nil, "A list of role IDs that should receive the notification")
-		flags.StringSliceVar(&targetUserIDs, "to-user-ids", nil, "A list of user IDs that should receive the notification")
-		flags.StringSliceVar(&targetUserNames, "to-user", nil, "A list of usernames that should receive the notificatoin")
+		flags.StringSliceVar(&targetUser, "to-user", nil, "A list of usernames or ids that should receive the notificatoin")
 
 		flags.StringVar(&subject, "subject", "", "The subject if sending a mail")
 		flags.StringVar(&body, "body", "", "The body of the email/sms")
 		flags.StringVar(&bodyFile, "body-file", "", "Path to the file that contains the body for the SMS/mail")
+		flags.BoolVar(&webpushRaw, "web-push-raw", false, "Do not convert body into a notification object")
 	}
 
 	return cmd

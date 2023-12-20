@@ -181,14 +181,14 @@ func (svc *Service) FinishLoginHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Generate and add refresh and access tokens
 
-	_, refreshTokenID, err := svc.AddRefreshToken(user, roles, w.Header())
+	_, refreshTokenID, err := svc.AddRefreshToken(user, roles, "webauthn", w.Header())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 
 		return
 	}
 
-	if _, _, err := svc.AddAccessToken(user, roles, 0, refreshTokenID, w.Header()); err != nil {
+	if _, _, err := svc.AddAccessToken(user, roles, 0, refreshTokenID, "webauthn", w.Header()); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 
 		return

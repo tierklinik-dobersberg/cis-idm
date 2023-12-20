@@ -22,7 +22,7 @@ func NewForwardAuthHandler(providers *app.Providers) http.Handler {
 
 		parsedForwardedUri, err := url.ParseRequestURI(r.Header.Get("x-forwarded-uri"))
 		if err != nil {
-			log.L(ctx).Errorf("failed to parse X-Forwareded-URI %q: %w", r.Header.Get("x-forwarded-uri"), err)
+			log.L(ctx).Errorf("failed to parse X-Forwareded-URI %q: %s", r.Header.Get("x-forwarded-uri"), err)
 		}
 
 		method := r.Header.Get("x-forwarded-method")
