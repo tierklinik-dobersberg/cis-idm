@@ -87,7 +87,9 @@ func (svc *Service) sendWebPushNotification(
 			}
 		}
 
-		blob, err := json.Marshal(notif)
+		blob, err := json.Marshal(map[string]any{
+			"notification": notif,
+		})
 		if err != nil {
 			deliveries = append(deliveries, &idmv1.DeliveryNotification{
 				TargetUser: userID,
@@ -110,7 +112,7 @@ func (svc *Service) sendWebPushNotification(
 		return deliveries, nil
 	}
 
-	log.L(ctx).Infof("sending web-push notification to %s", user)
+	log.L(ctx).Infof("sending web-push notification to %s (username=%q)", user.User.Id, user.User.Username)
 
 	atLeastOneSuccess := false
 	for _, sub := range subscriptions {
