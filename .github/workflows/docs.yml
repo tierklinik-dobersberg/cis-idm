@@ -23,8 +23,9 @@ jobs:
           # choose pnpm version to use
           version: 8
           # install deps with pnpm
-          run_install:
+          run_install: |
             cwd: ./docs
+            recursive: true
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
