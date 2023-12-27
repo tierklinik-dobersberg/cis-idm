@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - "main"
+    paths-ignore:
+      - "docs/**"
 
 jobs:
   docker:
@@ -28,7 +30,6 @@ jobs:
           platforms: linux/amd64
           push: true
           secrets: |
-            "github_token=${{ secrets.GITHUB_TOKEN }}"  
+            "github_token=${{ secrets.GITHUB_TOKEN }}"
           tags: |
             ghcr.io/tierklinik-dobersberg/cis-idm:latest
-  
