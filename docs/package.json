@@ -2,7 +2,6 @@
   "name": "docs",
   "version": "1.0.0",
   "description": "Documentation for CIS-IDM",
-  "main": "index.js",
   "scripts": {
     "docs:dev": "vuepress dev content",
     "docs:build": "vuepress build content"
