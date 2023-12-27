@@ -19,27 +19,21 @@ jobs:
           # fetch all commits to get last updated time or other git log info
           fetch-depth: 0
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          # choose pnpm version to use
-          version: 8
-          # install deps with pnpm
-          run_install: |
-            cwd: ./docs
-            recursive: true
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           # choose node.js version to use
           node-version: 18
-          # cache deps for pnpm
-          cache: pnpm
+          cache: npm
+
+      # install dependencies
+      - name: Build VuePress site
+        run: npm install
+        working-directory: ./docs
 
       # run build script
       - name: Build VuePress site
-        run: pnpm docs:build
+        run: npm run docs:build
         working-directory: ./docs
 
       # please check out the docs of the workflow for more details
