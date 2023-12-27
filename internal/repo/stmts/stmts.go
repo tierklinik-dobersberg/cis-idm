@@ -5,15 +5,20 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/hashicorp/go-multierror"
 	"github.com/mitchellh/mapstructure"
 	"github.com/rqlite/gorqlite"
 )
 
-type Statement[R any] struct {
-	Query  string
-	Args   []string
-	Result R
-}
+type (
+	Statement[R any] struct {
+		Query  string
+		Args   []string
+		Result R
+	}
+
+	StatementList []Statement[any]
+)
 
 var (
 	ErrInvalidArgCount = errors.New("invalid number of arguments")
@@ -74,4 +79,46 @@ func (stmt Statement[R]) Write(ctx context.Context, conn *gorqlite.Connection, a
 	}
 
 	return nil
+}
+
+func (list StatementList) Prepare(args []any) ([]gorqlite.ParameterizedStatement, error) {
+	result := make([]gorqlite.ParameterizedStatement, len(list))
+
+	if args != nil {
+		if len(args) != len(list) {
+			return nil, fmt.Errorf("arguments length does not match statement length")
+		}
+	}
+
+	for idx, s := range list {
+		v, err := s.Prepare(args[idx])
+		if err != nil {
+			return nil, fmt.Errorf("failed to prepare statement %d: %w", idx, err)
+		}
+
+		result[idx] = v
+	}
+
+	return result, nil
+}
+
+func (list StatementList) Write(ctx context.Context, conn *gorqlite.Connection, args []any) error {
+	stmts, err := list.Prepare(args)
+	if err != nil {
+		return err
+	}
+
+	writeResult, err := conn.WriteParameterizedContext(ctx, stmts)
+	if err != nil {
+		return err
+	}
+
+	merr := new(multierror.Error)
+	for idx, wr := range writeResult {
+		if wr.Err != nil {
+			merr.Errors = append(merr.Errors, fmt.Errorf("stmt#%d: %w", idx, err))
+		}
+	}
+
+	return merr.ErrorOrNil()
 }
