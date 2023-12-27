@@ -1,0 +1,1 @@
+const e=JSON.parse('{"key":"v-ae32707c","path":"/guides/user-role-management.html","title":"User and Role Management","lang":"en-US","frontmatter":{},"headers":[],"git":{"updatedTime":1703658203000,"contributors":[{"name":"Patrick Pacher","email":"patrick.pacher@gmail.com","commits":1}]},"filePathRelative":"guides/user-role-management.md"}');export{e as data};

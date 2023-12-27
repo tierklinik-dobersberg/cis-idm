@@ -1,0 +1,1 @@
+const e=JSON.parse('{"key":"v-2c3300c0","path":"/guides/to-be-done.html","title":"Sorry, documentation is work-in-progress","lang":"en-US","frontmatter":{},"headers":[],"git":{"updatedTime":1703658203000,"contributors":[{"name":"Patrick Pacher","email":"patrick.pacher@gmail.com","commits":1}]},"filePathRelative":"guides/to-be-done.md"}');export{e as data};
