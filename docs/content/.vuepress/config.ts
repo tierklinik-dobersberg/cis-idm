@@ -3,6 +3,7 @@ import { defaultTheme, defineUserConfig } from "vuepress";
 export default defineUserConfig({
   lang: "en-US",
   title: "Identity Management Service",
+  base: "/cis-idm/",
   description: "",
   theme: defaultTheme({
     repo: "tierklinik-dobersberg/cis-idm",
