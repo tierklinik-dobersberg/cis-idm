@@ -25,6 +25,7 @@ jobs:
           # choose node.js version to use
           node-version: 18
           cache: npm
+          cache-dependency-path: ./docs/package-lock.json
 
       # install dependencies
       - name: Build VuePress site
