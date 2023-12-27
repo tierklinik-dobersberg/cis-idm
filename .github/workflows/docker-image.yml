@@ -6,6 +6,8 @@ on:
       - "main"
     paths-ignore:
       - "docs/**"
+      - ".github/workflows/docs.yml"
+      - ".github/workflows/release.yml"
 
 jobs:
   docker:
