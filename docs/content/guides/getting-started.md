@@ -313,13 +313,53 @@ The above service snippet configures Traefik as our reverse proxy. Let's go thro
   `--certificatesresolvers.resolver.acme.httpchallenge.entrypoint=http`  
   Configure a certificate resolver that uses ACME to request certificates from Let's Encrypt.
 
-## Start the project
+### Identity Management Server
+
+```yaml
+cisidm:
+  image: ghcr.io/tierklinik-dobersberg/cis-idm:latest
+  restart: unless-stopped
+  volumes:
+    - ./config/idm-config.yml:/etc/config.yml:ro
+  labels:
+    - "traefik.enable=true"
+    - "traefik.http.routers.idm.rule=Host(`account.example.com`)"
+    - "traefik.http.routers.idm.entrypoints=web"
+    - "traefik.http.routers.idm.tls=true"
+    - "traefik.http.routers.idm.tls.certresolver=resolver"
+    - "traefik.http.middlewares.auth.forwardauth.address=http://cisidm:8080/validate"
+    - "traefik.http.middlewares.auth.forwardauth.authResponseHeaders=X-Remote-User,X-Remote-User-ID,X-Remote-Mail,X-Remote-Mail-Verified,X-Remote-Avatar-URL,X-Remote-Role,X-Remote-User-Display-Name"
+  environment:
+    CONFIG_FILE: "/etc/config.yml"
+  depends_on:
+    - rqlite
+```
+
+This configures the `cisidm` docker container, mounts the configuration file to `/etc/config.yml` and tells traefik that is should be reachable at `account.example.com`.
+
+It also configures a new HTTP middleware `auth` that uses the forward-auth feature of traefik:
+
+- `traefik.http.middlewares.auth.forwardauth.address=http://cisidm:8080/validate`  
+  This configures the Forward-Auth middleware (named `auth` here) to forward any HTTP request to cisidm to determine if the user is actually allowed to access the requested resource. If cisidm replies with a HTTP success status code (2xx) than traefik will forward the original request to the actual service container. If cisidm replies with an error code, traefik will immediately return the response from `cisidm` to the user. This is used to redirect the user to the login page in case the request is unauthenticated.
+
+- `traefik.http.middlewares.auth.forwardauth.authResponseHeaders=....`  
+  When `cisidm` successfully authenticated a request, it will return a set of headers that contain information about the logged in user. With this setting, we tell traefik to forward those headers to the actual service container. This enables service containers to know which user performs the access without the need to parse and validate the JWT token issued by `cisidm` for every successful authentication.
+
+## First Start
 
 Finally it's time to start our services by calling the following command from the project directory (the one that contains the docker-compose file)
 
 ```
 docker-compose up -d
 ```
+
+:::tip Admin User
+Whenever `cisidm` starts, it checks if a user with super-user privileges (member of the `iam_superuser` role) exists. If not, a new registration token will be created and logged to stdout.
+
+To create your initial admin user, copy that token from the log output (`docker-compose logs cisidm | grep "superuser account"`) and visit `https://account.example.com/registration?token=YOUR_TOKEN` and replace `YOUR_TOKEN` with the token from the log output.
+
+It's also possible to use the cli tool for the registration: `idmctl register-user --registration-token YOUR-TOKEN your-username`.
+:::
 
 <br />
 
@@ -330,5 +370,5 @@ docker-compose up -d
 :::tip Congratulations
 You just finished setting up cisidm with a HTTPS enabled reverse proxy that will now protect your services using Proxy/Forward Authentication.
 
-Now it's time to check the [User and Role Administration Guide](./user-role-management.md).
+Now it's time to check the [User and Role Administration Guide](./user-role-management.md) or the [Command Line Reference](./cli-reference.md).
 :::

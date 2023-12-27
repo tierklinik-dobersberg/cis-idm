@@ -10,14 +10,78 @@ export default defineUserConfig({
     docsBranch: "main",
     docsDir: "docs/content",
     editLinkPattern: ":repo/-/edit/:branch/:path",
+    sidebar: {
+      "/guides/": [
+        {
+          text: "Introduction",
+          link: "/intro.md",
+        },
+        {
+          text: "How Tos",
+          children: [
+            {
+              text: "Getting Started",
+              link: "/guides/getting-started.md",
+            },
+            {
+              text: "User and Role Management",
+              link: "/guides/user-role-management.md",
+            },
+            {
+              text: "CLI Reference",
+              link: "/guides/cli-reference.md",
+            },
+          ],
+        },
+        {
+          text: "Setup",
+          link: "/guides/README.md",
+          children: [
+            {
+              text: "WebAuthN",
+            },
+            {
+              text: "E-Mail",
+            },
+            {
+              text: "SMS (Twilio)",
+            },
+            {
+              text: "WebPush Notifications",
+            },
+            {
+              text: "OpenID Connect (OIDC)",
+            },
+            {
+              text: "Configuration File Reference",
+            },
+          ],
+        },
+        {
+          text: "Developer Docs",
+          children: [
+            {
+              text: "ConnectRPC APIs",
+              children: [
+                {
+                  text: "with Go",
+                },
+                {
+                  text: "with Javascript/Typescript",
+                },
+                {
+                  text: "with CURL",
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    },
     navbar: [
       {
-        text: "Get Started",
-        link: "/guides/getting-started",
-      },
-      {
-        text: "Architecture",
-        link: "architecture",
+        text: "Guides",
+        link: "/guides/",
       },
       {
         text: "Report an issue",

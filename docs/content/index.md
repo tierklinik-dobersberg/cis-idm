@@ -35,3 +35,18 @@ features:
   - title: Easy Deployment
     details: Easily deploy using docker.
 ---
+
+---
+
+:::warning Documentation is Work-in-Progress
+
+Please note that the documentation for `cisidm` is currently being built and cannot be considered complete!  
+There's a lot of missing information and setup-guides.
+
+<center>
+
+**Stay tuned** :rocket:
+
+</center>
+
+:::
