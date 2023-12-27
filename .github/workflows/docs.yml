@@ -24,7 +24,6 @@ jobs:
           version: 8
           # install deps with pnpm
           run_install: true
-        working-directory: ./docs
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -33,7 +32,6 @@ jobs:
           node-version: 18
           # cache deps for pnpm
           cache: pnpm
-        working-directory: ./docs
 
       # run build script
       - name: Build VuePress site
@@ -52,4 +50,3 @@ jobs:
         env:
           # @see https://docs.github.com/en/actions/reference/authentication-in-a-workflow#about-the-github_token-secret
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        working-directory: ./docs
