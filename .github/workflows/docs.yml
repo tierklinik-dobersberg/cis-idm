@@ -11,11 +11,6 @@ jobs:
   docs:
     runs-on: ubuntu-latest
 
-    defaults:
-      run:
-        shell: bash
-        working-directory: ./docs
-
     steps:
       - uses: actions/checkout@v4
         with:
@@ -29,6 +24,7 @@ jobs:
           version: 8
           # install deps with pnpm
           run_install: true
+        working-directory: ./docs
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -37,10 +33,12 @@ jobs:
           node-version: 18
           # cache deps for pnpm
           cache: pnpm
+        working-directory: ./docs
 
       # run build script
       - name: Build VuePress site
         run: pnpm docs:build
+        working-directory: ./docs
 
       # please check out the docs of the workflow for more details
       # @see https://github.com/crazy-max/ghaction-github-pages
@@ -54,3 +52,4 @@ jobs:
         env:
           # @see https://docs.github.com/en/actions/reference/authentication-in-a-workflow#about-the-github_token-secret
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        working-directory: ./docs
