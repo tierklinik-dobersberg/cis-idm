@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/gofrs/uuid"
 	"github.com/ory/mail"
 	"github.com/tidwall/sjson"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -210,13 +211,24 @@ func (svc *Service) CreateUser(ctx context.Context, req *connect.Request[idmv1.C
 	}
 	usr := req.Msg.Profile.User
 
+
 	userModel := repo.User{
+		ID: usr.Id,
 		Username:    usr.Username,
 		FirstName:   usr.FirstName,
 		LastName:    usr.LastName,
 		DisplayName: usr.DisplayName,
 		Avatar:      usr.Avatar,
 		Birthday:    usr.Birthday,
+	}
+
+	if userModel.ID == "" {
+		id, err := uuid.NewV4()
+		if err != nil {
+			return nil, err
+		}
+
+		userModel.ID = id.String()
 	}
 
 	if usr.Extra != nil {
@@ -274,7 +286,13 @@ func (svc *Service) CreateUser(ctx context.Context, req *connect.Request[idmv1.C
 	var userAddresses []repo.UserAddress
 	if addresses := req.Msg.GetProfile().Addresses; len(addresses) > 0 {
 		for _, addr := range addresses {
+			id, err := uuid.NewV4()
+			if err != nil {
+				return nil, err
+			}
+
 			addrModel := repo.CreateUserAddressParams{
+				ID:  id.String(),
 				UserID:   userModel.ID,
 				CityCode: addr.CityCode,
 				CityName: addr.CityName,
@@ -294,7 +312,13 @@ func (svc *Service) CreateUser(ctx context.Context, req *connect.Request[idmv1.C
 	var userPhoneNumbers []repo.UserPhoneNumber
 	if phoneNumbers := req.Msg.GetProfile().PhoneNumbers; len(phoneNumbers) > 0 {
 		for _, nbr := range phoneNumbers {
+			id, err := uuid.NewV4()
+			if err != nil {
+				return nil, err
+			}
+
 			nbrModel := repo.CreateUserPhoneNumberParams{
+				ID: id.String(),
 				UserID:      userModel.ID,
 				PhoneNumber: nbr.Number,
 				Verified:    nbr.Verified,
@@ -312,7 +336,13 @@ func (svc *Service) CreateUser(ctx context.Context, req *connect.Request[idmv1.C
 	var userEmails []repo.UserEmail
 	if emails := req.Msg.GetProfile().EmailAddresses; len(emails) > 0 {
 		for idx, mail := range emails {
+			id, err := uuid.NewV4()
+			if err != nil {
+				return nil, err
+			}
+
 			mailModel := repo.CreateEMailParams{
+				ID: id.String(),
 				UserID:    userModel.ID,
 				Address:   mail.Address,
 				Verified:  true,

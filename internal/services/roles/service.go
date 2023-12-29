@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/bufbuild/connect-go"
+	"github.com/gofrs/uuid"
 	"github.com/hashicorp/go-multierror"
 	idmv1 "github.com/tierklinik-dobersberg/apis/gen/go/tkd/idm/v1"
 	"github.com/tierklinik-dobersberg/apis/gen/go/tkd/idm/v1/idmv1connect"
@@ -46,6 +47,15 @@ func (svc *Service) CreateRole(ctx context.Context, req *connect.Request[idmv1.C
 		Name:            req.Msg.Name,
 		Description:     req.Msg.Description,
 		DeleteProtected: req.Msg.DeleteProtection,
+	}
+
+	if params.ID == "" {
+		id, err := uuid.NewV4()
+		if err != nil {
+			return nil, err
+		}
+
+		params.ID = id.String()
 	}
 
 	roleModel, err := svc.Datastore.CreateRole(ctx, params)

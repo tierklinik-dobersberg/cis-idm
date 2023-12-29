@@ -86,6 +86,7 @@ func (p *Providers) GenerateRegistrationToken(ctx context.Context, creator repo.
 		expires := time.Now().Add(ttl)
 		tokenModel.Expires = sql.NullTime{
 			Time: expires,
+			Valid: true,
 		}
 	}
 

@@ -1,6 +1,7 @@
 package webauthn
 
 import (
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"time"
@@ -34,11 +35,31 @@ func (svc *Service) BeginRegistrationHandler(w http.ResponseWriter, r *http.Requ
 			return
 		}
 
+		tx, err := svc.Datastore.Tx(ctx, &sql.TxOptions{})
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+
+			return
+		}
+
 		// a user is performing an initial registration
-		userModel, err := svc.authService.CreateUser(ctx, repo.User{
+		userModel, err := svc.authService.CreateUser(ctx, tx, repo.CreateUserParams{
 			Username: payload.Username,
 		}, payload.Token)
+
 		if err != nil {
+			if err := tx.Rollback(); err != nil {
+				log.L(ctx).Errorf("failed to rollback transaction: %s", err)
+			}
+
+			http.Error(w, "internal server error", http.StatusInternalServerError)
+
+			return
+		}
+
+		if err := tx.Commit(); err != nil {
+			log.L(ctx).Errorf("failed to commit transaction: %s", err)
+
 			http.Error(w, "internal server error", http.StatusInternalServerError)
 
 			return
@@ -87,7 +108,7 @@ func (svc *Service) BeginRegistrationHandler(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	if err := svc.Cache.PutKeyTTL(ctx, sessionID.String(), session, session.Expires.Sub(time.Now())); err != nil {
+	if err := svc.Cache.PutKeyTTL(ctx, sessionID.String(), session, time.Until(session.Expires)); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 
 		return

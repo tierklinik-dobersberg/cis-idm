@@ -11,6 +11,7 @@ import (
 	"github.com/Masterminds/sprig/v3"
 	"github.com/SherClockHolmes/webpush-go"
 	"github.com/bufbuild/connect-go"
+	"github.com/gofrs/uuid"
 	"github.com/ory/mail"
 	idmv1 "github.com/tierklinik-dobersberg/apis/gen/go/tkd/idm/v1"
 	"github.com/tierklinik-dobersberg/apis/gen/go/tkd/idm/v1/idmv1connect"
@@ -272,7 +273,13 @@ func (svc *Service) AddWebPushSubscription(ctx context.Context, req *connect.Req
 		Keys:     keys,
 	}
 
+	id, err := uuid.NewV4()
+	if err != nil {
+		return nil, err
+	}
+
 	params := repo.CreateWebPushSubscriptionForUserParams{
+		ID: id.String(),
 		UserID:    claims.Subject,
 		UserAgent: req.Header().Get("User-Agent"),
 		Endpoint:  sub.Endpoint,

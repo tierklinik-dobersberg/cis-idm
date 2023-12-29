@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/bufbuild/connect-go"
+	"github.com/gofrs/uuid"
 	idmv1 "github.com/tierklinik-dobersberg/apis/gen/go/tkd/idm/v1"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/cache"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/config"
@@ -29,7 +30,13 @@ func (svc *Service) AddPhoneNumber(ctx context.Context, req *connect.Request[idm
 		return nil, fmt.Errorf("no token claims associated with request context")
 	}
 
+	id, err := uuid.NewV4()
+	if err != nil {
+		return nil, err
+	}
+
 	m := repo.CreateUserPhoneNumberParams{
+		ID: id.String(),
 		UserID:      claims.Subject,
 		PhoneNumber: req.Msg.Number,
 		Verified:    false,

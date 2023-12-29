@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/bufbuild/connect-go"
+	"github.com/gofrs/uuid"
 	"github.com/hashicorp/go-multierror"
 	"github.com/mennanov/fmutils"
 	"github.com/pquerna/otp/totp"
@@ -386,7 +387,17 @@ func (svc *AuthService) RegisterUser(ctx context.Context, req *connect.Request[i
 		return nil, err
 	}
 
-	userModel, err := svc.CreateUser(ctx, repo.User{
+	tx, err := svc.Datastore.Tx(ctx, &sql.TxOptions{})
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		if err := tx.Rollback(); err != nil && !errors.Is(err, sql.ErrTxDone) {
+			log.L(ctx).Errorf("failed to rollback transaction: %s", err)
+		}
+	}()
+
+	userModel, err := svc.CreateUser(ctx, tx, repo.CreateUserParams{
 		Username: req.Msg.Username,
 		Password: string(passwordHash),
 	}, req.Msg.RegistrationToken)
@@ -394,7 +405,15 @@ func (svc *AuthService) RegisterUser(ctx context.Context, req *connect.Request[i
 		return nil, err
 	}
 
-	if mailModel, err := svc.Datastore.CreateEMail(ctx, repo.CreateEMailParams{
+	id, err := uuid.NewV4()
+	if err != nil {
+		return nil, err
+	}
+
+	if mailModel, err := svc.Datastore.
+		WithTx(tx).
+		CreateEMail(ctx, repo.CreateEMailParams{
+		ID: id.String(),
 		UserID:    userModel.ID,
 		Address:   req.Msg.Email,
 		IsPrimary: true,
@@ -405,6 +424,12 @@ func (svc *AuthService) RegisterUser(ctx context.Context, req *connect.Request[i
 		if err := svc.SendMailVerification(ctx, *userModel, mailModel); err != nil {
 			log.L(ctx).WithError(err).Errorf("failed to send verification mail")
 		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		log.L(ctx).Errorf("failed to commit transaction: %s", err)
+
+		return nil, err
 	}
 
 	roles, err := svc.Datastore.GetRolesForUser(ctx, userModel.ID)
@@ -435,17 +460,28 @@ func (svc *AuthService) RegisterUser(ctx context.Context, req *connect.Request[i
 	return resp, nil
 }
 
-func (svc *AuthService) CreateUser(ctx context.Context, userModel repo.User, token string) (*repo.User, error) {
+func (svc *AuthService) CreateUser(ctx context.Context, tx *sql.Tx, params repo.CreateUserParams, token string) (*repo.User, error) {
 	var (
 		initialRoles []string
 		err          error
 	)
 
+	db := svc.Datastore.WithTx(tx)
+
+	if params.ID == "" {
+		id, err := uuid.NewV4()
+		if err != nil {
+			return nil, err
+		}
+
+		params.ID = id.String()
+	}
+
 	// ensure we have a valid registration token if IDM_REGISTRATION_REQUIRES_TOKEN is set to true.
 	// Note that we also accept a registration token even if it's not required so users can be
 	// bootstrapped with a set of initial roles.
 	if svc.Config.RegistrationRequiresToken || token != "" {
-		tokenModel, err := svc.Datastore.GetRegistrationToken(ctx, repo.GetRegistrationTokenParams{
+		tokenModel, err := db.GetRegistrationToken(ctx, repo.GetRegistrationTokenParams{
 			Token: token,
 			Expires: sql.NullTime{
 				Time: time.Now(),
@@ -464,7 +500,7 @@ func (svc *AuthService) CreateUser(ctx context.Context, userModel repo.User, tok
 			}
 		}
 
-		if _, err := svc.Datastore.MarkRegistrationTokenUsed(ctx, repo.MarkRegistrationTokenUsedParams{
+		if _, err := db.MarkRegistrationTokenUsed(ctx, repo.MarkRegistrationTokenUsedParams{
 			Token: token,
 			Expires: sql.NullTime{
 				Time: time.Now(),
@@ -477,24 +513,14 @@ func (svc *AuthService) CreateUser(ctx context.Context, userModel repo.User, tok
 		}
 	}
 
-	userModel, err = svc.Datastore.CreateUser(ctx, repo.CreateUserParams{
-		ID:          userModel.ID,
-		Username:    userModel.Username,
-		DisplayName: userModel.DisplayName,
-		FirstName:   userModel.FirstName,
-		LastName:    userModel.LastName,
-		Extra:       userModel.Extra,
-		Avatar:      userModel.Avatar,
-		Birthday:    userModel.Birthday,
-		Password:    userModel.Password,
-	})
+	userModel, err := db.CreateUser(ctx, params)
 	if err != nil {
 		return nil, err
 	}
 
 	merr := new(multierror.Error)
 	for _, role := range initialRoles {
-		if err := svc.Datastore.AssignRoleToUser(ctx, repo.AssignRoleToUserParams{
+		if err := db.AssignRoleToUser(ctx, repo.AssignRoleToUserParams{
 			UserID: userModel.ID,
 			RoleID: role,
 		}); err != nil {
