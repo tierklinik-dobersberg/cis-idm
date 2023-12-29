@@ -12,7 +12,6 @@ import (
 	"github.com/tierklinik-dobersberg/apis/pkg/log"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/middleware"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/repo"
-	"github.com/tierklinik-dobersberg/cis-idm/internal/repo/models"
 )
 
 func (svc *Service) BeginRegistrationHandler(w http.ResponseWriter, r *http.Request) {
@@ -21,7 +20,7 @@ func (svc *Service) BeginRegistrationHandler(w http.ResponseWriter, r *http.Requ
 
 	l.Infof("received request to begin webauthn registration")
 
-	var user models.User
+	var user repo.User
 	claims := middleware.ClaimsFromContext(ctx)
 	if claims == nil {
 		var payload struct {
@@ -36,7 +35,7 @@ func (svc *Service) BeginRegistrationHandler(w http.ResponseWriter, r *http.Requ
 		}
 
 		// a user is performing an initial registration
-		userModel, err := svc.authService.CreateUser(ctx, models.User{
+		userModel, err := svc.authService.CreateUser(ctx, repo.User{
 			Username: payload.Username,
 		}, payload.Token)
 		if err != nil {
@@ -154,7 +153,23 @@ func (svc *Service) FinishRegistrationHandler(w http.ResponseWriter, r *http.Req
 
 	ua := useragent.Parse(r.UserAgent())
 
-	if err := svc.Datastore.AddWebauthnCred(ctx, user.ID, *cred, ua); err != nil {
+	blob, err := json.Marshal(*cred)
+	if err != nil {
+		http.Error(w, "failed to store credentails: "+err.Error(), http.StatusInternalServerError)
+
+		return
+	}
+
+	params := repo.AddWebauthnCredParams{
+		UserID:       user.ID,
+		Cred:         string(blob),
+		ClientName:   ua.Name,
+		ClientOs:     ua.OS,
+		ClientDevice: ua.Device,
+		CredType:     string(cred.Authenticator.Attachment),
+	}
+
+	if err := svc.Datastore.AddWebauthnCred(ctx, params); err != nil {
 		http.Error(w, "failed to create credentials: "+err.Error(), http.StatusInternalServerError)
 
 		return

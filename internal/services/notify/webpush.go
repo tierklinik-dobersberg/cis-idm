@@ -12,7 +12,7 @@ import (
 	"github.com/SherClockHolmes/webpush-go"
 	idmv1 "github.com/tierklinik-dobersberg/apis/gen/go/tkd/idm/v1"
 	"github.com/tierklinik-dobersberg/apis/pkg/log"
-	"github.com/tierklinik-dobersberg/cis-idm/internal/repo/models"
+	"github.com/tierklinik-dobersberg/cis-idm/internal/repo"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/tmpl"
 )
 
@@ -142,9 +142,12 @@ func (svc *Service) sendWebPushNotification(
 		if res.StatusCode < 200 || res.StatusCode > 299 {
 			if res.StatusCode == http.StatusGone {
 				// this subscription has been removed/expired so remove it from the db
-				go func(sub models.Webpush) {
-					if err := svc.Datastore.DeleteWebPushSubscriptionByID(context.Background(), sub.ID); err != nil {
-						log.L(context.Background()).Errorf("failed to delete expired web-push subscription %s", sub.ID)
+				go func(sub repo.WebpushSubscription) {
+					rows, err := svc.Datastore.DeleteWebPushSubscriptionByID(context.Background(), sub.ID)
+					if err != nil {
+						log.L(context.Background()).Errorf("failed to delete expired web-push subscription %s: %s", sub.ID, err)
+					} else if rows == 0 {
+						log.L(context.Background()).Errorf("failed to delete expired web-push subscription %s: not found", sub.ID)
 					}
 				}(sub)
 			} else {

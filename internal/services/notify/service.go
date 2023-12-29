@@ -3,6 +3,7 @@ package notify
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	textTemplate "text/template"
@@ -16,7 +17,7 @@ import (
 	"github.com/tierklinik-dobersberg/apis/pkg/log"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/app"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/middleware"
-	"github.com/tierklinik-dobersberg/cis-idm/internal/repo/stmts"
+	"github.com/tierklinik-dobersberg/cis-idm/internal/repo"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/sms"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/tmpl"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -63,7 +64,7 @@ func (svc *Service) loadUsers(ctx context.Context, userIds []string) (map[string
 	for _, usr := range userIds {
 		userModel, err := svc.Datastore.GetUserByID(ctx, usr)
 		if err != nil {
-			if errors.Is(err, stmts.ErrNoResults) {
+			if errors.Is(err, sql.ErrNoRows) {
 				return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("user with id %q not found", usr))
 			}
 
@@ -271,7 +272,16 @@ func (svc *Service) AddWebPushSubscription(ctx context.Context, req *connect.Req
 		Keys:     keys,
 	}
 
-	if _, err := svc.Datastore.CreateWebPushSubscriptionForUser(ctx, claims.Subject, req.Header().Get("User-Agent"), tokenID, sub); err != nil {
+	params := repo.CreateWebPushSubscriptionForUserParams{
+		UserID:    claims.Subject,
+		UserAgent: req.Header().Get("User-Agent"),
+		Endpoint:  sub.Endpoint,
+		Auth:      sub.Keys.Auth,
+		Key:       sub.Keys.P256dh,
+		TokenID:   tokenID,
+	}
+
+	if err := svc.Datastore.CreateWebPushSubscriptionForUser(ctx, params); err != nil {
 		return nil, err
 	}
 

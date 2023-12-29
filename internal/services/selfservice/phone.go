@@ -2,6 +2,7 @@ package selfservice
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"math/rand"
@@ -13,8 +14,7 @@ import (
 	"github.com/tierklinik-dobersberg/cis-idm/internal/config"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/conv"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/middleware"
-	"github.com/tierklinik-dobersberg/cis-idm/internal/repo/models"
-	"github.com/tierklinik-dobersberg/cis-idm/internal/repo/stmts"
+	"github.com/tierklinik-dobersberg/cis-idm/internal/repo"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/sms"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/tmpl"
 )
@@ -29,20 +29,19 @@ func (svc *Service) AddPhoneNumber(ctx context.Context, req *connect.Request[idm
 		return nil, fmt.Errorf("no token claims associated with request context")
 	}
 
-	m := models.PhoneNumber{
+	m := repo.CreateUserPhoneNumberParams{
 		UserID:      claims.Subject,
 		PhoneNumber: req.Msg.Number,
 		Verified:    false,
-		Primary:     false,
 	}
 
-	m, err := svc.Datastore.AddUserPhoneNumber(ctx, m)
+	phone, err := svc.Datastore.CreateUserPhoneNumber(ctx, m)
 	if err != nil {
 		return nil, err
 	}
 
 	return connect.NewResponse(&idmv1.AddPhoneNumberResponse{
-		PhoneNumber: conv.PhoneNumberProtoFromPhoneNumber(m),
+		PhoneNumber: conv.PhoneNumberProtoFromPhoneNumber(phone),
 	}), nil
 }
 
@@ -56,8 +55,13 @@ func (svc *Service) DeletePhoneNumber(ctx context.Context, req *connect.Request[
 		return nil, fmt.Errorf("no token claims associated with request context")
 	}
 
-	if err := svc.Datastore.DeleteUserPhoneNumber(ctx, claims.Subject, req.Msg.Id); err != nil {
+	rows, err := svc.Datastore.DeleteUserPhoneNumber(ctx, repo.DeleteUserPhoneNumberParams{UserID: claims.Subject, ID: req.Msg.Id})
+	if err != nil {
 		return nil, err
+	}
+
+	if rows == 0 {
+		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("phone number not found"))
 	}
 
 	return connect.NewResponse(&idmv1.DeletePhoneNumberResponse{}), nil
@@ -73,8 +77,13 @@ func (svc *Service) MarkPhoneNumberAsPrimary(ctx context.Context, req *connect.R
 		return nil, fmt.Errorf("no token claims associated with request context")
 	}
 
-	if err := svc.Datastore.MarkPhoneNumberAsPrimary(ctx, claims.Subject, req.Msg.Id); err != nil {
+	rows, err := svc.Datastore.MarkPhoneNumberAsPrimary(ctx, repo.MarkPhoneNumberAsPrimaryParams{UserID: claims.Subject, ID: req.Msg.Id})
+	if err != nil {
 		return nil, err
+	}
+
+	if rows == 0 {
+		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("phone-number not found"))
 	}
 
 	return connect.NewResponse(&idmv1.MarkPhoneNumberAsPrimaryResponse{}), nil
@@ -92,9 +101,9 @@ func (svc *Service) ValidatePhoneNumber(ctx context.Context, req *connect.Reques
 
 	switch v := req.Msg.Step.(type) {
 	case *idmv1.ValidatePhoneNumberRequest_Id:
-		number, err := svc.Datastore.GetUserPhoneNumberByID(ctx, v.Id, claims.Subject)
+		number, err := svc.Datastore.GetPhoneNumberByID(ctx, repo.GetPhoneNumberByIDParams{ID: v.Id, UserID: claims.Subject})
 		if err != nil {
-			if errors.Is(err, stmts.ErrNoResults) {
+			if errors.Is(err, sql.ErrNoRows) {
 				return nil, connect.NewError(connect.CodeNotFound, nil)
 			}
 		}
@@ -139,12 +148,14 @@ func (svc *Service) ValidatePhoneNumber(ctx context.Context, req *connect.Reques
 			return nil, err
 		}
 
-		if err := svc.Datastore.MarkPhoneNumberAsVerified(ctx, claims.Subject, numberID); err != nil {
-			if errors.Is(err, stmts.ErrNoResults) {
-				return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("the verified number has been deleted from the profile"))
-			}
+		rows, err := svc.Datastore.MarkPhoneNumberAsVerified(ctx, repo.MarkPhoneNumberAsVerifiedParams{UserID: claims.Subject, ID: numberID})
+		if err != nil {
 
 			return nil, err
+		}
+
+		if rows == 0 {
+			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("the verified number has been deleted from the profile"))
 		}
 
 		return connect.NewResponse(&idmv1.ValidatePhoneNumberResponse{}), nil

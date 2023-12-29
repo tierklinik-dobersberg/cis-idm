@@ -3,6 +3,7 @@ package bootstrap
 import (
 	"context"
 	"crypto/rand"
+	"database/sql"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -11,11 +12,9 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/config"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/repo"
-	"github.com/tierklinik-dobersberg/cis-idm/internal/repo/models"
-	"github.com/tierklinik-dobersberg/cis-idm/internal/repo/stmts"
 )
 
-func Bootstrap(ctx context.Context, cfg config.Config, userRepo *repo.Repo) error {
+func Bootstrap(ctx context.Context, cfg config.Config, userRepo *repo.Queries) error {
 	superuserRoleID, err := bootstrapRole(ctx, userRepo, "idm_superuser", "Super-user management role", true)
 	if err != nil {
 		return err
@@ -42,12 +41,14 @@ func Bootstrap(ctx context.Context, cfg config.Config, userRepo *repo.Repo) erro
 		}
 		blobs, _ := json.Marshal([]string{"idm_superuser"})
 
-		token := models.RegistrationToken{
+		token := repo.CreateRegistrationTokenParams{
 			Token:        tokenValue,
 			InitialRoles: string(blobs),
-			AllowedUsage: new(int64),
+			AllowedUsage: sql.NullInt64{
+				Int64: 1,
+				Valid: true,
+			},
 		}
-		*token.AllowedUsage = 1
 
 		if err := userRepo.CreateRegistrationToken(ctx, token); err != nil {
 			return err
@@ -66,19 +67,19 @@ func Bootstrap(ctx context.Context, cfg config.Config, userRepo *repo.Repo) erro
 	return nil
 }
 
-func bootstrapRole(ctx context.Context, repo *repo.Repo, roleName, description string, deleteProtection bool) (string, error) {
-	role, err := repo.GetRoleByID(ctx, roleName)
+func bootstrapRole(ctx context.Context, ds *repo.Queries, roleName, description string, deleteProtection bool) (string, error) {
+	role, err := ds.GetRoleByID(ctx, roleName)
 	if err != nil {
-		if errors.Is(err, stmts.ErrNoResults) {
+		if errors.Is(err, sql.ErrNoRows) {
 
-			role = models.Role{
+			params := repo.CreateRoleParams{
 				ID:              roleName,
 				Name:            roleName,
 				Description:     description,
 				DeleteProtected: deleteProtection,
 			}
 
-			role, err = repo.CreateRole(ctx, role)
+			role, err = ds.CreateRole(ctx, params)
 			if err != nil {
 				return "", fmt.Errorf("failed to create role %s: %w", roleName, err)
 			}

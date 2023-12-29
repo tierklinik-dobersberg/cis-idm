@@ -43,7 +43,7 @@ COPY ./ ./
 COPY --from=builder /app/cmds/userd/static/ui /go/src/app/cmds/userd/static/ui
 COPY --from=mailbuild /app/mails/dist /go/src/app/internal/tmpl/templates/mail/
 
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /go/bin/userd ./cmds/userd
+RUN CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -tags "sqlite_foreign_keys" -o /go/bin/userd ./cmds/userd
 
 FROM gcr.io/distroless/static
 

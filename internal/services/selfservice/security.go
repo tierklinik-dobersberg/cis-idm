@@ -5,8 +5,8 @@ import (
 	"context"
 	"crypto/hmac"
 	"crypto/sha256"
+	"database/sql"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"image/png"
 	"math/rand"
@@ -16,7 +16,7 @@ import (
 	"github.com/pquerna/otp/totp"
 	idmv1 "github.com/tierklinik-dobersberg/apis/gen/go/tkd/idm/v1"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/middleware"
-	"github.com/tierklinik-dobersberg/cis-idm/internal/repo/stmts"
+	"github.com/tierklinik-dobersberg/cis-idm/internal/repo"
 	"github.com/vincent-petithory/dataurl"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -44,8 +44,13 @@ func (svc *Service) ChangePassword(ctx context.Context, req *connect.Request[idm
 		return nil, fmt.Errorf("failed to generate password hash: %w", err)
 	}
 
-	if err := svc.Datastore.SetUserPassword(ctx, claims.Subject, string(newHashedPassword)); err != nil {
+	rows, err := svc.Datastore.SetUserPassword(ctx, repo.SetUserPasswordParams{ID: claims.Subject, Password: string(newHashedPassword)})
+	if err != nil {
 		return nil, fmt.Errorf("failed to save user password: %w", err)
+	}
+
+	if rows == 0 {
+		return nil, fmt.Errorf("user not found")
 	}
 
 	return connect.NewResponse(&idmv1.ChangePasswordResponse{}), nil
@@ -64,7 +69,7 @@ func (svc *Service) Enroll2FA(ctx context.Context, req *connect.Request[idmv1.En
 
 	switch v := req.Msg.Kind.(type) {
 	case *idmv1.Enroll2FARequest_TotpStep1:
-		if user.TOTPSecret != "" {
+		if user.TotpSecret.String != "" {
 			return nil, connect.NewError(connect.CodeAlreadyExists, fmt.Errorf("totp already enrolled"))
 		}
 
@@ -110,7 +115,7 @@ func (svc *Service) Enroll2FA(ctx context.Context, req *connect.Request[idmv1.En
 		}), nil
 
 	case *idmv1.Enroll2FARequest_TotpStep2:
-		if user.TOTPSecret != "" {
+		if user.TotpSecret.String != "" {
 			return nil, connect.NewError(connect.CodeAlreadyExists, fmt.Errorf("totp already enrolled"))
 		}
 
@@ -128,7 +133,7 @@ func (svc *Service) Enroll2FA(ctx context.Context, req *connect.Request[idmv1.En
 			return nil, fmt.Errorf("invalid passcode")
 		}
 
-		if err := svc.Datastore.SetUserTotpSecret(ctx, claims.Subject, v.TotpStep2.Secret); err != nil {
+		if err := svc.Datastore.EnrollUserTOTPSecret(ctx, repo.EnrollUserTOTPSecretParams{ID: claims.Subject, TotpSecret: sql.NullString{String: v.TotpStep2.Secret}}); err != nil {
 			return nil, err
 		}
 
@@ -154,25 +159,31 @@ func (svc *Service) Remove2FA(ctx context.Context, req *connect.Request[idmv1.Re
 
 	switch v := req.Msg.Kind.(type) {
 	case *idmv1.Remove2FARequest_TotpCode:
-		if user.TOTPSecret == "" {
+		if user.TotpSecret.String == "" {
 			return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("totp 2fa not enrooled"))
 		}
 
-		valid := totp.Validate(v.TotpCode, user.TOTPSecret)
+		valid := totp.Validate(v.TotpCode, user.TotpSecret.String)
 		if !valid {
 			// check if the user used a recovery code
-			recoveryCodeErr := svc.Datastore.CheckAndDeleteRecoveryCode(ctx, user.ID, v.TotpCode)
+			rows, recoveryCodeErr := svc.Datastore.CheckAndDeleteRecoveryCode(ctx, repo.CheckAndDeleteRecoveryCodeParams{UserID: user.ID, Code: v.TotpCode})
 			if recoveryCodeErr != nil {
-				if errors.Is(recoveryCodeErr, stmts.ErrNoRowsAffected) {
-					return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("totp passcode invalid"))
-				}
 
 				return nil, recoveryCodeErr
 			}
+
+			if rows == 0 {
+				return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("totp passcode invalid"))
+			}
 		}
 
-		if err := svc.Datastore.RemoveUserTotpSecret(ctx, claims.Subject); err != nil {
+		rows, err := svc.Datastore.RemoveUserTOTPSecret(ctx, claims.Subject)
+		if err != nil {
 			return nil, err
+		}
+
+		if rows == 0 {
+			return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("user not found"))
 		}
 
 	default:
@@ -196,8 +207,17 @@ func (svc *Service) GenerateRecoveryCodes(ctx context.Context, req *connect.Requ
 		codes[i] = fmt.Sprintf("%d", rand.Intn(999999-100000)+100000)
 	}
 
-	if err := svc.Datastore.ReplaceUserRecoveryCodes(ctx, claims.Subject, codes); err != nil {
+	if err := svc.Datastore.RemoveAllRecoveryCodes(ctx, claims.Subject); err != nil {
 		return nil, err
+	}
+
+	for _, code := range codes {
+		if err := svc.Datastore.InsertRecoveryCodes(ctx, repo.InsertRecoveryCodesParams{
+			Code:   code,
+			UserID: claims.Subject,
+		}); err != nil {
+			return nil, err
+		}
 	}
 
 	return connect.NewResponse(&idmv1.GenerateRecoveryCodesResponse{

@@ -2,10 +2,10 @@ package middleware
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 
 	"github.com/bufbuild/connect-go"
-	"github.com/tierklinik-dobersberg/cis-idm/internal/repo/stmts"
 )
 
 func NewErrorInterceptor() connect.UnaryInterceptorFunc {
@@ -13,7 +13,7 @@ func NewErrorInterceptor() connect.UnaryInterceptorFunc {
 		return func(ctx context.Context, ar connect.AnyRequest) (connect.AnyResponse, error) {
 			resp, err := uf(ctx, ar)
 			if err != nil {
-				if errors.Is(err, stmts.ErrNoResults) {
+				if errors.Is(err, sql.ErrNoRows) {
 					return nil, connect.NewError(connect.CodeNotFound, err)
 				}
 			}

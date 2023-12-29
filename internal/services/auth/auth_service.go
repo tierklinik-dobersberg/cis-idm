@@ -2,11 +2,11 @@ package auth
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/bufbuild/connect-go"
@@ -24,8 +24,7 @@ import (
 	"github.com/tierklinik-dobersberg/cis-idm/internal/jwt"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/mailer"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/middleware"
-	"github.com/tierklinik-dobersberg/cis-idm/internal/repo/models"
-	"github.com/tierklinik-dobersberg/cis-idm/internal/repo/stmts"
+	"github.com/tierklinik-dobersberg/cis-idm/internal/repo"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/tmpl"
 	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/exp/slices"
@@ -48,7 +47,7 @@ func (svc *AuthService) Login(ctx context.Context, req *connect.Request[idmv1.Lo
 	r := req.Msg
 
 	var (
-		user models.User
+		user repo.User
 	)
 
 	// Log out any user that might still be logged-in.
@@ -81,11 +80,12 @@ func (svc *AuthService) Login(ctx context.Context, req *connect.Request[idmv1.Lo
 		user, err = svc.Datastore.GetUserByName(ctx, passwordAuth.GetUsername())
 		if err != nil {
 			if svc.Config.FeatureEnabled(config.FeatureLoginByMail) {
-				if errors.Is(err, stmts.ErrNoResults) {
-					var verified bool
-					user, verified, err = svc.Datastore.GetUserByEMail(ctx, passwordAuth.GetUsername())
+				if errors.Is(err, sql.ErrNoRows) {
+					response, err := svc.Datastore.GetUserByEMail(ctx, passwordAuth.GetUsername())
 
-					if err == nil && !verified {
+					user = response.User
+
+					if err == nil && !response.Verified {
 						return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("e-mail address has not been verified"))
 					}
 				}
@@ -103,7 +103,7 @@ func (svc *AuthService) Login(ctx context.Context, req *connect.Request[idmv1.Lo
 		}
 
 		// check if the user still needs to pass the 2fa
-		if user.TOTPSecret != "" {
+		if user.TotpSecret.String != "" {
 			state, _, err := svc.CreateSignedJWT(user, nil, "", time.Minute*5, jwt.Scope2FAPending)
 			if err != nil {
 				return nil, err
@@ -139,23 +139,28 @@ func (svc *AuthService) Login(ctx context.Context, req *connect.Request[idmv1.Lo
 			return nil, err
 		}
 
-		if user.TOTPSecret == "" {
+		if user.TotpSecret.String == "" {
 			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("totp not enrolled"))
 		}
 
-		valid := totp.Validate(req.Msg.GetTotp().Code, user.TOTPSecret)
+		valid := totp.Validate(req.Msg.GetTotp().Code, user.TotpSecret.String)
 		if !valid {
 			// if the code is not valid the user might used a recovery code.
 			// TODO(ppacher): do we have security implications if we automatically try
 			// recovery codes here?
-			recoveryCodeErr := svc.Datastore.CheckAndDeleteRecoveryCode(ctx, claims.Subject, req.Msg.GetTotp().Code)
+			rows, recoveryCodeErr := svc.Datastore.CheckAndDeleteRecoveryCode(ctx, repo.CheckAndDeleteRecoveryCodeParams{
+				UserID: claims.Subject,
+				Code:   req.Msg.GetTotp().Code,
+			})
+
 			if recoveryCodeErr != nil {
-				if errors.Is(recoveryCodeErr, stmts.ErrNoRowsAffected) {
-					return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("invalid totp passcode"))
-				}
 
 				// any other internal error
 				return nil, err
+			}
+
+			if rows == 0 {
+				return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("invalid totp passcode"))
 			}
 		}
 
@@ -166,7 +171,7 @@ func (svc *AuthService) Login(ctx context.Context, req *connect.Request[idmv1.Lo
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("unsupported authentication method"))
 	}
 
-	roles, err := svc.Datastore.GetUserRoles(ctx, user.ID)
+	roles, err := svc.Datastore.GetRolesForUser(ctx, user.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -174,14 +179,7 @@ func (svc *AuthService) Login(ctx context.Context, req *connect.Request[idmv1.Lo
 	// make sure we provide a display name in the response.
 	// - either join first and lastname
 	// - or fall back to the user name.
-	if user.DisplayName == "" {
-		switch {
-		case user.FirstName != "" || user.LastName != "":
-			user.DisplayName = strings.Join([]string{user.FirstName, user.LastName}, " ")
-		default:
-			user.DisplayName = user.Username
-		}
-	}
+	common.EnsureDisplayName(&user)
 
 	response := &idmv1.AccessTokenResponse{
 		User: &idmv1.User{
@@ -282,7 +280,7 @@ func (svc *AuthService) RefreshToken(ctx context.Context, req *connect.Request[i
 		return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("invalid refresh token"))
 	}
 
-	roles, err := svc.Datastore.GetUserRoles(ctx, claims.Subject)
+	roles, err := svc.Datastore.GetRolesForUser(ctx, claims.Subject)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get role assignments: %w", err)
 	}
@@ -352,7 +350,7 @@ func (svc *AuthService) GenerateRegistrationToken(ctx context.Context, req *conn
 
 	creator, err := svc.Datastore.GetUserByID(ctx, claims.Subject)
 	if err != nil {
-		if errors.Is(err, stmts.ErrNoResults) {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, fmt.Errorf("invalid jwt token or account deleted")
 		}
 
@@ -388,7 +386,7 @@ func (svc *AuthService) RegisterUser(ctx context.Context, req *connect.Request[i
 		return nil, err
 	}
 
-	userModel, err := svc.CreateUser(ctx, models.User{
+	userModel, err := svc.CreateUser(ctx, repo.User{
 		Username: req.Msg.Username,
 		Password: string(passwordHash),
 	}, req.Msg.RegistrationToken)
@@ -396,10 +394,10 @@ func (svc *AuthService) RegisterUser(ctx context.Context, req *connect.Request[i
 		return nil, err
 	}
 
-	if mailModel, err := svc.Datastore.CreateUserEmail(ctx, models.EMail{
-		UserID:  userModel.ID,
-		Address: req.Msg.Email,
-		Primary: true,
+	if mailModel, err := svc.Datastore.CreateEMail(ctx, repo.CreateEMailParams{
+		UserID:    userModel.ID,
+		Address:   req.Msg.Email,
+		IsPrimary: true,
 	}); err != nil {
 		// just log out the error but continue to sign in the user
 		log.L(ctx).WithError(err).Errorf("failed to save email address for user")
@@ -409,7 +407,7 @@ func (svc *AuthService) RegisterUser(ctx context.Context, req *connect.Request[i
 		}
 	}
 
-	roles, err := svc.Datastore.GetUserRoles(ctx, userModel.ID)
+	roles, err := svc.Datastore.GetRolesForUser(ctx, userModel.ID)
 	if err != nil {
 		log.L(ctx).WithError(err).Error("failed to get user role assignments")
 	}
@@ -437,7 +435,7 @@ func (svc *AuthService) RegisterUser(ctx context.Context, req *connect.Request[i
 	return resp, nil
 }
 
-func (svc *AuthService) CreateUser(ctx context.Context, userModel models.User, token string) (*models.User, error) {
+func (svc *AuthService) CreateUser(ctx context.Context, userModel repo.User, token string) (*repo.User, error) {
 	var (
 		initialRoles []string
 		err          error
@@ -447,9 +445,14 @@ func (svc *AuthService) CreateUser(ctx context.Context, userModel models.User, t
 	// Note that we also accept a registration token even if it's not required so users can be
 	// bootstrapped with a set of initial roles.
 	if svc.Config.RegistrationRequiresToken || token != "" {
-		tokenModel, err := svc.Datastore.ValidateRegistrationToken(ctx, token)
+		tokenModel, err := svc.Datastore.GetRegistrationToken(ctx, repo.GetRegistrationTokenParams{
+			Token: token,
+			Expires: sql.NullTime{
+				Time: time.Now(),
+			},
+		})
 		if err != nil {
-			if errors.Is(err, stmts.ErrNoResults) {
+			if errors.Is(err, sql.ErrNoRows) {
 				return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid registration token"))
 			}
 			return nil, err
@@ -461,22 +464,40 @@ func (svc *AuthService) CreateUser(ctx context.Context, userModel models.User, t
 			}
 		}
 
-		if err := svc.Datastore.MarkRegistrationTokenUsed(ctx, token); err != nil {
-			if errors.Is(err, stmts.ErrNoRowsAffected) {
+		if _, err := svc.Datastore.MarkRegistrationTokenUsed(ctx, repo.MarkRegistrationTokenUsedParams{
+			Token: token,
+			Expires: sql.NullTime{
+				Time: time.Now(),
+			},
+		}); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
 				return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid registration token"))
 			}
 			return nil, err
 		}
 	}
 
-	userModel, err = svc.Datastore.CreateUser(ctx, userModel)
+	userModel, err = svc.Datastore.CreateUser(ctx, repo.CreateUserParams{
+		ID:          userModel.ID,
+		Username:    userModel.Username,
+		DisplayName: userModel.DisplayName,
+		FirstName:   userModel.FirstName,
+		LastName:    userModel.LastName,
+		Extra:       userModel.Extra,
+		Avatar:      userModel.Avatar,
+		Birthday:    userModel.Birthday,
+		Password:    userModel.Password,
+	})
 	if err != nil {
 		return nil, err
 	}
 
 	merr := new(multierror.Error)
 	for _, role := range initialRoles {
-		if err := svc.Datastore.AssignRoleToUser(ctx, userModel.ID, role); err != nil {
+		if err := svc.Datastore.AssignRoleToUser(ctx, repo.AssignRoleToUserParams{
+			UserID: userModel.ID,
+			RoleID: role,
+		}); err != nil {
 			merr.Errors = append(merr.Errors, fmt.Errorf("failed to assign role %s: %w", role, err))
 		}
 	}
@@ -495,14 +516,17 @@ func (svc *AuthService) RequestPasswordReset(ctx context.Context, req *connect.R
 			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("missing username or email address"))
 		}
 
-		user, _, err := svc.Datastore.GetUserByEMail(ctx, v.Email)
-		if err != nil {
+		var user repo.User
+		response, err := svc.Datastore.GetUserByEMail(ctx, v.Email)
+		if err == nil {
+			user = response.User
+		} else {
 			user, err = svc.Datastore.GetUserByName(ctx, v.Email)
 			if err != nil {
 				return connect.NewResponse(&idmv1.RequestPasswordResetResponse{}), nil
 			}
 
-			primaryMail, err := svc.Datastore.GetUserPrimaryMail(ctx, user.ID)
+			primaryMail, err := svc.Datastore.GetPrimaryEmailForUserByID(ctx, user.ID)
 			if err != nil {
 				return connect.NewResponse(&idmv1.RequestPasswordResetResponse{}), nil
 			}
@@ -552,8 +576,16 @@ func (svc *AuthService) RequestPasswordReset(ctx context.Context, req *connect.R
 			return nil, err
 		}
 
-		if err := svc.Datastore.SetUserPassword(ctx, user.ID, string(hashed)); err != nil {
+		rows, err := svc.Datastore.SetUserPassword(ctx, repo.SetUserPasswordParams{
+			Password: string(hashed),
+			ID:       user.ID,
+		})
+		if err != nil {
 			return nil, err
+		}
+
+		if rows == 0 {
+			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("user not found"))
 		}
 
 	default:
@@ -569,13 +601,13 @@ func (svc *AuthService) invalidateTokens(ctx context.Context, claims *jwt.Claims
 	// mark the token as rejected
 	if err := common.Timing(ctx, "reject-access-token", func() error {
 		// delete the web-push subscription for the access token
-		_ = svc.Datastore.DeleteWebPushSubscriptionForToken(ctx, claims.ID)
+		_, _ = svc.Datastore.DeleteWebPushSubscriptionForToken(ctx, claims.ID)
 
-		return svc.Datastore.MarkTokenRejected(ctx, models.RejectedToken{
+		return svc.Datastore.CreateRejectedToken(ctx, repo.CreateRejectedTokenParams{
 			TokenID:   claims.ID,
 			UserID:    claims.Subject,
-			IssuedAt:  claims.IssuedAt,
-			ExpiresAt: claims.ExpiresAt,
+			IssuedAt:  time.Unix(claims.IssuedAt, 0),
+			ExpiresAt: time.Unix(claims.ExpiresAt, 0),
 		})
 	}); err != nil {
 		return fmt.Errorf("failed to mark token as rejected: %w", err)
@@ -585,13 +617,13 @@ func (svc *AuthService) invalidateTokens(ctx context.Context, claims *jwt.Claims
 	if claims.AppMetadata != nil && claims.AppMetadata.ParentTokenID != "" {
 		if err := common.Timing(ctx, "reject-refresh-token", func() error {
 			// delete the web-push subscription for the refresh token
-			_ = svc.Datastore.DeleteWebPushSubscriptionForToken(ctx, claims.AppMetadata.ParentTokenID)
+			_, _ = svc.Datastore.DeleteWebPushSubscriptionForToken(ctx, claims.AppMetadata.ParentTokenID)
 
-			return svc.Datastore.MarkTokenRejected(ctx, models.RejectedToken{
+			return svc.Datastore.CreateRejectedToken(ctx, repo.CreateRejectedTokenParams{
 				TokenID:   claims.AppMetadata.ParentTokenID,
 				UserID:    claims.Subject,
-				IssuedAt:  claims.IssuedAt,
-				ExpiresAt: claims.ExpiresAt,
+				IssuedAt:  time.Unix(claims.IssuedAt, 0),
+				ExpiresAt: time.Unix(claims.ExpiresAt, 0),
 			})
 		}); err != nil {
 			return fmt.Errorf("failed to mark token as rejected: %w", err)

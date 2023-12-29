@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,13 +13,13 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/tierklinik-dobersberg/apis/pkg/log"
 	"github.com/tierklinik-dobersberg/apis/pkg/server"
+	"github.com/tierklinik-dobersberg/cis-idm/internal/common"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/config"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/jwt"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/repo"
-	"github.com/tierklinik-dobersberg/cis-idm/internal/repo/stmts"
 )
 
-func AuthenticateRequest(cfg config.Config, ds *repo.Repo, req *http.Request) (*jwt.Claims, bool, error) {
+func AuthenticateRequest(cfg config.Config, ds *repo.Queries, req *http.Request) (*jwt.Claims, bool, error) {
 	ctx := req.Context()
 
 	l := log.L(ctx)
@@ -37,11 +38,11 @@ func AuthenticateRequest(cfg config.Config, ds *repo.Repo, req *http.Request) (*
 	if tokenErr == nil {
 		l.Debugf("found valid JWT for user %s (name=%q)", claims.Subject, claims.Name)
 
-		mail, err := ds.GetUserPrimaryMail(ctx, claims.Subject)
+		mail, err := ds.GetPrimaryEmailForUserByID(ctx, claims.Subject)
 		if err == nil {
 			claims.Email = mail.Address
 		} else {
-			if !errors.Is(err, stmts.ErrNoResults) {
+			if !errors.Is(err, sql.ErrNoRows) {
 				l.Errorf("failed to get primary user mail: %s", err)
 			} else {
 				l.Debugf("user does not have a primary mail address configured")
@@ -126,15 +127,17 @@ func AuthenticateRequest(cfg config.Config, ds *repo.Repo, req *http.Request) (*
 		return nil, false, fmt.Errorf("failed to find user: %w", err)
 	}
 
+	common.EnsureDisplayName(&user)
+
 	claims.Subject = user.ID
 	claims.Name = user.Username
 	claims.DisplayName = user.DisplayName
 
-	mail, err := ds.GetUserPrimaryMail(ctx, claims.Subject)
+	mail, err := ds.GetPrimaryEmailForUserByID(ctx, claims.Subject)
 	if err == nil {
 		claims.Email = mail.Address
 	} else {
-		if !errors.Is(err, stmts.ErrNoResults) {
+		if !errors.Is(err, sql.ErrNoRows) {
 			l.Errorf("failed to get primary user mail: %s", err)
 		} else {
 			l.Debugf("user does not have a primary mail address configured")
@@ -143,7 +146,7 @@ func AuthenticateRequest(cfg config.Config, ds *repo.Repo, req *http.Request) (*
 
 	// get user roles and append to the claims.
 
-	userRoles, err := ds.GetUserRoles(ctx, claims.Subject)
+	userRoles, err := ds.GetRolesForUser(ctx, claims.Subject)
 	if err == nil {
 		claims.AppMetadata = &jwt.AppMetadata{
 			Authorization: &jwt.Authorization{},
@@ -158,7 +161,7 @@ func AuthenticateRequest(cfg config.Config, ds *repo.Repo, req *http.Request) (*
 	return claims, true, nil
 }
 
-func NewJWTMiddleware(cfg config.Config, repo *repo.Repo, next http.Handler, skipVerifyFunc func(r *http.Request) bool) http.HandlerFunc {
+func NewJWTMiddleware(cfg config.Config, repo *repo.Queries, next http.Handler, skipVerifyFunc func(r *http.Request) bool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 

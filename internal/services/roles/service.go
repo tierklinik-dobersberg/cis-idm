@@ -2,6 +2,7 @@ package roles
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 
@@ -11,8 +12,7 @@ import (
 	"github.com/tierklinik-dobersberg/apis/gen/go/tkd/idm/v1/idmv1connect"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/app"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/conv"
-	"github.com/tierklinik-dobersberg/cis-idm/internal/repo/models"
-	"github.com/tierklinik-dobersberg/cis-idm/internal/repo/stmts"
+	"github.com/tierklinik-dobersberg/cis-idm/internal/repo"
 )
 
 type Service struct {
@@ -31,7 +31,7 @@ func (svc *Service) CreateRole(ctx context.Context, req *connect.Request[idmv1.C
 	if req.Msg.Id != "" {
 		_, err := svc.Datastore.GetRoleByID(ctx, req.Msg.Id)
 		if err != nil {
-			if !errors.Is(err, stmts.ErrNoResults) {
+			if !errors.Is(err, sql.ErrNoRows) {
 				return nil, fmt.Errorf("failed to query for conflicting roles: %w", err)
 			}
 		}
@@ -41,14 +41,14 @@ func (svc *Service) CreateRole(ctx context.Context, req *connect.Request[idmv1.C
 		}
 	}
 
-	roleModel := models.Role{
+	params := repo.CreateRoleParams{
 		ID:              req.Msg.Id,
 		Name:            req.Msg.Name,
 		Description:     req.Msg.Description,
 		DeleteProtected: req.Msg.DeleteProtection,
 	}
 
-	roleModel, err := svc.Datastore.CreateRole(ctx, roleModel)
+	roleModel, err := svc.Datastore.CreateRole(ctx, params)
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +61,7 @@ func (svc *Service) CreateRole(ctx context.Context, req *connect.Request[idmv1.C
 func (svc *Service) UpdateRole(ctx context.Context, req *connect.Request[idmv1.UpdateRoleRequest]) (*connect.Response[idmv1.UpdateRoleResponse], error) {
 	role, err := svc.Datastore.GetRoleByID(ctx, req.Msg.RoleId)
 	if err != nil {
-		if errors.Is(err, stmts.ErrNoResults) {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, connect.NewError(connect.CodeNotFound, nil)
 		}
 
@@ -73,20 +73,28 @@ func (svc *Service) UpdateRole(ctx context.Context, req *connect.Request[idmv1.U
 		paths = []string{"name", "description", "delete_protection"}
 	}
 
+	update := repo.UpdateRoleParams{
+		Name:            role.Name,
+		Description:     role.Description,
+		DeleteProtected: role.DeleteProtected,
+		ID:              role.ID,
+	}
+
 	for _, p := range paths {
 		switch p {
 		case "name":
-			role.Name = req.Msg.Name
+			update.Name = req.Msg.Name
 		case "description":
-			role.Description = req.Msg.Description
+			update.Description = req.Msg.Description
 		case "delete_protection":
-			role.DeleteProtected = req.Msg.DeleteProtection
+			update.DeleteProtected = req.Msg.DeleteProtection
 		default:
 			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("unknown field_mask.path %q", p))
 		}
 	}
 
-	if err := svc.Datastore.UpdateRole(ctx, role); err != nil {
+	role, err = svc.Datastore.UpdateRole(ctx, update)
+	if err != nil {
 		return nil, err
 	}
 
@@ -103,7 +111,7 @@ func (svc *Service) UpdateRole(ctx context.Context, req *connect.Request[idmv1.U
 func (svc *Service) DeleteRole(ctx context.Context, req *connect.Request[idmv1.DeleteRoleRequest]) (*connect.Response[idmv1.DeleteRoleResponse], error) {
 	role, err := svc.Datastore.GetRoleByID(ctx, req.Msg.RoleId)
 	if err != nil {
-		if errors.Is(err, stmts.ErrNoResults) {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, connect.NewError(connect.CodeNotFound, err)
 		}
 
@@ -114,8 +122,13 @@ func (svc *Service) DeleteRole(ctx context.Context, req *connect.Request[idmv1.D
 		return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("role is delete protected"))
 	}
 
-	if err := svc.Datastore.DeleteRole(ctx, role.ID); err != nil {
+	rows, err := svc.Datastore.DeleteRole(ctx, role.ID)
+	if err != nil {
 		return nil, err
+	}
+
+	if rows == 0 {
+		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("role not found"))
 	}
 
 	return connect.NewResponse(&idmv1.DeleteRoleResponse{}), nil
@@ -136,7 +149,7 @@ func (svc *Service) ListRoles(ctx context.Context, req *connect.Request[idmv1.Li
 
 func (svc *Service) GetRole(ctx context.Context, req *connect.Request[idmv1.GetRoleRequest]) (*connect.Response[idmv1.GetRoleResponse], error) {
 	var (
-		role models.Role
+		role repo.Role
 		err  error
 	)
 
@@ -155,7 +168,7 @@ func (svc *Service) GetRole(ctx context.Context, req *connect.Request[idmv1.GetR
 	}
 
 	if err != nil {
-		if errors.Is(err, stmts.ErrNoResults) {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("role %s not found", selector))
 		}
 		return nil, err
@@ -169,7 +182,7 @@ func (svc *Service) GetRole(ctx context.Context, req *connect.Request[idmv1.GetR
 func (svc *Service) AssignRoleToUser(ctx context.Context, req *connect.Request[idmv1.AssignRoleToUserRequest]) (*connect.Response[idmv1.AssignRoleToUserResponse], error) {
 	role, err := svc.Datastore.GetRoleByID(ctx, req.Msg.RoleId)
 	if err != nil {
-		if errors.Is(err, stmts.ErrNoResults) {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("role not found"))
 		}
 		return nil, err
@@ -183,7 +196,10 @@ func (svc *Service) AssignRoleToUser(ctx context.Context, req *connect.Request[i
 			continue
 		}
 
-		if err := svc.Datastore.AssignRoleToUser(ctx, user.ID, role.ID); err != nil {
+		if err := svc.Datastore.AssignRoleToUser(ctx, repo.AssignRoleToUserParams{
+			UserID: user.ID,
+			RoleID: role.ID,
+		}); err != nil {
 			merr.Errors = append(merr.Errors, fmt.Errorf("user %s: %w", userID, err))
 			continue
 		}
@@ -199,7 +215,7 @@ func (svc *Service) AssignRoleToUser(ctx context.Context, req *connect.Request[i
 func (svc *Service) UnassignRoleFromUser(ctx context.Context, req *connect.Request[idmv1.UnassignRoleFromUserRequest]) (*connect.Response[idmv1.UnassignRoleFromUserResponse], error) {
 	role, err := svc.Datastore.GetRoleByID(ctx, req.Msg.RoleId)
 	if err != nil {
-		if errors.Is(err, stmts.ErrNoResults) {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("role not found"))
 		}
 		return nil, err
@@ -213,9 +229,17 @@ func (svc *Service) UnassignRoleFromUser(ctx context.Context, req *connect.Reque
 			continue
 		}
 
-		if err := svc.Datastore.UnassignRoleFromUser(ctx, user.ID, role.ID); err != nil {
+		rows, err := svc.Datastore.UnassignRoleFromUser(ctx, repo.UnassignRoleFromUserParams{
+			UserID: user.ID,
+			RoleID: role.ID,
+		})
+		if err != nil {
 			merr.Errors = append(merr.Errors, fmt.Errorf("user %s: %w", userID, err))
 			continue
+		}
+
+		if rows == 0 {
+			merr.Errors = append(merr.Errors, fmt.Errorf("user-assignment for user %s and role %s: not found", user.ID, role.ID))
 		}
 	}
 

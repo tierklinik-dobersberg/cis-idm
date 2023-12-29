@@ -77,10 +77,7 @@ type Config struct {
 	// require all users to re-login.
 	JWTSecret string `json:"jwtSecret"`
 
-	// DatabaseURL is the URL to one of the rqlite cluster members.
-	// It should have the format of
-	//   http://rqlite:4001/
-	DatabaseURL string `json:"rqliteURL"`
+	DatabaseURL string `json:"databaseURL"`
 
 	// SecureCookie defines whether or not cookies should be set with the
 	// Secure attribute. If left empty, SecureCookie will be automatically

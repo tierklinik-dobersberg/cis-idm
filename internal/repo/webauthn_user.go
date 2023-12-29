@@ -2,20 +2,20 @@ package repo
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/go-webauthn/webauthn/webauthn"
 	"github.com/sirupsen/logrus"
-	"github.com/tierklinik-dobersberg/cis-idm/internal/repo/models"
 )
 
 type WebauthnUser struct {
-	models.User
-	repo *Repo
+	User
+	repo *Queries
 	ctx  context.Context
 	log  *logrus.Entry
 }
 
-func NewWebAuthnUser(ctx context.Context, log *logrus.Entry, repo *Repo, usr models.User) webauthn.User {
+func NewWebAuthnUser(ctx context.Context, log *logrus.Entry, repo *Queries, usr User) webauthn.User {
 	return &WebauthnUser{
 		User: usr,
 		repo: repo,
@@ -54,7 +54,17 @@ func (usr *WebauthnUser) WebAuthnCredentials() []webauthn.Credential {
 		usr.log.Errorf("user does not have any webauthn credentials yet.")
 	}
 
-	return res
+	result := make([]webauthn.Credential, 0, len(res))
+	for _, r := range res {
+		var w webauthn.Credential
+		if err := json.Unmarshal([]byte(r.Cred), &w); err != nil {
+			continue
+		}
+
+		result = append(result, w)
+	}
+
+	return result
 }
 
 func (usr *WebauthnUser) WebAuthnIcon() string {

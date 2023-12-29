@@ -13,7 +13,6 @@ import (
 	"github.com/tierklinik-dobersberg/cis-idm/internal/config"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/middleware"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/repo"
-	"github.com/tierklinik-dobersberg/cis-idm/internal/repo/models"
 )
 
 func (svc *Service) BeginLoginHandler(w http.ResponseWriter, r *http.Request) {
@@ -31,10 +30,11 @@ func (svc *Service) BeginLoginHandler(w http.ResponseWriter, r *http.Request) {
 		user, err := svc.Datastore.GetUserByName(ctx, userNameOrEmail)
 		if err != nil {
 			if svc.Config.FeatureEnabled(config.FeatureLoginByMail) {
-				var verified bool
-				user, verified, err = svc.Datastore.GetUserByEMail(ctx, userNameOrEmail)
+				response, err := svc.Datastore.GetUserByEMail(ctx, userNameOrEmail)
 
-				if err == nil && !verified {
+				user = response.User
+
+				if err == nil && !response.Verified {
 					http.Error(w, "e-mail address not verified", http.StatusPreconditionFailed)
 
 					return
@@ -131,7 +131,7 @@ func (svc *Service) FinishLoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var user models.User
+	var user repo.User
 	getUserID := func(rawID, userHandle []byte) (webauthn.User, error) {
 		var err error
 		user, err = svc.Datastore.GetUserByID(ctx, string(userHandle))
@@ -172,7 +172,7 @@ func (svc *Service) FinishLoginHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	roles, err := svc.Datastore.GetUserRoles(ctx, user.ID)
+	roles, err := svc.Datastore.GetRolesForUser(ctx, user.ID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 

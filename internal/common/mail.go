@@ -2,29 +2,32 @@ package common
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/bufbuild/connect-go"
 	"github.com/tierklinik-dobersberg/apis/pkg/log"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/config"
-	"github.com/tierklinik-dobersberg/cis-idm/internal/repo/models"
-	"github.com/tierklinik-dobersberg/cis-idm/internal/repo/stmts"
+	"github.com/tierklinik-dobersberg/cis-idm/internal/repo"
 )
 
-func (svc *Service) AddEmailAddressToUser(ctx context.Context, mailModel models.EMail) (*models.EMail, []models.EMail, error) {
+func (svc *Service) AddEmailAddressToUser(ctx context.Context, mailModel repo.UserEmail) (*repo.UserEmail, []repo.UserEmail, error) {
 	userID := mailModel.UserID
 
 	if !svc.cfg.FeatureEnabled(config.FeatureEMails) {
 		return nil, nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("email: %w", config.ErrFeatureDisabled))
 	}
 
-	addedMail, err := svc.repo.CreateUserEmail(ctx, mailModel)
+	addedMail, err := svc.repo.CreateEMail(ctx, repo.CreateEMailParams{
+		ID:       mailModel.ID,
+		UserID:   mailModel.UserID,
+		Address:  mailModel.Address,
+		Verified: mailModel.Verified,
+	})
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to store new email address: %w", err)
 	}
 
-	mails, err := svc.repo.GetUserEmails(ctx, userID)
+	mails, err := svc.repo.GetEmailsForUserByID(ctx, userID)
 	if err != nil {
 		return &addedMail, nil, fmt.Errorf("failed to get existing user emails: %w", err)
 	}
@@ -32,18 +35,25 @@ func (svc *Service) AddEmailAddressToUser(ctx context.Context, mailModel models.
 	return &addedMail, mails, nil
 }
 
-func (svc *Service) DeleteEmailAddressFromUser(ctx context.Context, userID string, mailID string) ([]models.EMail, error) {
+func (svc *Service) DeleteEmailAddressFromUser(ctx context.Context, userID string, mailID string) ([]repo.UserEmail, error) {
 	if !svc.cfg.FeatureEnabled(config.FeatureEMails) {
 		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("email: %w", config.ErrFeatureDisabled))
 	}
 
 	log.L(ctx).WithField("email_id", mailID).Infof("deleting email address from user")
 
-	if err := svc.repo.DeleteEMailFromUser(ctx, userID, mailID); err != nil {
+	if rows, err := svc.repo.DeleteEMailFromUser(ctx, repo.DeleteEMailFromUserParams{
+		ID:     mailID,
+		UserID: userID,
+	}); err == nil {
+		if rows == 0 {
+			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("mail with id %q not found", mailID))
+		}
+	} else {
 		return nil, fmt.Errorf("failed to delete email from user: %w", err)
 	}
 
-	mails, err := svc.repo.GetUserEmails(ctx, userID)
+	mails, err := svc.repo.GetEmailsForUserByID(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get existing user emails: %w", err)
 	}
@@ -56,11 +66,14 @@ func (svc *Service) MarkEmailAsPrimary(ctx context.Context, userID string, mailI
 		return connect.NewError(connect.CodeUnavailable, fmt.Errorf("addresses: %w", config.ErrFeatureDisabled))
 	}
 
-	if err := svc.repo.MarkEmailAsPrimary(ctx, userID, mailID); err != nil {
-		if errors.Is(err, stmts.ErrNoRowsAffected) {
-			return connect.NewError(connect.CodeNotFound, fmt.Errorf("email address not found"))
+	if rows, err := svc.repo.MarkEmailAsPrimary(ctx, repo.MarkEmailAsPrimaryParams{
+		ID:     mailID,
+		UserID: userID,
+	}); err == nil {
+		if rows == 0 {
+			return connect.NewError(connect.CodeNotFound, fmt.Errorf("mail with id %q not found", mailID))
 		}
-
+	} else {
 		return err
 	}
 

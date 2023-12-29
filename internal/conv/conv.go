@@ -6,13 +6,13 @@ import (
 
 	idmv1 "github.com/tierklinik-dobersberg/apis/gen/go/tkd/idm/v1"
 	"github.com/tierklinik-dobersberg/apis/pkg/log"
-	"github.com/tierklinik-dobersberg/cis-idm/internal/repo/models"
+	"github.com/tierklinik-dobersberg/cis-idm/internal/repo"
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
 type UserOption func(u *idmv1.Profile)
 
-func UserProtoFromUser(ctx context.Context, user models.User) *idmv1.User {
+func UserProtoFromUser(ctx context.Context, user repo.User) *idmv1.User {
 	var extra *structpb.Struct
 	if len(user.Extra) > 0 {
 		var m map[string]any
@@ -41,10 +41,10 @@ func UserProtoFromUser(ctx context.Context, user models.User) *idmv1.User {
 	return usr
 }
 
-func ProfileProtoFromUser(ctx context.Context, user models.User, useropts ...UserOption) *idmv1.Profile {
+func ProfileProtoFromUser(ctx context.Context, user repo.User, useropts ...UserOption) *idmv1.Profile {
 	profile := &idmv1.Profile{
 		User:                UserProtoFromUser(ctx, user),
-		TotpEnabled:         user.TOTPSecret != "",
+		TotpEnabled:         user.TotpSecret.String != "",
 		PasswordAuthEnabled: user.Password != "",
 	}
 
@@ -55,7 +55,7 @@ func ProfileProtoFromUser(ctx context.Context, user models.User, useropts ...Use
 	return profile
 }
 
-func RoleProtoFromRole(role models.Role) *idmv1.Role {
+func RoleProtoFromRole(role repo.Role) *idmv1.Role {
 	return &idmv1.Role{
 		Id:              role.ID,
 		Name:            role.Name,
@@ -64,7 +64,7 @@ func RoleProtoFromRole(role models.Role) *idmv1.Role {
 	}
 }
 
-func RolesProtoFromRoles(roles ...models.Role) []*idmv1.Role {
+func RolesProtoFromRoles(roles ...repo.Role) []*idmv1.Role {
 	res := make([]*idmv1.Role, len(roles))
 
 	for idx, r := range roles {
@@ -74,16 +74,16 @@ func RolesProtoFromRoles(roles ...models.Role) []*idmv1.Role {
 	return res
 }
 
-func EmailProtoFromEmail(email models.EMail) *idmv1.EMail {
+func EmailProtoFromEmail(email repo.UserEmail) *idmv1.EMail {
 	return &idmv1.EMail{
 		Id:       email.ID,
 		Address:  email.Address,
 		Verified: email.Verified,
-		Primary:  email.Primary,
+		Primary:  email.IsPrimary,
 	}
 }
 
-func EmailProtosFromEmails(emails ...models.EMail) []*idmv1.EMail {
+func EmailProtosFromEmails(emails ...repo.UserEmail) []*idmv1.EMail {
 	result := make([]*idmv1.EMail, len(emails))
 	for idx, e := range emails {
 		result[idx] = EmailProtoFromEmail(e)
@@ -92,7 +92,7 @@ func EmailProtosFromEmails(emails ...models.EMail) []*idmv1.EMail {
 	return result
 }
 
-func AddressProtoFromAddress(addr models.Address) *idmv1.Address {
+func AddressProtoFromAddress(addr repo.UserAddress) *idmv1.Address {
 	return &idmv1.Address{
 		Id:       addr.ID,
 		CityCode: addr.CityCode,
@@ -102,16 +102,16 @@ func AddressProtoFromAddress(addr models.Address) *idmv1.Address {
 	}
 }
 
-func PhoneNumberProtoFromPhoneNumber(nbr models.PhoneNumber) *idmv1.PhoneNumber {
+func PhoneNumberProtoFromPhoneNumber(nbr repo.UserPhoneNumber) *idmv1.PhoneNumber {
 	return &idmv1.PhoneNumber{
 		Id:       nbr.ID,
 		Number:   nbr.PhoneNumber,
 		Verified: nbr.Verified,
-		Primary:  nbr.Primary,
+		Primary:  nbr.IsPrimary,
 	}
 }
 
-func PhoneNumberProtosFromPhoneNumbers(nbrs ...models.PhoneNumber) []*idmv1.PhoneNumber {
+func PhoneNumberProtosFromPhoneNumbers(nbrs ...repo.UserPhoneNumber) []*idmv1.PhoneNumber {
 	result := make([]*idmv1.PhoneNumber, len(nbrs))
 	for idx, n := range nbrs {
 		result[idx] = PhoneNumberProtoFromPhoneNumber(n)
@@ -120,7 +120,7 @@ func PhoneNumberProtosFromPhoneNumbers(nbrs ...models.PhoneNumber) []*idmv1.Phon
 	return result
 }
 
-func AddressProtosFromAddresses(addrs ...models.Address) []*idmv1.Address {
+func AddressProtosFromAddresses(addrs ...repo.UserAddress) []*idmv1.Address {
 	result := make([]*idmv1.Address, len(addrs))
 	for idx, a := range addrs {
 		result[idx] = AddressProtoFromAddress(a)
@@ -129,25 +129,25 @@ func AddressProtosFromAddresses(addrs ...models.Address) []*idmv1.Address {
 	return result
 }
 
-func WithAddresses(addresses ...models.Address) UserOption {
+func WithAddresses(addresses ...repo.UserAddress) UserOption {
 	return func(u *idmv1.Profile) {
 		u.Addresses = AddressProtosFromAddresses(addresses...)
 	}
 }
 
-func WithPhoneNumbers(phoneNumbers ...models.PhoneNumber) UserOption {
+func WithPhoneNumbers(phoneNumbers ...repo.UserPhoneNumber) UserOption {
 	return func(u *idmv1.Profile) {
 		u.PhoneNumbers = PhoneNumberProtosFromPhoneNumbers(phoneNumbers...)
 	}
 }
 
-func WithEmailAddresses(emails ...models.EMail) UserOption {
+func WithEmailAddresses(emails ...repo.UserEmail) UserOption {
 	return func(u *idmv1.Profile) {
 		u.EmailAddresses = EmailProtosFromEmails(emails...)
 	}
 }
 
-func WithPrimaryMail(mail *models.EMail) UserOption {
+func WithPrimaryMail(mail *repo.UserEmail) UserOption {
 	return func(u *idmv1.Profile) {
 		if mail == nil {
 			return
@@ -157,7 +157,7 @@ func WithPrimaryMail(mail *models.EMail) UserOption {
 	}
 }
 
-func WithPrimaryPhone(phone *models.PhoneNumber) UserOption {
+func WithPrimaryPhone(phone *repo.UserPhoneNumber) UserOption {
 	return func(u *idmv1.Profile) {
 		if phone == nil {
 			return
@@ -167,7 +167,7 @@ func WithPrimaryPhone(phone *models.PhoneNumber) UserOption {
 	}
 }
 
-func WithRoles(roles ...models.Role) UserOption {
+func WithRoles(roles ...repo.Role) UserOption {
 	return func(u *idmv1.Profile) {
 		u.Roles = RolesProtoFromRoles(roles...)
 	}

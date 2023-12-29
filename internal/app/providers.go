@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -19,8 +20,6 @@ import (
 	"github.com/tierklinik-dobersberg/cis-idm/internal/mailer"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/middleware"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/repo"
-	"github.com/tierklinik-dobersberg/cis-idm/internal/repo/models"
-	"github.com/tierklinik-dobersberg/cis-idm/internal/repo/stmts"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/sms"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/tmpl"
 	"golang.org/x/exp/slices"
@@ -32,7 +31,7 @@ type Providers struct {
 	TemplateEngine *tmpl.Engine
 	SMSSender      sms.Sender
 	Mailer         mailer.Mailer
-	Datastore      *repo.Repo
+	Datastore      *repo.Queries
 	Config         config.Config
 	Common         *common.Service
 	ProtoRegistry  *protoregistry.Files
@@ -40,7 +39,7 @@ type Providers struct {
 	Cache          cache.Cache
 }
 
-func (p *Providers) SendMailVerification(ctx context.Context, user models.User, mail models.EMail) error {
+func (p *Providers) SendMailVerification(ctx context.Context, user repo.User, mail repo.UserEmail) error {
 	secret, err := bootstrap.GenerateSecret(16)
 	if err != nil {
 		return err
@@ -67,27 +66,27 @@ func (p *Providers) SendMailVerification(ctx context.Context, user models.User, 
 	return nil
 }
 
-func (p *Providers) GenerateRegistrationToken(ctx context.Context, creator models.User, maxCount uint64, ttl time.Duration, initialRoles []string) (string, error) {
+func (p *Providers) GenerateRegistrationToken(ctx context.Context, creator repo.User, maxCount uint64, ttl time.Duration, initialRoles []string) (string, error) {
 	token, err := bootstrap.GenerateSecret(8)
 	if err != nil {
 		return "", err
 	}
 
-	tokenModel := models.RegistrationToken{
+	tokenModel := repo.CreateRegistrationTokenParams{
 		Token:     token,
 		CreatedBy: creator.ID,
-		CreatedAt: time.Now().Unix(),
+		CreatedAt: time.Now(),
 	}
 
 	if maxCount > 0 {
-		i := new(int64)
-		*i = int64(maxCount)
-		tokenModel.AllowedUsage = i
+		tokenModel.AllowedUsage = sql.NullInt64{Int64: int64(maxCount)}
 	}
 
 	if ttl > 0 {
-		expires := time.Now().Add(ttl).Unix()
-		tokenModel.Expires = &expires
+		expires := time.Now().Add(ttl)
+		tokenModel.Expires = sql.NullTime{
+			Time: expires,
+		}
 	}
 
 	if len(initialRoles) > 0 {
@@ -96,14 +95,14 @@ func (p *Providers) GenerateRegistrationToken(ctx context.Context, creator model
 		for _, role := range initialRoles {
 			roleModel, err := p.Datastore.GetRoleByID(ctx, role)
 			if err != nil {
-				if errors.Is(err, stmts.ErrNoResults) {
+				if errors.Is(err, sql.ErrNoRows) {
 					roleModel, err = p.Datastore.GetRoleByName(ctx, role)
 				}
 			}
 
 			if err != nil {
-				if errors.Is(err, stmts.ErrNoResults) {
-					return "", connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("roles %q does not exist", role))
+				if errors.Is(err, sql.ErrNoRows) {
+					return "", connect.NewError(connect.CodeNotFound, fmt.Errorf("roles %q does not exist", role))
 				}
 
 				return "", err
@@ -140,51 +139,46 @@ func getCurrentFieldVisiblity(ctx context.Context, id string) config.FieldVisibi
 	return config.FieldVisibilityPublic
 }
 
-func (p *Providers) GetUserProfileProto(ctx context.Context, usr models.User) (*idmv1.Profile, error) {
+func (p *Providers) GetUserProfileProto(ctx context.Context, usr repo.User) (*idmv1.Profile, error) {
 	addresses, err := p.Datastore.GetUserAddresses(ctx, usr.ID)
 	if err != nil {
 		log.L(ctx).Errorf("failed to get user addresses: %s", err)
 	}
 
-	mails, err := p.Datastore.GetUserEmails(ctx, usr.ID)
-	if err != nil {
-		log.L(ctx).Errorf("failed to get user emails: %s", err)
-	}
-
-	phones, err := p.Datastore.GetUserPhoneNumbers(ctx, usr.ID)
+	phones, err := p.Datastore.GetPhoneNumbersByUserID(ctx, usr.ID)
 	if err != nil {
 		log.L(ctx).Errorf("failed to get user phone numbers: %s", err)
 	}
 
-	roles, err := p.Datastore.GetUserRoles(ctx, usr.ID)
+	roles, err := p.Datastore.GetRolesForUser(ctx, usr.ID)
 	if err != nil {
 		log.L(ctx).Errorf("failed to get user roles: %s", err)
 	}
 
-	emails, err := p.Datastore.GetUserEmails(ctx, usr.ID)
+	emails, err := p.Datastore.GetEmailsForUserByID(ctx, usr.ID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load emails: %w", err)
 	}
 
-	hasBackupCodes, err := p.Datastore.UserHasRecoveryCodes(ctx, usr.ID)
+	hasBackupCodes, err := p.Datastore.UserHasTOTPEnrolled(ctx, usr.ID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to check for existing recovery codes: %w", err)
 	}
 
-	var primaryMail *models.EMail
+	var primaryMail *repo.UserEmail
 	for _, mail := range emails {
-		if mail.Primary {
-			primaryMail = new(models.EMail)
+		if mail.IsPrimary {
+			primaryMail = new(repo.UserEmail)
 			*primaryMail = mail
 
 			break
 		}
 	}
 
-	var primaryPhone *models.PhoneNumber
+	var primaryPhone *repo.UserPhoneNumber
 	for _, phone := range phones {
-		if phone.Primary {
-			primaryPhone = new(models.PhoneNumber)
+		if phone.IsPrimary {
+			primaryPhone = new(repo.UserPhoneNumber)
 			*primaryPhone = phone
 
 			break
@@ -195,7 +189,7 @@ func (p *Providers) GetUserProfileProto(ctx context.Context, usr models.User) (*
 		ctx,
 		usr,
 		conv.WithAddresses(addresses...),
-		conv.WithEmailAddresses(mails...),
+		conv.WithEmailAddresses(emails...),
 		conv.WithPhoneNumbers(phones...),
 		conv.WithRoles(roles...),
 		conv.WithPrimaryMail(primaryMail),

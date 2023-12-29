@@ -18,7 +18,7 @@ import (
 	idmv1 "github.com/tierklinik-dobersberg/apis/gen/go/tkd/idm/v1"
 	"github.com/tierklinik-dobersberg/apis/pkg/overlayfs"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/config"
-	"github.com/tierklinik-dobersberg/cis-idm/internal/repo/models"
+	"github.com/tierklinik-dobersberg/cis-idm/internal/repo"
 	"github.com/vincent-petithory/dataurl"
 	"golang.org/x/exp/slices"
 )
@@ -161,7 +161,7 @@ var customMap = map[string]any{
 			return profile.User.Username
 		}
 
-		if model, ok := input.(models.User); ok {
+		if model, ok := input.(repo.User); ok {
 			if model.DisplayName != "" {
 				return model.DisplayName
 			}
@@ -169,7 +169,7 @@ var customMap = map[string]any{
 			return model.Username
 		}
 
-		panic("expected *idmv1.Profile or models.User")
+		panic("expected *idmv1.Profile or repo.User")
 	},
 	"userAvatar": func(input any, ctx *RenderContext) htmlTemplate.URL {
 		m, ok := ctx.Get("mail").(*mail.Message)
@@ -185,7 +185,7 @@ var customMap = map[string]any{
 		if profile, ok := input.(*idmv1.Profile); ok {
 			userID = profile.User.Id
 			avatarURL = profile.User.Avatar
-		} else if model, ok := input.(models.User); ok {
+		} else if model, ok := input.(repo.User); ok {
 			userID = model.ID
 			avatarURL = model.Avatar
 		}

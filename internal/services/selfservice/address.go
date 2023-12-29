@@ -8,7 +8,7 @@ import (
 	idmv1 "github.com/tierklinik-dobersberg/apis/gen/go/tkd/idm/v1"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/conv"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/middleware"
-	"github.com/tierklinik-dobersberg/cis-idm/internal/repo/models"
+	"github.com/tierklinik-dobersberg/cis-idm/internal/repo"
 )
 
 func (svc *Service) AddAddress(ctx context.Context, req *connect.Request[idmv1.AddAddressRequest]) (*connect.Response[idmv1.AddAddressResponse], error) {
@@ -17,7 +17,7 @@ func (svc *Service) AddAddress(ctx context.Context, req *connect.Request[idmv1.A
 		return nil, fmt.Errorf("no token claims associated with request context")
 	}
 
-	addresses, err := svc.Common.AddUserAddress(ctx, models.Address{
+	addresses, err := svc.Common.AddUserAddress(ctx, repo.UserAddress{
 		UserID:   claims.Subject,
 		CityCode: req.Msg.CityCode,
 		CityName: req.Msg.CityName,
@@ -55,7 +55,7 @@ func (svc *Service) UpdateAddress(ctx context.Context, req *connect.Request[idmv
 		return nil, fmt.Errorf("no token claims associated with request context")
 	}
 
-	addrs, err := svc.Common.UpdateUserAddress(ctx, models.Address{
+	addrs, err := svc.Common.UpdateUserAddress(ctx, repo.UserAddress{
 		CityCode: req.Msg.CityCode,
 		CityName: req.Msg.CityName,
 		Street:   req.Msg.Street,

@@ -12,6 +12,7 @@ import (
 	"github.com/tierklinik-dobersberg/cis-idm/internal/config"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/conv"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/middleware"
+	"github.com/tierklinik-dobersberg/cis-idm/internal/repo"
 )
 
 type Service struct {
@@ -77,7 +78,17 @@ func (svc *Service) UpdateProfile(ctx context.Context, req *connect.Request[idmv
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 
-	if err := svc.Datastore.UpdateUser(ctx, user); err != nil {
+	user, err = svc.Datastore.UpdateUser(ctx, repo.UpdateUserParams{
+		Username:    user.Username,
+		DisplayName: user.DisplayName,
+		FirstName:   user.FirstName,
+		LastName:    user.LastName,
+		Extra:       user.Extra,
+		Avatar:      user.Avatar,
+		Birthday:    user.Birthday,
+		ID:          user.ID,
+	})
+	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to update user: %w", err))
 	}
 

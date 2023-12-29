@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"os"
 
@@ -66,25 +67,16 @@ func main() {
 }
 
 func setupAppProviders(ctx context.Context, cfg config.Config) (*app.Providers, error) {
+	db, err := sql.Open("sqlite", cfg.DatabaseURL)
+	if err != nil {
+		return nil, err
+	}
+
 	// connect to rqlite
-	datastore, err := repo.New(cfg.DatabaseURL)
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to database: %w", err)
-	}
-
-	// Get the current leader and print a info message about the cluster
-	leader, err := datastore.Conn.Leader()
-	if err != nil {
-		return nil, fmt.Errorf("rqlite does not yet have a leader elected: %w", err)
-	}
-
-	logrus.WithFields(logrus.Fields{
-		"cluster": cfg.DatabaseURL,
-		"leader":  leader,
-	}).Infof("connected to rqlite cluster")
+	datastore := repo.New(db)
 
 	// Try to create/migrate the users tables.
-	if err := datastore.Migrate(ctx); err != nil {
+	if err := repo.Migrate(ctx, db); err != nil {
 		return nil, fmt.Errorf("failed to migrate database: %w", err)
 	}
 

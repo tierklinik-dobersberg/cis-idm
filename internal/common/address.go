@@ -2,6 +2,7 @@ package common
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 
@@ -9,16 +10,22 @@ import (
 	"github.com/bufbuild/protovalidate-go"
 	idmv1 "github.com/tierklinik-dobersberg/apis/gen/go/tkd/idm/v1"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/config"
-	"github.com/tierklinik-dobersberg/cis-idm/internal/repo/models"
-	"github.com/tierklinik-dobersberg/cis-idm/internal/repo/stmts"
+	"github.com/tierklinik-dobersberg/cis-idm/internal/repo"
 )
 
-func (svc *Service) AddUserAddress(ctx context.Context, model models.Address) ([]models.Address, error) {
+func (svc *Service) AddUserAddress(ctx context.Context, model repo.UserAddress) ([]repo.UserAddress, error) {
 	if !svc.cfg.FeatureEnabled(config.FeatureAddresses) {
 		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("addresses: %w", config.ErrFeatureDisabled))
 	}
 
-	if _, err := svc.repo.AddUserAddress(ctx, model); err != nil {
+	if _, err := svc.repo.CreateUserAddress(ctx, repo.CreateUserAddressParams{
+		ID:       model.ID,
+		UserID:   model.UserID,
+		CityCode: model.CityCode,
+		CityName: model.CityName,
+		Street:   model.Street,
+		Extra:    model.Extra,
+	}); err != nil {
 		return nil, fmt.Errorf("failed to save new user address: %w", err)
 	}
 
@@ -30,16 +37,20 @@ func (svc *Service) AddUserAddress(ctx context.Context, model models.Address) ([
 	return addresses, nil
 }
 
-func (svc *Service) DeleteUserAddress(ctx context.Context, userID string, addressID string) ([]models.Address, error) {
+func (svc *Service) DeleteUserAddress(ctx context.Context, userID string, addressID string) ([]repo.UserAddress, error) {
 	if !svc.cfg.FeatureEnabled(config.FeatureAddresses) {
 		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("addresses: %w", config.ErrFeatureDisabled))
 	}
 
-	if err := svc.repo.DeleteUserAddress(ctx, userID, addressID); err != nil {
-		if errors.Is(err, stmts.ErrNoRowsAffected) {
+	if rows, err := svc.repo.DeleteUserAddress(ctx, repo.DeleteUserAddressParams{
+		ID:     addressID,
+		UserID: userID,
+	}); err == nil {
+		if rows == 0 {
 			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("address not fund"))
 		}
-		return nil, fmt.Errorf("failed to delete user address: %w", err)
+	} else {
+		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
 	addresses, err := svc.repo.GetUserAddresses(ctx, userID)
@@ -50,14 +61,17 @@ func (svc *Service) DeleteUserAddress(ctx context.Context, userID string, addres
 	return addresses, nil
 }
 
-func (svc *Service) UpdateUserAddress(ctx context.Context, updateModel models.Address, paths []string) ([]models.Address, error) {
+func (svc *Service) UpdateUserAddress(ctx context.Context, updateModel repo.UserAddress, paths []string) ([]repo.UserAddress, error) {
 	if !svc.cfg.FeatureEnabled(config.FeatureAddresses) {
 		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("addresses: %w", config.ErrFeatureDisabled))
 	}
 
-	addr, err := svc.repo.GetAddressesByID(ctx, updateModel.UserID, updateModel.ID)
+	addr, err := svc.repo.GetUserAddress(ctx, repo.GetUserAddressParams{
+		UserID: updateModel.UserID,
+		ID:     updateModel.ID,
+	})
 	if err != nil {
-		if errors.Is(err, stmts.ErrNoResults) {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("address does not exist"))
 		}
 
@@ -107,7 +121,14 @@ func (svc *Service) UpdateUserAddress(ctx context.Context, updateModel models.Ad
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 
-	if err := svc.repo.UpdateUserAddress(ctx, addr); err != nil {
+	if _, err := svc.repo.UpdateUserAddress(ctx, repo.UpdateUserAddressParams{
+		CityCode: addr.CityCode,
+		CityName: addr.CityName,
+		Street:   addr.Street,
+		Extra:    addr.Extra,
+		ID:       addr.ID,
+		UserID:   addr.UserID,
+	}); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to update user address: %w", err))
 	}
 

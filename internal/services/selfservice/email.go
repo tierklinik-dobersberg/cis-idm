@@ -8,7 +8,7 @@ import (
 	idmv1 "github.com/tierklinik-dobersberg/apis/gen/go/tkd/idm/v1"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/conv"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/middleware"
-	"github.com/tierklinik-dobersberg/cis-idm/internal/repo/models"
+	"github.com/tierklinik-dobersberg/cis-idm/internal/repo"
 )
 
 func (svc *Service) AddEmailAddress(ctx context.Context, req *connect.Request[idmv1.AddEmailAddressRequest]) (*connect.Response[idmv1.AddEmailAddressResponse], error) {
@@ -22,7 +22,7 @@ func (svc *Service) AddEmailAddress(ctx context.Context, req *connect.Request[id
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("user not found"))
 	}
 
-	addedMail, mails, err := svc.Common.AddEmailAddressToUser(ctx, models.EMail{
+	addedMail, mails, err := svc.Common.AddEmailAddressToUser(ctx, repo.UserEmail{
 		UserID:  claims.Subject,
 		Address: req.Msg.Email,
 	})
@@ -80,7 +80,10 @@ func (svc *Service) ValidateEmail(ctx context.Context, req *connect.Request[idmv
 
 	switch v := req.Msg.Kind.(type) {
 	case *idmv1.ValidateEmailRequest_EmailId:
-		email, err := svc.Datastore.GetUserEmailByID(ctx, claims.Subject, v.EmailId)
+		email, err := svc.Datastore.GetEmailByID(ctx, repo.GetEmailByIDParams{
+			UserID: claims.Subject,
+			ID:     v.EmailId,
+		})
 		if err != nil {
 			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("unknown email id"))
 		}
@@ -105,13 +108,21 @@ func (svc *Service) ValidateEmail(ctx context.Context, req *connect.Request[idmv
 			return nil, err
 		}
 
-		email, err := svc.Datastore.GetUserEmailByID(ctx, claims.Subject, emailID)
+		email, err := svc.Datastore.GetEmailByID(ctx, repo.GetEmailByIDParams{
+			UserID: claims.Subject,
+			ID:     emailID,
+		})
 		if err != nil {
 			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("unknown email id"))
 		}
 
-		if err := svc.Datastore.MarkEmailAsVerified(ctx, claims.Subject, email.ID); err != nil {
+		rows, err := svc.Datastore.MarkEmailAsVerified(ctx, repo.MarkEmailAsVerifiedParams{UserID: claims.Subject, ID: email.ID})
+		if err != nil {
 			return nil, err
+		}
+
+		if rows == 0 {
+			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("user mail not found"))
 		}
 
 	default:

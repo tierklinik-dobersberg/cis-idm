@@ -3,7 +3,7 @@ package tmpl
 import (
 	"embed"
 
-	"github.com/tierklinik-dobersberg/cis-idm/internal/repo/models"
+	"github.com/tierklinik-dobersberg/cis-idm/internal/repo"
 )
 
 //go:embed templates
@@ -37,20 +37,20 @@ type (
 
 	RequestPasswordResetCtx struct {
 		BaseContext
-		User      models.User
+		User      repo.User
 		ResetLink string
 	}
 
 	AccountCreationNoticeCtx struct {
 		BaseContext
-		Creator   models.User
-		User      models.User
+		Creator   repo.User
+		User      repo.User
 		ResetLink string
 	}
 
 	VerifyMailCtx struct {
 		BaseContext
-		User       models.User
+		User       repo.User
 		VerifyLink string
 	}
 
@@ -58,7 +58,7 @@ type (
 		BaseContext
 		RegisterURL string
 		Name        string
-		Inviter     models.User
+		Inviter     repo.User
 	}
 )
 

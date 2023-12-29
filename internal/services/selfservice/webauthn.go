@@ -2,13 +2,12 @@ package selfservice
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/bufbuild/connect-go"
 	idmv1 "github.com/tierklinik-dobersberg/apis/gen/go/tkd/idm/v1"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/middleware"
-	"github.com/tierklinik-dobersberg/cis-idm/internal/repo/stmts"
+	"github.com/tierklinik-dobersberg/cis-idm/internal/repo"
 )
 
 func (svc *Service) GetRegisteredPasskeys(ctx context.Context, req *connect.Request[idmv1.GetRegisteredPasskeysRequest]) (*connect.Response[idmv1.GetRegisteredPasskeysResponse], error) {
@@ -17,7 +16,7 @@ func (svc *Service) GetRegisteredPasskeys(ctx context.Context, req *connect.Requ
 		return nil, fmt.Errorf("no token claims associated with request context")
 	}
 
-	creds, err := svc.Datastore.GetPasskeys(ctx, claims.Subject)
+	creds, err := svc.Datastore.GetWebauthnCreds(ctx, claims.Subject)
 	if err != nil {
 		return nil, err
 	}
@@ -30,7 +29,7 @@ func (svc *Service) GetRegisteredPasskeys(ctx context.Context, req *connect.Requ
 		res.Passkeys = append(res.Passkeys, &idmv1.RegisteredPasskey{
 			Id:           cred.ID,
 			ClientName:   cred.ClientName,
-			ClientOs:     cred.ClientOS,
+			ClientOs:     cred.ClientOs,
 			ClientDevice: cred.ClientDevice,
 			CredType:     cred.CredType,
 		})
@@ -45,12 +44,13 @@ func (svc *Service) RemovePasskey(ctx context.Context, req *connect.Request[idmv
 		return nil, fmt.Errorf("no token claims associated with request context")
 	}
 
-	if err := svc.Datastore.RemoveWebauthnCred(ctx, claims.Subject, req.Msg.Id); err != nil {
-		if errors.Is(err, stmts.ErrNoRowsAffected) {
-			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("passkey not found"))
-		}
-
+	rows, err := svc.Datastore.RemoveWebauthnCred(ctx, repo.RemoveWebauthnCredParams{UserID: claims.Subject, ID: req.Msg.Id})
+	if err != nil {
 		return nil, err
+	}
+
+	if rows == 0 {
+		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("passkey not found"))
 	}
 
 	return connect.NewResponse(&idmv1.RemovePasskeyResponse{}), nil

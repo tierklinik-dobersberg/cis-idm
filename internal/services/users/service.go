@@ -2,6 +2,7 @@ package users
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -23,8 +24,7 @@ import (
 	"github.com/tierklinik-dobersberg/cis-idm/internal/config"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/mailer"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/middleware"
-	"github.com/tierklinik-dobersberg/cis-idm/internal/repo/models"
-	"github.com/tierklinik-dobersberg/cis-idm/internal/repo/stmts"
+	"github.com/tierklinik-dobersberg/cis-idm/internal/repo"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/tmpl"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -46,12 +46,12 @@ func NewService(providers *app.Providers) (*Service, error) {
 func (svc *Service) Impersonate(ctx context.Context, req *connect.Request[idmv1.ImpersonateRequest]) (*connect.Response[idmv1.ImpersonateResponse], error) {
 	user, err := svc.Datastore.GetUserByID(ctx, req.Msg.UserId)
 	if err != nil {
-		if errors.Is(err, stmts.ErrNoResults) {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("user %q not found", req.Msg.UserId))
 		}
 	}
 
-	roles, err := svc.Datastore.GetUserRoles(ctx, user.ID)
+	roles, err := svc.Datastore.GetRolesForUser(ctx, user.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +74,7 @@ func (svc *Service) Impersonate(ctx context.Context, req *connect.Request[idmv1.
 }
 
 func (svc *Service) ListUsers(ctx context.Context, req *connect.Request[idmv1.ListUsersRequest]) (*connect.Response[idmv1.ListUsersResponse], error) {
-	users, err := svc.Datastore.GetUsers(ctx)
+	users, err := svc.Datastore.GetAllUsers(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -120,8 +120,13 @@ func (svc *Service) SetUserPassword(ctx context.Context, req *connect.Request[id
 		return nil, fmt.Errorf("failed to generate password hash: %w", err)
 	}
 
-	if err := svc.Datastore.SetUserPassword(ctx, req.Msg.UserId, string(newHashedPassword)); err != nil {
+	rows, err := svc.Datastore.SetUserPassword(ctx, repo.SetUserPasswordParams{ID: req.Msg.UserId, Password: string(newHashedPassword)})
+	if err != nil {
 		return nil, fmt.Errorf("failed to save user password: %w", err)
+	}
+
+	if rows == 0 {
+		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("user not found"))
 	}
 
 	return connect.NewResponse(new(idmv1.SetUserPasswordResponse)), nil
@@ -129,7 +134,7 @@ func (svc *Service) SetUserPassword(ctx context.Context, req *connect.Request[id
 
 func (svc *Service) GetUser(ctx context.Context, req *connect.Request[idmv1.GetUserRequest]) (*connect.Response[idmv1.GetUserResponse], error) {
 	var (
-		user models.User
+		user repo.User
 		err  error
 	)
 
@@ -139,7 +144,10 @@ func (svc *Service) GetUser(ctx context.Context, req *connect.Request[idmv1.GetU
 	case *idmv1.GetUserRequest_Name:
 		user, err = svc.Datastore.GetUserByName(ctx, v.Name)
 	case *idmv1.GetUserRequest_Mail:
-		user, _, err = svc.Datastore.GetUserByEMail(ctx, v.Mail)
+		var response repo.GetUserByEMailRow
+		response, err = svc.Datastore.GetUserByEMail(ctx, v.Mail)
+
+		user = response.User
 	default:
 		err = connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid request message"))
 	}
@@ -182,8 +190,13 @@ func (svc *Service) DeleteUser(ctx context.Context, req *connect.Request[idmv1.D
 	}
 
 	// actually delete the user from the repository
-	if err := svc.Datastore.DeleteUser(ctx, req.Msg.Id); err != nil {
+	rows, err := svc.Datastore.DeleteUser(ctx, req.Msg.Id)
+	if err != nil {
 		return nil, err
+	}
+
+	if rows == 0 {
+		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("user not found"))
 	}
 
 	// TODO(ppacher): invalidate all current access and refresh tokens
@@ -197,7 +210,7 @@ func (svc *Service) CreateUser(ctx context.Context, req *connect.Request[idmv1.C
 	}
 	usr := req.Msg.Profile.User
 
-	userModel := models.User{
+	userModel := repo.User{
 		Username:    usr.Username,
 		FirstName:   usr.FirstName,
 		LastName:    usr.LastName,
@@ -240,7 +253,17 @@ func (svc *Service) CreateUser(ctx context.Context, req *connect.Request[idmv1.C
 	}
 
 	// actually create the user.
-	userModel, err := svc.Datastore.CreateUser(ctx, userModel)
+	userModel, err := svc.Datastore.CreateUser(ctx, repo.CreateUserParams{
+		ID:          userModel.ID,
+		Username:    userModel.Username,
+		DisplayName: userModel.DisplayName,
+		FirstName:   userModel.FirstName,
+		LastName:    userModel.LastName,
+		Extra:       userModel.Extra,
+		Avatar:      userModel.Avatar,
+		Birthday:    userModel.Birthday,
+		Password:    userModel.Password,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -248,10 +271,10 @@ func (svc *Service) CreateUser(ctx context.Context, req *connect.Request[idmv1.C
 	merr := new(multierror.Error)
 
 	// Create user addresses
-	var userAddresses []models.Address
+	var userAddresses []repo.UserAddress
 	if addresses := req.Msg.GetProfile().Addresses; len(addresses) > 0 {
 		for _, addr := range addresses {
-			addrModel := models.Address{
+			addrModel := repo.CreateUserAddressParams{
 				UserID:   userModel.ID,
 				CityCode: addr.CityCode,
 				CityName: addr.CityName,
@@ -259,7 +282,7 @@ func (svc *Service) CreateUser(ctx context.Context, req *connect.Request[idmv1.C
 				Extra:    addr.Extra,
 			}
 
-			if addr, err := svc.Datastore.AddUserAddress(ctx, addrModel); err != nil {
+			if addr, err := svc.Datastore.CreateUserAddress(ctx, addrModel); err != nil {
 				merr.Errors = append(merr.Errors, fmt.Errorf("failed to create user address: %w", err))
 			} else {
 				userAddresses = append(userAddresses, addr)
@@ -268,17 +291,16 @@ func (svc *Service) CreateUser(ctx context.Context, req *connect.Request[idmv1.C
 	}
 
 	// Create phone number records
-	var userPhoneNumbers []models.PhoneNumber
+	var userPhoneNumbers []repo.UserPhoneNumber
 	if phoneNumbers := req.Msg.GetProfile().PhoneNumbers; len(phoneNumbers) > 0 {
 		for _, nbr := range phoneNumbers {
-			nbrModel := models.PhoneNumber{
+			nbrModel := repo.CreateUserPhoneNumberParams{
 				UserID:      userModel.ID,
 				PhoneNumber: nbr.Number,
 				Verified:    nbr.Verified,
-				Primary:     nbr.Primary,
 			}
 
-			if phone, err := svc.Datastore.AddUserPhoneNumber(ctx, nbrModel); err != nil {
+			if phone, err := svc.Datastore.CreateUserPhoneNumber(ctx, nbrModel); err != nil {
 				merr.Errors = append(merr.Errors, fmt.Errorf("failed to create phone number: %w", err))
 			} else {
 				userPhoneNumbers = append(userPhoneNumbers, phone)
@@ -287,17 +309,17 @@ func (svc *Service) CreateUser(ctx context.Context, req *connect.Request[idmv1.C
 	}
 
 	// create email address records
-	var userEmails []models.EMail
+	var userEmails []repo.UserEmail
 	if emails := req.Msg.GetProfile().EmailAddresses; len(emails) > 0 {
 		for idx, mail := range emails {
-			mailModel := models.EMail{
-				UserID:   userModel.ID,
-				Address:  mail.Address,
-				Verified: true,
-				Primary:  idx == 0,
+			mailModel := repo.CreateEMailParams{
+				UserID:    userModel.ID,
+				Address:   mail.Address,
+				Verified:  true,
+				IsPrimary: idx == 0,
 			}
 
-			if email, err := svc.Datastore.CreateUserEmail(ctx, mailModel); err != nil {
+			if email, err := svc.Datastore.CreateEMail(ctx, mailModel); err != nil {
 				merr.Errors = append(merr.Errors, fmt.Errorf("failed to create email record: %w", err))
 			} else {
 				userEmails = append(userEmails, email)
@@ -324,7 +346,7 @@ func (svc *Service) CreateUser(ctx context.Context, req *connect.Request[idmv1.C
 			role.Id = roleModel.ID
 		}
 
-		if err := svc.Datastore.AssignRoleToUser(ctx, userModel.ID, role.Id); err != nil {
+		if err := svc.Datastore.AssignRoleToUser(ctx, repo.AssignRoleToUserParams{UserID: userModel.ID, RoleID: role.Id}); err != nil {
 			merr.Errors = append(merr.Errors, fmt.Errorf("failed to assigne user %q to role %q", userModel.ID, role.Id))
 		}
 	}
@@ -432,7 +454,16 @@ func (svc *Service) UpdateUser(ctx context.Context, req *connect.Request[idmv1.U
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 
-	if err := svc.Datastore.UpdateUser(ctx, user); err != nil {
+	if _, err := svc.Datastore.UpdateUser(ctx, repo.UpdateUserParams{
+		Username:    user.Username,
+		DisplayName: user.DisplayName,
+		FirstName:   user.FirstName,
+		LastName:    user.LastName,
+		Extra:       user.Extra,
+		Avatar:      user.Avatar,
+		Birthday:    user.Birthday,
+		ID:          user.ID,
+	}); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to update user: %w", err))
 	}
 
@@ -454,7 +485,7 @@ func (svc *Service) InviteUser(ctx context.Context, req *connect.Request[idmv1.I
 
 	creator, err := svc.Datastore.GetUserByID(ctx, claims.Subject)
 	if err != nil {
-		if errors.Is(err, stmts.ErrNoResults) {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, fmt.Errorf("invalid jwt or account deleted")
 		}
 
@@ -543,8 +574,16 @@ func (svc *Service) SetUserExtraKey(ctx context.Context, req *connect.Request[id
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 
-	if err := svc.Datastore.UpdateUser(ctx, usr); err != nil {
+	rows, err := svc.Datastore.SetUserExtraData(ctx, repo.SetUserExtraDataParams{
+		Extra: usr.Extra,
+		ID:    usr.ID,
+	})
+	if err != nil {
 		return nil, err
+	}
+
+	if rows == 0 {
+		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("user not found"))
 	}
 
 	return connect.NewResponse(&idmv1.SetUserExtraKeyResponse{}), nil
@@ -562,8 +601,16 @@ func (svc *Service) DeleteUserExtraKey(ctx context.Context, req *connect.Request
 			return nil, err
 		}
 
-		if err := svc.Datastore.UpdateUser(ctx, usr); err != nil {
+		rows, err := svc.Datastore.SetUserExtraData(ctx, repo.SetUserExtraDataParams{
+			Extra: "",
+			ID:    usr.ID,
+		})
+		if err != nil {
 			return nil, err
+		}
+
+		if rows == 0 {
+			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("user not found"))
 		}
 	}
 
@@ -591,7 +638,7 @@ func (svc *Service) SendAccountCreationNotice(ctx context.Context, req *connect.
 			continue
 		}
 
-		primaryMail, err := svc.Datastore.GetUserPrimaryMail(ctx, userId)
+		primaryMail, err := svc.Datastore.GetPrimaryEmailForUserByID(ctx, userId)
 		if err != nil {
 			merr.Errors = append(merr.Errors, fmt.Errorf("failed to get primary email for user %q: %w", userId, err))
 
