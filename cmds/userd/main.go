@@ -67,7 +67,7 @@ func main() {
 }
 
 func setupAppProviders(ctx context.Context, cfg config.Config) (*app.Providers, error) {
-	db, err := sql.Open("sqlite", cfg.DatabaseURL)
+	db, err := sql.Open("sqlite3_extended", cfg.DatabaseURL)
 	if err != nil {
 		return nil, err
 	}

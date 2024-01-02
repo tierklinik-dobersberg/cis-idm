@@ -42,10 +42,25 @@ func (svc *Service) BeginRegistrationHandler(w http.ResponseWriter, r *http.Requ
 			return
 		}
 
+		userCount, err := svc.Datastore.WithTx(tx).CountUsers(ctx)
+		if err != nil {
+			if err := tx.Rollback(); err != nil {
+				log.L(ctx).Errorf("failed to rollback transaction: %s", err)
+			}
+
+			http.Error(w, "internal server error", http.StatusInternalServerError)
+			return
+		}
+
 		// a user is performing an initial registration
-		userModel, err := svc.authService.CreateUser(ctx, tx, repo.CreateUserParams{
-			Username: payload.Username,
-		}, payload.Token)
+		userModel, err := svc.authService.CreateUser(
+			ctx,
+			tx, repo.CreateUserParams{
+				Username: payload.Username,
+			},
+			payload.Token,
+			userCount == 0, // assign iam_superuser role
+		)
 
 		if err != nil {
 			if err := tx.Rollback(); err != nil {

@@ -10,7 +10,8 @@ CREATE TABLE IF NOT EXISTS role_assignments (
     user_id TEXT NOT NULL,
     role_id TEXT NOT NULL,
     CONSTRAINT fk_user_role_user FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
-    CONSTRAINT fk_user_role_role FOREIGN KEY(role_id) REFERENCES roles(id) ON DELETE CASCADE
+    CONSTRAINT fk_user_role_role FOREIGN KEY(role_id) REFERENCES roles(id) ON DELETE CASCADE,
+    UNIQUE(user_id, role_id)
 );
 
 -- +migrate Down

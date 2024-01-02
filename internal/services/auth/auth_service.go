@@ -378,7 +378,13 @@ func (svc *AuthService) ValidateRegistrationToken(ctx context.Context, req *conn
 }
 
 func (svc *AuthService) RegisterUser(ctx context.Context, req *connect.Request[idmv1.RegisterUserRequest]) (*connect.Response[idmv1.RegisterUserResponse], error) {
-	if !svc.Config.FeatureEnabled(config.FeatureSelfRegistration) {
+	count, err := svc.Datastore.CountUsers(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// deny registrytion if FeatureSelfRegistration is not enabled and we already have a user.
+	if !svc.Config.FeatureEnabled(config.FeatureSelfRegistration) && count > 0 {
 		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("registration feature is disabled"))
 	}
 
@@ -397,10 +403,23 @@ func (svc *AuthService) RegisterUser(ctx context.Context, req *connect.Request[i
 		}
 	}()
 
-	userModel, err := svc.CreateUser(ctx, tx, repo.CreateUserParams{
-		Username: req.Msg.Username,
-		Password: string(passwordHash),
-	}, req.Msg.RegistrationToken)
+	// Deny registration if a token is required but none is provided.
+	// In case we don't have users, we still allow the registration since
+	// the admin needs to bootstrap the first user.
+	if svc.Config.RegistrationRequiresToken && count > 0 && req.Msg.RegistrationToken == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("registration token is missing"))
+	}
+
+	userModel, err := svc.CreateUser(
+		ctx,
+		tx,
+		repo.CreateUserParams{
+			Username: req.Msg.Username,
+			Password: string(passwordHash),
+		},
+		req.Msg.RegistrationToken,
+		count == 0, // assign the super user role
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -413,11 +432,11 @@ func (svc *AuthService) RegisterUser(ctx context.Context, req *connect.Request[i
 	if mailModel, err := svc.Datastore.
 		WithTx(tx).
 		CreateEMail(ctx, repo.CreateEMailParams{
-		ID: id.String(),
-		UserID:    userModel.ID,
-		Address:   req.Msg.Email,
-		IsPrimary: true,
-	}); err != nil {
+			ID:        id.String(),
+			UserID:    userModel.ID,
+			Address:   req.Msg.Email,
+			IsPrimary: true,
+		}); err != nil {
 		// just log out the error but continue to sign in the user
 		log.L(ctx).WithError(err).Errorf("failed to save email address for user")
 	} else {
@@ -460,7 +479,7 @@ func (svc *AuthService) RegisterUser(ctx context.Context, req *connect.Request[i
 	return resp, nil
 }
 
-func (svc *AuthService) CreateUser(ctx context.Context, tx *sql.Tx, params repo.CreateUserParams, token string) (*repo.User, error) {
+func (svc *AuthService) CreateUser(ctx context.Context, tx *sql.Tx, params repo.CreateUserParams, token string, assignSuperUser bool) (*repo.User, error) {
 	var (
 		initialRoles []string
 		err          error
@@ -517,6 +536,13 @@ func (svc *AuthService) CreateUser(ctx context.Context, tx *sql.Tx, params repo.
 	if err != nil {
 		return nil, err
 	}
+
+	if assignSuperUser {
+		initialRoles = append(initialRoles, "iam_superuser")
+	}
+
+	// remove any duplicates
+	initialRoles = slices.Compact(initialRoles)
 
 	merr := new(multierror.Error)
 	for _, role := range initialRoles {

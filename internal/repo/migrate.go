@@ -14,7 +14,7 @@ var dbMigrations embed.FS
 func Migrate(ctx context.Context, db *sql.DB) error {
 	migrations := migrate.EmbedFileSystemMigrationSource{
 		FileSystem: dbMigrations,
-		Root:       "migrations",
+		Root:       ".",
 	}
 
 	_, err := migrate.Exec(db, "sqlite3", migrations, migrate.Up)

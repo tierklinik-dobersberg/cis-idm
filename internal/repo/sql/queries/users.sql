@@ -19,6 +19,9 @@ UPDATE users
 SET extra = ?
 WHERE id = ?;
 
+-- name: CountUsers :one
+SELECT COUNT(*)
+FROM users;
 
 -- name: GetUserByEMail :one
 SELECT

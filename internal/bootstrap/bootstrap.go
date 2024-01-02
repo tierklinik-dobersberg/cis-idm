@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"database/sql"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -15,7 +14,7 @@ import (
 )
 
 func Bootstrap(ctx context.Context, cfg config.Config, userRepo *repo.Queries) error {
-	superuserRoleID, err := bootstrapRole(ctx, userRepo, "idm_superuser", "Super-user management role", true)
+	_, err := bootstrapRole(ctx, userRepo, "idm_superuser", "Super-user management role", true)
 	if err != nil {
 		return err
 	}
@@ -25,43 +24,6 @@ func Bootstrap(ctx context.Context, cfg config.Config, userRepo *repo.Queries) e
 		if _, err := bootstrapRole(ctx, userRepo, roleName, "Automatically bootstrapped role", true); err != nil {
 			return err
 		}
-	}
-
-	// ensure there is at least one user in idm_superuser
-	users, err := userRepo.GetUsersByRole(ctx, superuserRoleID)
-	if err != nil {
-		return fmt.Errorf("failed to retrieve users in idm_superuser group: %w", err)
-	}
-
-	// if there are not users with the idm_superuser role create a new registration token
-	if len(users) == 0 {
-		tokenValue, err := GenerateSecret(8)
-		if err != nil {
-			return err
-		}
-		blobs, _ := json.Marshal([]string{"idm_superuser"})
-
-		token := repo.CreateRegistrationTokenParams{
-			Token:        tokenValue,
-			InitialRoles: string(blobs),
-			AllowedUsage: sql.NullInt64{
-				Int64: 1,
-				Valid: true,
-			},
-		}
-
-		if err := userRepo.CreateRegistrationToken(ctx, token); err != nil {
-			return err
-		}
-
-		logrus.WithField("token", tokenValue).Infof("Please bootstrap the superuser account using the provided registration token.")
-
-		return nil
-	}
-
-	logrus.WithFields(logrus.Fields{"count": len(users)}).Infof("bootstrap: found users in idm_superuser group")
-	for _, user := range users {
-		logrus.WithField("id", user.ID).Infof("idm_superuser: %s", user.Username)
 	}
 
 	return nil

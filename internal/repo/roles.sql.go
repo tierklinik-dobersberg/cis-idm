@@ -11,7 +11,7 @@ import (
 )
 
 const assignRoleToUser = `-- name: AssignRoleToUser :exec
-INSERT INTO
+INSERT OR IGNORE INTO
 	role_assignments (user_id, role_id)
 VALUES
 	(?, ?)
