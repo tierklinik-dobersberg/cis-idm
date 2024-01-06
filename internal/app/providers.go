@@ -79,13 +79,16 @@ func (p *Providers) GenerateRegistrationToken(ctx context.Context, creator repo.
 	}
 
 	if maxCount > 0 {
-		tokenModel.AllowedUsage = sql.NullInt64{Int64: int64(maxCount)}
+		tokenModel.AllowedUsage = sql.NullInt64{
+			Int64: int64(maxCount),
+			Valid: true,
+		}
 	}
 
 	if ttl > 0 {
 		expires := time.Now().Add(ttl)
 		tokenModel.Expires = sql.NullTime{
-			Time: expires,
+			Time:  expires,
 			Valid: true,
 		}
 	}

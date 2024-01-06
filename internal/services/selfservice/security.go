@@ -133,7 +133,10 @@ func (svc *Service) Enroll2FA(ctx context.Context, req *connect.Request[idmv1.En
 			return nil, fmt.Errorf("invalid passcode")
 		}
 
-		if err := svc.Datastore.EnrollUserTOTPSecret(ctx, repo.EnrollUserTOTPSecretParams{ID: claims.Subject, TotpSecret: sql.NullString{String: v.TotpStep2.Secret}}); err != nil {
+		if err := svc.Datastore.EnrollUserTOTPSecret(ctx, repo.EnrollUserTOTPSecretParams{ID: claims.Subject, TotpSecret: sql.NullString{
+			String: v.TotpStep2.Secret,
+			Valid:  true,
+		}}); err != nil {
 			return nil, err
 		}
 

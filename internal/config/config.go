@@ -104,12 +104,12 @@ type Config struct {
 	// Overwrites may hold configuration overwrites per user or role.
 	Overwrites []Overwrite `json:"overwrites"`
 
-	// BootstrapRoles holds a list of role name that should be automatically
+	// Roles holds a list of role name that should be automatically
 	// created when cisidm is started. Those roles are created with deleteProtection
 	// enabled.
 	// Use this if you want to ensure cisidm has a set of roles that other services
 	// rely upon.
-	BootstrapRoles []string `json:"bootstrapRoles"`
+	Roles []string `json:"roles"`
 
 	// AllowedDomainRedirects is a list of domain names to which cisidm will allow
 	// redirection after login/refresh.

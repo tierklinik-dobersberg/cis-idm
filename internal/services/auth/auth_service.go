@@ -105,7 +105,7 @@ func (svc *AuthService) Login(ctx context.Context, req *connect.Request[idmv1.Lo
 
 		// check if the user still needs to pass the 2fa
 		if user.TotpSecret.String != "" {
-			state, _, err := svc.CreateSignedJWT(user, nil, "", time.Minute*5, jwt.Scope2FAPending)
+			state, _, err := svc.CreateSignedJWT(user, nil, "", time.Minute*5, jwt.Scope2FAPending, jwt.Scope2FAPending)
 			if err != nil {
 				return nil, err
 			}
@@ -123,7 +123,7 @@ func (svc *AuthService) Login(ctx context.Context, req *connect.Request[idmv1.Lo
 
 	case idmv1.AuthType_AUTH_TYPE_TOTP:
 		if req.Msg.GetTotp() == nil {
-			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid message"))
+			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid message: missing required totp field"))
 		}
 
 		claims, err := jwt.ParseAndVerify([]byte(svc.Config.JWTSecret), req.Msg.GetTotp().State)
@@ -132,7 +132,7 @@ func (svc *AuthService) Login(ctx context.Context, req *connect.Request[idmv1.Lo
 		}
 
 		if !slices.Contains(claims.Scopes, jwt.Scope2FAPending) {
-			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid message"))
+			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid message: invalid JWT scopes"))
 		}
 
 		user, err = svc.Datastore.GetUserByID(ctx, claims.Subject)
@@ -503,7 +503,8 @@ func (svc *AuthService) CreateUser(ctx context.Context, tx *sql.Tx, params repo.
 		tokenModel, err := db.GetRegistrationToken(ctx, repo.GetRegistrationTokenParams{
 			Token: token,
 			Expires: sql.NullTime{
-				Time: time.Now(),
+				Time:  time.Now(),
+				Valid: true,
 			},
 		})
 		if err != nil {
@@ -522,7 +523,8 @@ func (svc *AuthService) CreateUser(ctx context.Context, tx *sql.Tx, params repo.
 		if _, err := db.MarkRegistrationTokenUsed(ctx, repo.MarkRegistrationTokenUsedParams{
 			Token: token,
 			Expires: sql.NullTime{
-				Time: time.Now(),
+				Time:  time.Now(),
+				Valid: true,
 			},
 		}); err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
@@ -537,8 +539,13 @@ func (svc *AuthService) CreateUser(ctx context.Context, tx *sql.Tx, params repo.
 		return nil, err
 	}
 
+	log.L(ctx).WithFields(logrus.Fields{
+		"id":       params.ID,
+		"username": params.Username,
+	}).Infof("created new user")
+
 	if assignSuperUser {
-		initialRoles = append(initialRoles, "iam_superuser")
+		initialRoles = append(initialRoles, "idm_superuser")
 	}
 
 	// remove any duplicates

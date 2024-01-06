@@ -354,7 +354,7 @@ docker-compose up -d
 ```
 
 :::tip Admin User
-Whenever `cisidm` starts, it checks if a user with super-user privileges (member of the `iam_superuser` role) exists. If not, a new registration token will be created and logged to stdout.
+Whenever `cisidm` starts, it checks if a user with super-user privileges (member of the `idm_superuser` role) exists. If not, a new registration token will be created and logged to stdout.
 
 To create your initial admin user, copy that token from the log output (`docker-compose logs cisidm | grep "superuser account"`) and visit `https://account.example.com/registration?token=YOUR_TOKEN` and replace `YOUR_TOKEN` with the token from the log output.
 

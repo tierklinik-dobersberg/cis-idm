@@ -8,6 +8,7 @@ import (
 
 	"github.com/bufbuild/protovalidate-go"
 	"github.com/sirupsen/logrus"
+	"github.com/tierklinik-dobersberg/apis/pkg/log"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/app"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/bootstrap"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/cache"
@@ -69,14 +70,16 @@ func main() {
 func setupAppProviders(ctx context.Context, cfg config.Config) (*app.Providers, error) {
 	db, err := sql.Open("sqlite3_extended", cfg.DatabaseURL)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to open database at %q: %q", cfg.DatabaseURL, err)
 	}
 
 	// connect to rqlite
 	datastore := repo.New(db)
 
 	// Try to create/migrate the users tables.
-	if err := repo.Migrate(ctx, db); err != nil {
+	if n, err := repo.Migrate(ctx, db); err == nil {
+		log.L(ctx).Infof("successfully applied %d migrations", n)
+	} else {
 		return nil, fmt.Errorf("failed to migrate database: %w", err)
 	}
 

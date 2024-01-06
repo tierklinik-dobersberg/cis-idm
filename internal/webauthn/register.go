@@ -59,7 +59,7 @@ func (svc *Service) BeginRegistrationHandler(w http.ResponseWriter, r *http.Requ
 				Username: payload.Username,
 			},
 			payload.Token,
-			userCount == 0, // assign iam_superuser role
+			userCount == 0, // assign idm_superuser role
 		)
 
 		if err != nil {

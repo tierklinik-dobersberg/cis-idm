@@ -20,7 +20,7 @@ func Bootstrap(ctx context.Context, cfg config.Config, userRepo *repo.Queries) e
 	}
 
 	// Create all bootstrap roles
-	for _, roleName := range cfg.BootstrapRoles {
+	for _, roleName := range cfg.Roles {
 		if _, err := bootstrapRole(ctx, userRepo, roleName, "Automatically bootstrapped role", true); err != nil {
 			return err
 		}
