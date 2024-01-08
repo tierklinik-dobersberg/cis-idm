@@ -3,7 +3,8 @@ CREATE TABLE IF NOT EXISTS roles (
     id TEXT NOT NULL PRIMARY KEY UNIQUE,
     name TEXT NOT NULL UNIQUE,
     description TEXT NOT NULL DEFAULT '',
-    delete_protected BOOL NOT NULL DEFAULT FALSE
+    delete_protected BOOL NOT NULL DEFAULT FALSE,
+    origin TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS role_assignments (

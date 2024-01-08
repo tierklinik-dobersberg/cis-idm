@@ -211,9 +211,8 @@ func (svc *Service) CreateUser(ctx context.Context, req *connect.Request[idmv1.C
 	}
 	usr := req.Msg.Profile.User
 
-
 	userModel := repo.User{
-		ID: usr.Id,
+		ID:          usr.Id,
 		Username:    usr.Username,
 		FirstName:   usr.FirstName,
 		LastName:    usr.LastName,
@@ -264,143 +263,132 @@ func (svc *Service) CreateUser(ctx context.Context, req *connect.Request[idmv1.C
 		}
 	}
 
-	// actually create the user.
-	userModel, err := svc.Datastore.CreateUser(ctx, repo.CreateUserParams{
-		ID:          userModel.ID,
-		Username:    userModel.Username,
-		DisplayName: userModel.DisplayName,
-		FirstName:   userModel.FirstName,
-		LastName:    userModel.LastName,
-		Extra:       userModel.Extra,
-		Avatar:      userModel.Avatar,
-		Birthday:    userModel.Birthday,
-		Password:    userModel.Password,
+	return repo.RunInTransaction(ctx, svc.Datastore, func(tx *repo.Queries) (*connect.Response[idmv1.CreateUserResponse], error) {
+
+		// actually create the user.
+		userModel, err := tx.CreateUser(ctx, repo.CreateUserParams{
+			ID:          userModel.ID,
+			Username:    userModel.Username,
+			DisplayName: userModel.DisplayName,
+			FirstName:   userModel.FirstName,
+			LastName:    userModel.LastName,
+			Extra:       userModel.Extra,
+			Avatar:      userModel.Avatar,
+			Birthday:    userModel.Birthday,
+			Password:    userModel.Password,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		merr := new(multierror.Error)
+
+		// Create user addresses
+		if addresses := req.Msg.GetProfile().Addresses; len(addresses) > 0 {
+			for _, addr := range addresses {
+				id, err := uuid.NewV4()
+				if err != nil {
+					return nil, err
+				}
+
+				addrModel := repo.CreateUserAddressParams{
+					ID:       id.String(),
+					UserID:   userModel.ID,
+					CityCode: addr.CityCode,
+					CityName: addr.CityName,
+					Street:   addr.Street,
+					Extra:    addr.Extra,
+				}
+
+				if _, err := tx.CreateUserAddress(ctx, addrModel); err != nil {
+					merr.Errors = append(merr.Errors, fmt.Errorf("failed to create user address: %w", err))
+				}
+			}
+		}
+
+		// Create phone number records
+		if phoneNumbers := req.Msg.GetProfile().PhoneNumbers; len(phoneNumbers) > 0 {
+			for _, nbr := range phoneNumbers {
+				id, err := uuid.NewV4()
+				if err != nil {
+					return nil, err
+				}
+
+				nbrModel := repo.CreateUserPhoneNumberParams{
+					ID:          id.String(),
+					UserID:      userModel.ID,
+					PhoneNumber: nbr.Number,
+					Verified:    nbr.Verified,
+				}
+
+				if _, err := tx.CreateUserPhoneNumber(ctx, nbrModel); err != nil {
+					merr.Errors = append(merr.Errors, fmt.Errorf("failed to create phone number: %w", err))
+				}
+			}
+		}
+
+		// create email address records
+		if emails := req.Msg.GetProfile().EmailAddresses; len(emails) > 0 {
+			for idx, mail := range emails {
+				id, err := uuid.NewV4()
+				if err != nil {
+					return nil, err
+				}
+
+				mailModel := repo.CreateEMailParams{
+					ID:        id.String(),
+					UserID:    userModel.ID,
+					Address:   mail.Address,
+					Verified:  true,
+					IsPrimary: idx == 0,
+				}
+
+				if _, err := tx.CreateEMail(ctx, mailModel); err != nil {
+					merr.Errors = append(merr.Errors, fmt.Errorf("failed to create email record: %w", err))
+				}
+			}
+		}
+
+		// assign the user to all roles specified in the request.
+		for _, role := range req.Msg.GetProfile().GetRoles() {
+			err = errors.New("")
+
+			if role.Id != "" {
+				_, err = tx.GetRoleByID(ctx, role.Id)
+			}
+
+			if err != nil || role.Id == "" {
+				roleModel, err := tx.GetRoleByName(ctx, role.Name)
+				if err != nil {
+					merr.Errors = append(merr.Errors, fmt.Errorf("role %q", role.Id))
+
+					continue
+				}
+
+				role.Id = roleModel.ID
+			}
+
+			if err := tx.AssignRoleToUser(ctx, repo.AssignRoleToUserParams{UserID: userModel.ID, RoleID: role.Id}); err != nil {
+				merr.Errors = append(merr.Errors, fmt.Errorf("failed to assigne user %q to role %q", userModel.ID, role.Id))
+			}
+		}
+
+		if err := merr.ErrorOrNil(); err != nil {
+			return nil, connect.NewError(connect.CodeInternal, err)
+		}
+
+		profile, err := app.GetUserProfileProto(ctx, tx, svc.Config, userModel)
+		if err != nil {
+			return nil, err
+		}
+
+		return connect.NewResponse(&idmv1.CreateUserResponse{
+			Profile: profile,
+		}), nil
 	})
-	if err != nil {
-		return nil, err
-	}
-
-	merr := new(multierror.Error)
-
-	// Create user addresses
-	var userAddresses []repo.UserAddress
-	if addresses := req.Msg.GetProfile().Addresses; len(addresses) > 0 {
-		for _, addr := range addresses {
-			id, err := uuid.NewV4()
-			if err != nil {
-				return nil, err
-			}
-
-			addrModel := repo.CreateUserAddressParams{
-				ID:  id.String(),
-				UserID:   userModel.ID,
-				CityCode: addr.CityCode,
-				CityName: addr.CityName,
-				Street:   addr.Street,
-				Extra:    addr.Extra,
-			}
-
-			if addr, err := svc.Datastore.CreateUserAddress(ctx, addrModel); err != nil {
-				merr.Errors = append(merr.Errors, fmt.Errorf("failed to create user address: %w", err))
-			} else {
-				userAddresses = append(userAddresses, addr)
-			}
-		}
-	}
-
-	// Create phone number records
-	var userPhoneNumbers []repo.UserPhoneNumber
-	if phoneNumbers := req.Msg.GetProfile().PhoneNumbers; len(phoneNumbers) > 0 {
-		for _, nbr := range phoneNumbers {
-			id, err := uuid.NewV4()
-			if err != nil {
-				return nil, err
-			}
-
-			nbrModel := repo.CreateUserPhoneNumberParams{
-				ID: id.String(),
-				UserID:      userModel.ID,
-				PhoneNumber: nbr.Number,
-				Verified:    nbr.Verified,
-			}
-
-			if phone, err := svc.Datastore.CreateUserPhoneNumber(ctx, nbrModel); err != nil {
-				merr.Errors = append(merr.Errors, fmt.Errorf("failed to create phone number: %w", err))
-			} else {
-				userPhoneNumbers = append(userPhoneNumbers, phone)
-			}
-		}
-	}
-
-	// create email address records
-	var userEmails []repo.UserEmail
-	if emails := req.Msg.GetProfile().EmailAddresses; len(emails) > 0 {
-		for idx, mail := range emails {
-			id, err := uuid.NewV4()
-			if err != nil {
-				return nil, err
-			}
-
-			mailModel := repo.CreateEMailParams{
-				ID: id.String(),
-				UserID:    userModel.ID,
-				Address:   mail.Address,
-				Verified:  true,
-				IsPrimary: idx == 0,
-			}
-
-			if email, err := svc.Datastore.CreateEMail(ctx, mailModel); err != nil {
-				merr.Errors = append(merr.Errors, fmt.Errorf("failed to create email record: %w", err))
-			} else {
-				userEmails = append(userEmails, email)
-			}
-		}
-	}
-
-	// assign the user to all roles specified in the request.
-	for _, role := range req.Msg.GetProfile().GetRoles() {
-		err = errors.New("")
-
-		if role.Id != "" {
-			_, err = svc.Datastore.GetRoleByID(ctx, role.Id)
-		}
-
-		if err != nil || role.Id == "" {
-			roleModel, err := svc.Datastore.GetRoleByName(ctx, role.Name)
-			if err != nil {
-				merr.Errors = append(merr.Errors, fmt.Errorf("role %q", role.Id))
-
-				continue
-			}
-
-			role.Id = roleModel.ID
-		}
-
-		if err := svc.Datastore.AssignRoleToUser(ctx, repo.AssignRoleToUserParams{UserID: userModel.ID, RoleID: role.Id}); err != nil {
-			merr.Errors = append(merr.Errors, fmt.Errorf("failed to assigne user %q to role %q", userModel.ID, role.Id))
-		}
-	}
-
-	if err := merr.ErrorOrNil(); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
-	}
-
-	profile, err := svc.Providers.GetUserProfileProto(ctx, userModel)
-	if err != nil {
-		return nil, err
-	}
-
-	return connect.NewResponse(&idmv1.CreateUserResponse{
-		Profile: profile,
-	}), nil
 }
 
 func (svc *Service) UpdateUser(ctx context.Context, req *connect.Request[idmv1.UpdateUserRequest]) (*connect.Response[idmv1.UpdateUserResponse], error) {
-	claims := middleware.ClaimsFromContext(ctx)
-	if claims == nil {
-		return nil, fmt.Errorf("no claims associated with request context")
-	}
-
 	user, err := svc.Datastore.GetUserByID(ctx, req.Msg.Id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user object: %w", err)
@@ -708,4 +696,41 @@ func (svc *Service) SendAccountCreationNotice(ctx context.Context, req *connect.
 	}
 
 	return connect.NewResponse(new(idmv1.SendAccountCreationNoticeResponse)), nil
+}
+
+func (svc *Service) ResolveUserPermissions(ctx context.Context, req *connect.Request[idmv1.ResolveUserPermissionsRequest]) (*connect.Response[idmv1.ResolveUserPermissionsResponse], error) {
+	return repo.RunInTransaction(ctx, svc.Datastore, func(tx *repo.Queries) (*connect.Response[idmv1.ResolveUserPermissionsResponse], error) {
+		user, err := tx.GetUserByID(ctx, req.Msg.UserId)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("user id not fuond"))
+			}
+
+			return nil, err
+		}
+
+		roles, err := tx.GetRolesForUser(ctx, user.ID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get user roles: %w", err)
+		}
+
+		var permissions []string
+		for _, r := range roles {
+			rolePerms, err := tx.GetRolePermissions(ctx, r.ID)
+			if err != nil {
+				return nil, fmt.Errorf("failed to get role permissions: %w", err)
+			}
+
+			permissions = append(permissions, rolePerms...)
+		}
+
+		resolved, err := svc.Config.Permissions.Resolve(permissions)
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve role permissions: %w", err)
+		}
+
+		return connect.NewResponse(&idmv1.ResolveUserPermissionsResponse{
+			Permissions: resolved,
+		}), nil
+	}, repo.ReadOnly())
 }

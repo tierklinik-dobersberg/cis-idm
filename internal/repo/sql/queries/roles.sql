@@ -20,11 +20,34 @@ SELECT
 FROM
 	roles;
 
+-- name: GetSystemRoles :many
+SELECT
+	*
+FROM
+	roles
+WHERE origin = 'system';
+
+
 -- name: CreateRole :one
 INSERT INTO
-	roles (id, name, description, delete_protected)
+	roles (id, name, description, origin, delete_protected)
 VALUES
-	(?, ?, ?, ?)
+	(?, ?, ?, 'api', ?)
+RETURNING *;
+
+-- name: CreateSystemRole :one
+INSERT INTO
+	roles (id, name, description, origin, delete_protected)
+VALUES
+	(?, ?, ?, 'system', true)
+ON CONFLICT(id)	DO
+	UPDATE
+	SET
+		id = excluded.id,
+		name = excluded.name,
+		description = excluded.description,
+		origin = 'system',
+		delete_protected = true
 RETURNING *;
 
 -- name: UpdateRole :one

@@ -87,7 +87,32 @@ func GetUsersCommand(root *cli.Root) *cobra.Command {
 		GetSendAccountCreationNoticeCommand(root),
 		GetImpersonateCommand(root),
 		GetSetUserPasswordCommand(root),
+		GetResolveUserPermissions(root),
 	)
+
+	return cmd
+}
+
+func GetResolveUserPermissions(root *cli.Root) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:  "get-permissions [user-id/name]",
+		Args: cobra.ExactArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			user, err := root.ResolveUser(args[0])
+			if err != nil {
+				logrus.Fatalf(err.Error())
+			}
+
+			res, err := root.Users().ResolveUserPermissions(root.Context(), connect.NewRequest(&idmv1.ResolveUserPermissionsRequest{
+				UserId: user.Id,
+			}))
+			if err != nil {
+				logrus.Fatalf(err.Error())
+			}
+
+			root.Print(res.Msg)
+		},
+	}
 
 	return cmd
 }

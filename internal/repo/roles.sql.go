@@ -29,10 +29,10 @@ func (q *Queries) AssignRoleToUser(ctx context.Context, arg AssignRoleToUserPara
 
 const createRole = `-- name: CreateRole :one
 INSERT INTO
-	roles (id, name, description, delete_protected)
+	roles (id, name, description, origin, delete_protected)
 VALUES
-	(?, ?, ?, ?)
-RETURNING id, name, description, delete_protected
+	(?, ?, ?, 'api', ?)
+RETURNING id, name, description, delete_protected, origin
 `
 
 type CreateRoleParams struct {
@@ -55,6 +55,42 @@ func (q *Queries) CreateRole(ctx context.Context, arg CreateRoleParams) (Role, e
 		&i.Name,
 		&i.Description,
 		&i.DeleteProtected,
+		&i.Origin,
+	)
+	return i, err
+}
+
+const createSystemRole = `-- name: CreateSystemRole :one
+INSERT INTO
+	roles (id, name, description, origin, delete_protected)
+VALUES
+	(?, ?, ?, 'system', true)
+ON CONFLICT(id)	DO
+	UPDATE
+	SET
+		id = excluded.id,
+		name = excluded.name,
+		description = excluded.description,
+		origin = 'system',
+		delete_protected = true
+RETURNING id, name, description, delete_protected, origin
+`
+
+type CreateSystemRoleParams struct {
+	ID          string
+	Name        string
+	Description string
+}
+
+func (q *Queries) CreateSystemRole(ctx context.Context, arg CreateSystemRoleParams) (Role, error) {
+	row := q.db.QueryRowContext(ctx, createSystemRole, arg.ID, arg.Name, arg.Description)
+	var i Role
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Description,
+		&i.DeleteProtected,
+		&i.Origin,
 	)
 	return i, err
 }
@@ -76,7 +112,7 @@ func (q *Queries) DeleteRole(ctx context.Context, id string) (int64, error) {
 
 const getRoleByID = `-- name: GetRoleByID :one
 SELECT
-	id, name, description, delete_protected
+	id, name, description, delete_protected, origin
 FROM
 	roles
 WHERE
@@ -91,13 +127,14 @@ func (q *Queries) GetRoleByID(ctx context.Context, id string) (Role, error) {
 		&i.Name,
 		&i.Description,
 		&i.DeleteProtected,
+		&i.Origin,
 	)
 	return i, err
 }
 
 const getRoleByName = `-- name: GetRoleByName :one
 SELECT
-	id, name, description, delete_protected
+	id, name, description, delete_protected, origin
 FROM
 	roles
 WHERE
@@ -112,13 +149,14 @@ func (q *Queries) GetRoleByName(ctx context.Context, name string) (Role, error) 
 		&i.Name,
 		&i.Description,
 		&i.DeleteProtected,
+		&i.Origin,
 	)
 	return i, err
 }
 
 const getRoles = `-- name: GetRoles :many
 SELECT
-	id, name, description, delete_protected
+	id, name, description, delete_protected, origin
 FROM
 	roles
 `
@@ -137,6 +175,7 @@ func (q *Queries) GetRoles(ctx context.Context) ([]Role, error) {
 			&i.Name,
 			&i.Description,
 			&i.DeleteProtected,
+			&i.Origin,
 		); err != nil {
 			return nil, err
 		}
@@ -153,7 +192,7 @@ func (q *Queries) GetRoles(ctx context.Context) ([]Role, error) {
 
 const getRolesForUser = `-- name: GetRolesForUser :many
 SELECT
-	roles.id, roles.name, roles.description, roles.delete_protected
+	roles.id, roles.name, roles.description, roles.delete_protected, roles.origin
 FROM
 	role_assignments
 	JOIN roles ON roles.id = role_id
@@ -175,6 +214,44 @@ func (q *Queries) GetRolesForUser(ctx context.Context, userID string) ([]Role, e
 			&i.Name,
 			&i.Description,
 			&i.DeleteProtected,
+			&i.Origin,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getSystemRoles = `-- name: GetSystemRoles :many
+SELECT
+	id, name, description, delete_protected, origin
+FROM
+	roles
+WHERE origin = 'system'
+`
+
+func (q *Queries) GetSystemRoles(ctx context.Context) ([]Role, error) {
+	rows, err := q.db.QueryContext(ctx, getSystemRoles)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Role
+	for rows.Next() {
+		var i Role
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Description,
+			&i.DeleteProtected,
+			&i.Origin,
 		); err != nil {
 			return nil, err
 		}
@@ -280,7 +357,7 @@ SET
 	delete_protected = ?
 WHERE
 	id = ?
-RETURNING id, name, description, delete_protected
+RETURNING id, name, description, delete_protected, origin
 `
 
 type UpdateRoleParams struct {
@@ -303,6 +380,7 @@ func (q *Queries) UpdateRole(ctx context.Context, arg UpdateRoleParams) (Role, e
 		&i.Name,
 		&i.Description,
 		&i.DeleteProtected,
+		&i.Origin,
 	)
 	return i, err
 }

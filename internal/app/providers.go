@@ -144,27 +144,31 @@ func getCurrentFieldVisiblity(ctx context.Context, id string) config.FieldVisibi
 }
 
 func (p *Providers) GetUserProfileProto(ctx context.Context, usr repo.User) (*idmv1.Profile, error) {
-	addresses, err := p.Datastore.GetUserAddresses(ctx, usr.ID)
+	return GetUserProfileProto(ctx, p.Datastore, p.Config, usr)
+}
+
+func GetUserProfileProto(ctx context.Context, tx *repo.Queries, cfg config.Config, usr repo.User) (*idmv1.Profile, error) {
+	addresses, err := tx.GetUserAddresses(ctx, usr.ID)
 	if err != nil {
 		log.L(ctx).Errorf("failed to get user addresses: %s", err)
 	}
 
-	phones, err := p.Datastore.GetPhoneNumbersByUserID(ctx, usr.ID)
+	phones, err := tx.GetPhoneNumbersByUserID(ctx, usr.ID)
 	if err != nil {
 		log.L(ctx).Errorf("failed to get user phone numbers: %s", err)
 	}
 
-	roles, err := p.Datastore.GetRolesForUser(ctx, usr.ID)
+	roles, err := tx.GetRolesForUser(ctx, usr.ID)
 	if err != nil {
 		log.L(ctx).Errorf("failed to get user roles: %s", err)
 	}
 
-	emails, err := p.Datastore.GetEmailsForUserByID(ctx, usr.ID)
+	emails, err := tx.GetEmailsForUserByID(ctx, usr.ID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load emails: %w", err)
 	}
 
-	hasBackupCodes, err := p.Datastore.UserHasTOTPEnrolled(ctx, usr.ID)
+	hasBackupCodes, err := tx.UserHasTOTPEnrolled(ctx, usr.ID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to check for existing recovery codes: %w", err)
 	}
@@ -204,7 +208,7 @@ func (p *Providers) GetUserProfileProto(ctx context.Context, usr repo.User) (*id
 	if extra := profile.GetUser().GetExtra(); extra != nil {
 		currentVisiblity := getCurrentFieldVisiblity(ctx, usr.ID)
 
-		for key, propertyConfig := range p.Config.ExtraDataConfig {
+		for key, propertyConfig := range cfg.ExtraDataConfig {
 			value := extra.Fields[key]
 			if value == nil {
 				continue

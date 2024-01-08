@@ -14,11 +14,6 @@ type MfaBackupCode struct {
 	UserID string
 }
 
-type Permission struct {
-	Name        string
-	Description sql.NullString
-}
-
 type RegistrationToken struct {
 	Token        string
 	Expires      sql.NullTime
@@ -33,6 +28,7 @@ type Role struct {
 	Name            string
 	Description     string
 	DeleteProtected bool
+	Origin          string
 }
 
 type RoleAssignment struct {

@@ -64,7 +64,32 @@ func GetRoleCommand(root *cli.Root) *cobra.Command {
 		GetDeleteRoleCommand(root),
 		GetAssignRoleCommand(root),
 		GetUnassignRoleCommand(root),
+		GetResolveRolePermissions(root),
 	)
+
+	return cmd
+}
+
+func GetResolveRolePermissions(root *cli.Root) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:  "get-permissions [role-id/name]",
+		Args: cobra.ExactArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			role, err := root.ResolveRole(args[0])
+			if err != nil {
+				logrus.Fatalf(err.Error())
+			}
+
+			res, err := root.Roles().ResolveRolePermissions(root.Context(), connect.NewRequest(&idmv1.ResolveRolePermissionsRequest{
+				RoleId: role.Id,
+			}))
+			if err != nil {
+				logrus.Fatalf(err.Error())
+			}
+
+			root.Print(res.Msg)
+		},
+	}
 
 	return cmd
 }

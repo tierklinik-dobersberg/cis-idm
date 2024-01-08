@@ -29,6 +29,10 @@ func NewService(p *app.Providers) *Service {
 }
 
 func (svc *Service) CreateRole(ctx context.Context, req *connect.Request[idmv1.CreateRoleRequest]) (*connect.Response[idmv1.CreateRoleResponse], error) {
+	if !svc.Config.DynmicRolesEnabled() {
+		return nil, connect.NewError(connect.CodePermissionDenied, fmt.Errorf("dynamic role configuration is not enabled"))
+	}
+
 	if req.Msg.Id != "" {
 		_, err := svc.Datastore.GetRoleByID(ctx, req.Msg.Id)
 		if err != nil {
@@ -69,79 +73,99 @@ func (svc *Service) CreateRole(ctx context.Context, req *connect.Request[idmv1.C
 }
 
 func (svc *Service) UpdateRole(ctx context.Context, req *connect.Request[idmv1.UpdateRoleRequest]) (*connect.Response[idmv1.UpdateRoleResponse], error) {
-	role, err := svc.Datastore.GetRoleByID(ctx, req.Msg.RoleId)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, connect.NewError(connect.CodeNotFound, nil)
+	if !svc.Config.DynmicRolesEnabled() {
+		return nil, connect.NewError(connect.CodePermissionDenied, fmt.Errorf("dynamic role configuration is not enabled"))
+	}
+
+	return repo.RunInTransaction(ctx, svc.Datastore, func(tx *repo.Queries) (*connect.Response[idmv1.UpdateRoleResponse], error) {
+		role, err := tx.GetRoleByID(ctx, req.Msg.RoleId)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return nil, connect.NewError(connect.CodeNotFound, nil)
+			}
+
+			return nil, err
 		}
 
-		return nil, err
-	}
-
-	paths := req.Msg.FieldMask.GetPaths()
-	if len(paths) == 0 {
-		paths = []string{"name", "description", "delete_protection"}
-	}
-
-	update := repo.UpdateRoleParams{
-		Name:            role.Name,
-		Description:     role.Description,
-		DeleteProtected: role.DeleteProtected,
-		ID:              role.ID,
-	}
-
-	for _, p := range paths {
-		switch p {
-		case "name":
-			update.Name = req.Msg.Name
-		case "description":
-			update.Description = req.Msg.Description
-		case "delete_protection":
-			update.DeleteProtected = req.Msg.DeleteProtection
-		default:
-			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("unknown field_mask.path %q", p))
+		if role.Origin == "system" {
+			return nil, connect.NewError(connect.CodePermissionDenied, fmt.Errorf("system roles cannot be modified"))
 		}
-	}
 
-	role, err = svc.Datastore.UpdateRole(ctx, update)
-	if err != nil {
-		return nil, err
-	}
+		paths := req.Msg.FieldMask.GetPaths()
+		if len(paths) == 0 {
+			paths = []string{"name", "description", "delete_protection"}
+		}
 
-	return connect.NewResponse(&idmv1.UpdateRoleResponse{
-		Role: &idmv1.Role{
-			Id:              role.ID,
+		update := repo.UpdateRoleParams{
 			Name:            role.Name,
 			Description:     role.Description,
 			DeleteProtected: role.DeleteProtected,
-		},
-	}), nil
+			ID:              role.ID,
+		}
+
+		for _, p := range paths {
+			switch p {
+			case "name":
+				update.Name = req.Msg.Name
+			case "description":
+				update.Description = req.Msg.Description
+			case "delete_protection":
+				update.DeleteProtected = req.Msg.DeleteProtection
+			default:
+				return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("unknown field_mask.path %q", p))
+			}
+		}
+
+		role, err = tx.UpdateRole(ctx, update)
+		if err != nil {
+			return nil, err
+		}
+
+		return connect.NewResponse(&idmv1.UpdateRoleResponse{
+			Role: &idmv1.Role{
+				Id:              role.ID,
+				Name:            role.Name,
+				Description:     role.Description,
+				DeleteProtected: role.DeleteProtected,
+			},
+		}), nil
+	})
 }
 
 func (svc *Service) DeleteRole(ctx context.Context, req *connect.Request[idmv1.DeleteRoleRequest]) (*connect.Response[idmv1.DeleteRoleResponse], error) {
-	role, err := svc.Datastore.GetRoleByID(ctx, req.Msg.RoleId)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, connect.NewError(connect.CodeNotFound, err)
+	if !svc.Config.DynmicRolesEnabled() {
+		return nil, connect.NewError(connect.CodePermissionDenied, fmt.Errorf("dynamic role management is not enabled"))
+	}
+
+	return repo.RunInTransaction(ctx, svc.Datastore, func(tx *repo.Queries) (*connect.Response[idmv1.DeleteRoleResponse], error) {
+		role, err := tx.GetRoleByID(ctx, req.Msg.RoleId)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return nil, connect.NewError(connect.CodeNotFound, err)
+			}
+
+			return nil, err
 		}
 
-		return nil, err
-	}
+		if role.Origin == "system" {
+			return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("system roles cannot be deleted"))
+		}
 
-	if role.DeleteProtected {
-		return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("role is delete protected"))
-	}
+		if role.DeleteProtected {
+			return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("role is delete protected"))
+		}
 
-	rows, err := svc.Datastore.DeleteRole(ctx, role.ID)
-	if err != nil {
-		return nil, err
-	}
+		rows, err := tx.DeleteRole(ctx, role.ID)
+		if err != nil {
+			return nil, err
+		}
 
-	if rows == 0 {
-		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("role not found"))
-	}
+		if rows == 0 {
+			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("role not found"))
+		}
 
-	return connect.NewResponse(&idmv1.DeleteRoleResponse{}), nil
+		return connect.NewResponse(&idmv1.DeleteRoleResponse{}), nil
+	})
 }
 
 func (svc *Service) ListRoles(ctx context.Context, req *connect.Request[idmv1.ListRolesRequest]) (*connect.Response[idmv1.ListRolesResponse], error) {
@@ -190,72 +214,103 @@ func (svc *Service) GetRole(ctx context.Context, req *connect.Request[idmv1.GetR
 }
 
 func (svc *Service) AssignRoleToUser(ctx context.Context, req *connect.Request[idmv1.AssignRoleToUserRequest]) (*connect.Response[idmv1.AssignRoleToUserResponse], error) {
-	role, err := svc.Datastore.GetRoleByID(ctx, req.Msg.RoleId)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("role not found"))
-		}
-		return nil, err
-	}
-
-	merr := new(multierror.Error)
-	for _, userID := range req.Msg.UserId {
-		user, err := svc.Datastore.GetUserByID(ctx, userID)
+	return repo.RunInTransaction(ctx, svc.Datastore, func(tx *repo.Queries) (*connect.Response[idmv1.AssignRoleToUserResponse], error) {
+		role, err := tx.GetRoleByID(ctx, req.Msg.RoleId)
 		if err != nil {
-			merr.Errors = append(merr.Errors, fmt.Errorf("user %s: %w", userID, err))
-			continue
+			if errors.Is(err, sql.ErrNoRows) {
+				return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("role not found"))
+			}
+			return nil, err
 		}
 
-		if err := svc.Datastore.AssignRoleToUser(ctx, repo.AssignRoleToUserParams{
-			UserID: user.ID,
-			RoleID: role.ID,
-		}); err != nil {
-			merr.Errors = append(merr.Errors, fmt.Errorf("user %s: %w", userID, err))
-			continue
+		merr := new(multierror.Error)
+		for _, userID := range req.Msg.UserId {
+			user, err := tx.GetUserByID(ctx, userID)
+			if err != nil {
+				merr.Errors = append(merr.Errors, fmt.Errorf("user %s: %w", userID, err))
+				continue
+			}
+
+			if err := tx.AssignRoleToUser(ctx, repo.AssignRoleToUserParams{
+				UserID: user.ID,
+				RoleID: role.ID,
+			}); err != nil {
+				merr.Errors = append(merr.Errors, fmt.Errorf("user %s: %w", userID, err))
+				continue
+			}
 		}
-	}
 
-	if err := merr.ErrorOrNil(); err != nil {
-		return nil, err
-	}
+		if err := merr.ErrorOrNil(); err != nil {
+			return nil, err
+		}
 
-	return connect.NewResponse(&idmv1.AssignRoleToUserResponse{}), nil
+		return connect.NewResponse(&idmv1.AssignRoleToUserResponse{}), nil
+	})
 }
 
 func (svc *Service) UnassignRoleFromUser(ctx context.Context, req *connect.Request[idmv1.UnassignRoleFromUserRequest]) (*connect.Response[idmv1.UnassignRoleFromUserResponse], error) {
-	role, err := svc.Datastore.GetRoleByID(ctx, req.Msg.RoleId)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("role not found"))
-		}
-		return nil, err
-	}
-
-	merr := new(multierror.Error)
-	for _, userID := range req.Msg.UserId {
-		user, err := svc.Datastore.GetUserByID(ctx, userID)
+	return repo.RunInTransaction(ctx, svc.Datastore, func(tx *repo.Queries) (*connect.Response[idmv1.UnassignRoleFromUserResponse], error) {
+		role, err := tx.GetRoleByID(ctx, req.Msg.RoleId)
 		if err != nil {
-			merr.Errors = append(merr.Errors, fmt.Errorf("user %s: %w", userID, err))
-			continue
+			if errors.Is(err, sql.ErrNoRows) {
+				return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("role not found"))
+			}
+			return nil, err
 		}
 
-		rows, err := svc.Datastore.UnassignRoleFromUser(ctx, repo.UnassignRoleFromUserParams{
-			UserID: user.ID,
-			RoleID: role.ID,
-		})
+		merr := new(multierror.Error)
+		for _, userID := range req.Msg.UserId {
+			user, err := tx.GetUserByID(ctx, userID)
+			if err != nil {
+				merr.Errors = append(merr.Errors, fmt.Errorf("user %s: %w", userID, err))
+				continue
+			}
+
+			rows, err := tx.UnassignRoleFromUser(ctx, repo.UnassignRoleFromUserParams{
+				UserID: user.ID,
+				RoleID: role.ID,
+			})
+			if err != nil {
+				merr.Errors = append(merr.Errors, fmt.Errorf("user %s: %w", userID, err))
+				continue
+			}
+
+			if rows == 0 {
+				merr.Errors = append(merr.Errors, fmt.Errorf("user-assignment for user %s and role %s: not found", user.ID, role.ID))
+			}
+		}
+
+		if err := merr.ErrorOrNil(); err != nil {
+			return nil, err
+		}
+
+		return connect.NewResponse(&idmv1.UnassignRoleFromUserResponse{}), nil
+	})
+}
+
+func (svc *Service) ResolveRolePermissions(ctx context.Context, req *connect.Request[idmv1.ResolveRolePermissionsRequest]) (*connect.Response[idmv1.ResolveRolePermissionsResponse], error) {
+	return repo.RunInTransaction(ctx, svc.Datastore, func(tx *repo.Queries) (*connect.Response[idmv1.ResolveRolePermissionsResponse], error) {
+		role, err := tx.GetRoleByID(ctx, req.Msg.RoleId)
 		if err != nil {
-			merr.Errors = append(merr.Errors, fmt.Errorf("user %s: %w", userID, err))
-			continue
+			if errors.Is(err, sql.ErrNoRows) {
+				return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("role id not fuond"))
+			}
+
+			return nil, err
 		}
 
-		if rows == 0 {
-			merr.Errors = append(merr.Errors, fmt.Errorf("user-assignment for user %s and role %s: not found", user.ID, role.ID))
+		permissions, err := tx.GetRolePermissions(ctx, role.ID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get role permissions: %w", err)
 		}
-	}
 
-	if err := merr.ErrorOrNil(); err != nil {
-		return nil, err
-	}
+		resolved, err := svc.Config.Permissions.Resolve(permissions)
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve role permissions: %w", err)
+		}
 
-	return connect.NewResponse(&idmv1.UnassignRoleFromUserResponse{}), nil
+		return connect.NewResponse(&idmv1.ResolveRolePermissionsResponse{
+			Permissions: resolved,
+		}), nil
+	}, repo.ReadOnly())
 }

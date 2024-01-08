@@ -14,6 +14,7 @@ import (
 	"github.com/ghodss/yaml"
 	"github.com/hashicorp/go-multierror"
 	"github.com/tierklinik-dobersberg/apis/pkg/log"
+	"github.com/tierklinik-dobersberg/cis-idm/internal/permission"
 	"golang.org/x/exp/slices"
 )
 
@@ -50,6 +51,13 @@ type WebPush struct {
 	Admin           string `json:"admin"`
 	VAPIDpublicKey  string `json:"vapidPublicKey"`
 	VAPIDprivateKey string `json:"vapidPrivateKey"`
+}
+
+type Role struct {
+	ID          string   `json:"id"`
+	Name        string   `json:"name"`
+	Description string   `json:"description"`
+	Permissions []string `json:"permissions"`
 }
 
 type Config struct {
@@ -109,7 +117,23 @@ type Config struct {
 	// enabled.
 	// Use this if you want to ensure cisidm has a set of roles that other services
 	// rely upon.
-	Roles []string `json:"roles"`
+	Roles []Role `json:"roles"`
+
+	// EnableDynamicRoles controles whether or not roles can be created/updated/deleted
+	// via the tkd.idm.v1.RoleService API.
+	// This defaults to true if no roles are configured in the configuration file, otherwise,
+	// if roles are pre-configured, this defaults to false.
+	// To have config defined roles while still allowing role management via the API you need
+	// to explicitly set EnableDynamicRoles to true.
+	//
+	// Note that even if this is enabled, roles configured via the configuration file cannot
+	// be modified or deleted.
+	EnableDynamicRoles *bool `json:"enableDynamicRoles"`
+
+	// Permissions defines the hierarchical set of available permissions.
+	// Note that the specified permission tree will be merged into the default set of permissions
+	// that are built into cisidm.
+	Permissions permission.Tree `json:"permissions"`
 
 	// AllowedDomainRedirects is a list of domain names to which cisidm will allow
 	// redirection after login/refresh.
@@ -330,6 +354,11 @@ func (file *Config) applyDefaults() error {
 		file.MailConfig = new(MailConfig)
 	}
 
+	if file.EnableDynamicRoles == nil {
+		b := len(file.Roles) == 0
+		file.EnableDynamicRoles = &b
+	}
+
 	// validate the user extra data.
 	if len(file.ExtraDataConfig) > 0 {
 		for key, cfg := range file.ExtraDataConfig {
@@ -340,6 +369,14 @@ func (file *Config) applyDefaults() error {
 	}
 
 	return nil
+}
+
+func (file Config) DynmicRolesEnabled() bool {
+	if file.EnableDynamicRoles == nil {
+		return false
+	}
+
+	return *file.EnableDynamicRoles
 }
 
 func (file Config) AuthRequiredForURL(ctx context.Context, method string, url string) (*ForwardAuthEntry, bool, error) {

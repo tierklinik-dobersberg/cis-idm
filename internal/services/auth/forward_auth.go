@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 
 	gojwt "github.com/dgrijalva/jwt-go"
@@ -117,10 +118,31 @@ func NewForwardAuthHandler(providers *app.Providers) http.Handler {
 				w.Header().Add("X-Remote-Mail", claims.Email)
 			}
 
+			var permissions []string
 			if claims.AppMetadata != nil && claims.AppMetadata.Authorization != nil {
 				for _, r := range claims.AppMetadata.Authorization.Roles {
 					w.Header().Add("X-Remote-Role", r)
+
+					rolePermissions, err := providers.Datastore.GetRolePermissions(ctx, r)
+					if err != nil {
+						l.Errorf("failed to get permissions for role %q", r)
+
+						continue
+					}
+
+					permissions = append(permissions, rolePermissions...)
 				}
+			}
+
+			// all all permissions from all roles to the headers.
+			slices.Sort(permissions)
+			allPermissions, err := providers.Config.Permissions.Resolve(permissions)
+			if err == nil {
+				for _, p := range allPermissions {
+					w.Header().Add("X-Permission", p)
+				}
+			} else {
+				l.Errorf("failed to resolve role permissions: %s", err)
 			}
 
 			l.Infof("request by user %s (name=%q) is allowed", claims.Subject, claims.Name)
