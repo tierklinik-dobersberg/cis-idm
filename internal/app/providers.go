@@ -208,17 +208,17 @@ func GetUserProfileProto(ctx context.Context, tx *repo.Queries, cfg config.Confi
 	if extra := profile.GetUser().GetExtra(); extra != nil {
 		currentVisiblity := getCurrentFieldVisiblity(ctx, usr.ID)
 
-		for key, propertyConfig := range cfg.ExtraDataConfig {
-			value := extra.Fields[key]
+		for _, propertyConfig := range cfg.ExtraDataConfig {
+			value := extra.Fields[propertyConfig.Name]
 			if value == nil {
 				continue
 			}
 
 			value = propertyConfig.ApplyVisibility(currentVisiblity, value)
 			if value == nil {
-				delete(extra.Fields, key)
+				delete(extra.Fields, propertyConfig.Name)
 			} else {
-				extra.Fields[key] = value
+				extra.Fields[propertyConfig.Name] = value
 			}
 		}
 	}
@@ -228,8 +228,17 @@ func GetUserProfileProto(ctx context.Context, tx *repo.Queries, cfg config.Confi
 
 func (p *Providers) ValidateUserExtraData(pb *structpb.Struct) error {
 	for key, value := range pb.Fields {
-		propertyConfig, ok := p.Config.ExtraDataConfig[key]
-		if !ok {
+		var propertyConfig *config.FieldConfig
+
+		for _, p := range p.Config.ExtraDataConfig {
+			if p.Name == key {
+				propertyConfig = p
+
+				break
+			}
+		}
+
+		if propertyConfig == nil {
 			return fmt.Errorf("%s: key not allowed", key)
 		}
 

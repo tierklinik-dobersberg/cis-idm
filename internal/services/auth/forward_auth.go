@@ -136,7 +136,7 @@ func NewForwardAuthHandler(providers *app.Providers) http.Handler {
 
 			// all all permissions from all roles to the headers.
 			slices.Sort(permissions)
-			allPermissions, err := providers.Config.Permissions.Resolve(permissions)
+			allPermissions, err := providers.Config.PermissionTree().Resolve(permissions)
 			if err == nil {
 				for _, p := range allPermissions {
 					w.Header().Add("X-Permission", p)

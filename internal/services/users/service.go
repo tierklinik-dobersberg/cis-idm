@@ -724,7 +724,7 @@ func (svc *Service) ResolveUserPermissions(ctx context.Context, req *connect.Req
 			permissions = append(permissions, rolePerms...)
 		}
 
-		resolved, err := svc.Config.Permissions.Resolve(permissions)
+		resolved, err := svc.Config.PermissionTree().Resolve(permissions)
 		if err != nil {
 			return nil, fmt.Errorf("failed to resolve role permissions: %w", err)
 		}

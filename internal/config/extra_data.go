@@ -25,49 +25,16 @@ const (
 	FieldVisibilityAuthenticated = FieldVisibility("authenticated")
 )
 
-const _ = `
-extraFields:
-	calendarID:
-		type: string
-		visibility: private
-		writable: false
-		description: "The google calendar ID of the user"
-	color:
-		type: string
-		visibility: public
-		writeable: true
-		description: "The primary color of the user"
-		displayName: "Color"
-	pbx:
-		type: object
-		writeable: false
-		visibility: public
-		description: "Configuration for the internal PBX"
-		properties:
-			internal:
-				type: string
-				writeable: false
-				description: "The internal phone extension of the user"
-				displayName: "Internal Phone Extension"
-				visibility: authenticated
-			external:
-				type: string
-				writeable: false
-				description: "The external phone number of the user"
-				displayName: "External Phone Number"
-				visibility: public
-
-`
-
 // FieldConfig describes how user-extra data looks like.
 type FieldConfig struct {
-	Type        FieldType               `json:"type"`
-	Visibility  FieldVisibility         `json:"visibility"`
-	Writeable   bool                    `json:"writeable"`
-	Description string                  `json:"description"`
-	DisplayName string                  `json:"displayName"`
-	Properties  map[string]*FieldConfig `json:"properties"`
-	ElementType *FieldConfig            `json:"elementType"`
+	Name        string          `json:"name" hcl:",label"`
+	Type        FieldType       `json:"type" hcl:"type,optional"`
+	Visibility  FieldVisibility `json:"visibility" hcl:"visibility,optional"`
+	Writeable   bool            `json:"writeable" hcl:"writeable,optional"`
+	Description string          `json:"description" hcl:"description,optional"`
+	DisplayName string          `json:"display_name" hcl:"display_name,optional"`
+	Properties  []*FieldConfig  `json:"properties" hcl:"properties,block"`
+	ElementType *FieldConfig    `json:"element_type" hcl:"element_type,block"`
 }
 
 func (fc FieldConfig) Validate(data *structpb.Value) error {
@@ -97,15 +64,24 @@ func (fc FieldConfig) Validate(data *structpb.Value) error {
 			return fmt.Errorf("invalid type: expected %q but got %T", "object", data.Kind)
 		}
 
-		for key, propertyConfig := range fc.Properties {
-			value := ov.StructValue.Fields[key]
+		for _, propertyConfig := range fc.Properties {
+			value := ov.StructValue.Fields[propertyConfig.Name]
 			if err := propertyConfig.Validate(value); err != nil {
-				return fmt.Errorf("%s: %w", key, err)
+				return fmt.Errorf("%s: %w", propertyConfig.Name, err)
 			}
 		}
 
 		for key := range ov.StructValue.Fields {
-			_, ok := fc.Properties[key]
+			var ok bool
+
+			for _, p := range fc.Properties {
+				if p.Name == key {
+					ok = true
+
+					break
+				}
+			}
+
 			if !ok {
 				return fmt.Errorf("%s: key not allowed", key)
 			}
@@ -144,8 +120,8 @@ func (fc *FieldConfig) ApplyVisibility(current FieldVisibility, value *structpb.
 			return nil
 		}
 
-		for key, propertyConfig := range fc.Properties {
-			propertyValue := ov.StructValue.Fields[key]
+		for _, propertyConfig := range fc.Properties {
+			propertyValue := ov.StructValue.Fields[propertyConfig.Name]
 
 			if propertyValue == nil {
 				continue
@@ -153,7 +129,7 @@ func (fc *FieldConfig) ApplyVisibility(current FieldVisibility, value *structpb.
 
 			propertyValue = propertyConfig.ApplyVisibility(effectiveVisilbity, propertyValue)
 			if propertyValue == nil {
-				delete(ov.StructValue.Fields, key)
+				delete(ov.StructValue.Fields, propertyConfig.Name)
 			}
 		}
 	}

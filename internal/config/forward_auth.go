@@ -21,11 +21,11 @@ var (
 )
 
 type Rule struct {
-	IP        string `json:"ip"`
-	Network   string `json:"network"`
-	Token     string `json:"token"`
-	Deny      bool   `json:"deny"`
-	SubjectID string `json:"subject"`
+	IP        string `json:"ip" hcl:"ip,optional"`
+	Network   string `json:"network" hcl:"network,optional"`
+	Token     string `json:"token" hcl:"token,optional"`
+	Deny      bool   `json:"deny" hcl:"deny,optional"`
+	SubjectID string `json:"subject" hcl:"subject,optional"`
 
 	ip         net.IP
 	network    *net.IPNet
@@ -59,10 +59,10 @@ func (r *Rule) String() string {
 }
 
 type ForwardAuthEntry struct {
-	Required *bool    `json:"required,omitempty" yaml:"required,omitempty"`
-	URL      string   `json:"url" yaml:"url"`
-	Methods  []string `json:"methods,omitempty" yaml:"methods,omitempty"`
-	Rules    []*Rule  `json:"rules"`
+	Required *bool    `json:"required,omitempty" yaml:"required,omitempty" hcl:"required,optional"`
+	URL      string   `json:"url" yaml:"url" hcl:"url"`
+	Methods  []string `json:"methods,omitempty" yaml:"methods,omitempty" hcl:"methods,optional"`
+	Rules    []*Rule  `json:"rules" hcl:"rules,block"`
 
 	parsedUrlRegex *regexp.Regexp
 	parseOnce      sync.Once
