@@ -33,7 +33,7 @@ func AuthenticateRequest(cfg config.Config, ds *repo.Queries, req *http.Request)
 
 	// first, try to parse the token as a JWT and if that worked, immediately
 	// return the claims
-	claims, tokenErr := jwt.ParseAndVerify([]byte(cfg.JWTSecret), token)
+	claims, tokenErr := jwt.ParseAndVerify([]byte(cfg.JWT.Secret), token)
 
 	if tokenErr == nil {
 		l.Debugf("found valid JWT for user %s (name=%q)", claims.Subject, claims.Name)
@@ -177,7 +177,7 @@ func NewJWTMiddleware(cfg config.Config, repo *repo.Queries, next http.Handler, 
 			tokenSource = "header"
 		} else {
 			// try to get the access token from a cookie
-			cookie := FindCookie(cfg.AccessTokenCookieName, r.Header)
+			cookie := FindCookie(cfg.JWT.AccessTokenCookieName, r.Header)
 			if cookie != nil {
 				token = cookie.Value
 				tokenSource = "cookie"

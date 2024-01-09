@@ -1,6 +1,10 @@
 package main
 
 import (
+	"errors"
+
+	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/hcl/v2"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/tierklinik-dobersberg/apis/pkg/cli"
@@ -19,6 +23,16 @@ func main() {
 		Run: func(cmd *cobra.Command, args []string) {
 			c, err := config.LoadFile(args[0])
 			if err != nil {
+				var diag hcl.Diagnostics
+				if errors.As(err, &diag) {
+					merr := new(multierror.Error)
+					for _, d := range diag {
+						merr.Errors = append(merr.Errors, d)
+					}
+
+					logrus.Fatalf(merr.Error())
+				}
+
 				logrus.Fatalf(err.Error())
 			}
 

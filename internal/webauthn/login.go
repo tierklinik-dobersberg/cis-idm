@@ -88,7 +88,7 @@ func (svc *Service) BeginLoginHandler(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     "login_session",
 		Value:    sessionID.String(),
-		Secure:   *svc.Config.SecureCookie,
+		Secure:   *svc.Config.Server.SecureCookie,
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
 		Expires:  time.Now().Add(time.Minute * 5),

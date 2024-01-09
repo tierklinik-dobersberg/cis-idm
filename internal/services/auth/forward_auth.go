@@ -84,11 +84,11 @@ func NewForwardAuthHandler(providers *app.Providers) http.Handler {
 			switch {
 			case err == nil:
 				l.Debugf("request not allowed")
-				handleRedirect(w, r, providers.Config.LoginRedirectURL, redirectUrl)
+				handleRedirect(w, r, providers.Config.UserInterface.LoginRedirectURL, redirectUrl)
 
 			case errors.As(err, verr) && (verr.Errors&gojwt.ValidationErrorExpired) > 0:
 				l.Debugf("request not allowed: JWT token expired")
-				handleRedirect(w, r, providers.Config.RefreshRedirectURL, redirectUrl)
+				handleRedirect(w, r, providers.Config.UserInterface.RefreshRedirectURL, redirectUrl)
 
 			default:
 				l.Debugf("request not allowed: %s", err)
@@ -100,7 +100,7 @@ func NewForwardAuthHandler(providers *app.Providers) http.Handler {
 
 		if err != nil {
 			l.Errorf("request not allowed due to errors: %s", err)
-			handleRedirect(w, r, providers.Config.LoginRedirectURL, redirectUrl)
+			handleRedirect(w, r, providers.Config.UserInterface.LoginRedirectURL, redirectUrl)
 
 			return
 		}
@@ -108,7 +108,7 @@ func NewForwardAuthHandler(providers *app.Providers) http.Handler {
 		if claims != nil {
 			w.Header().Add("X-Remote-User-ID", claims.Subject)
 			w.Header().Add("X-Remote-User", claims.Name)
-			w.Header().Add("X-Remote-Avatar-URL", fmt.Sprintf("%s/avatar/%s", providers.Config.PublicURL, claims.Subject))
+			w.Header().Add("X-Remote-Avatar-URL", fmt.Sprintf("%s/avatar/%s", providers.Config.UserInterface.PublicURL, claims.Subject))
 
 			if claims.DisplayName != "" {
 				w.Header().Add("X-Remote-User-Display-Name", claims.DisplayName)

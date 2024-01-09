@@ -22,10 +22,11 @@ func New(providers *app.Providers, authService *auth.AuthService) (http.Handler,
 	mux := http.NewServeMux()
 
 	wconfig := &webauthn.Config{
-		RPDisplayName: providers.Config.SiteName,
-		RPID:          providers.Config.Domain,
+		RPDisplayName: providers.Config.UserInterface.SiteName,
+		RPID:          providers.Config.Server.Domain,
 		RPOrigins: []string{
-			providers.Config.PublicURL,
+			// TODO(ppacher): allow the user to specify mor rp-origins here.
+			providers.Config.UserInterface.PublicURL,
 		},
 	}
 

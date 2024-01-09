@@ -117,9 +117,9 @@ func (svc *Service) SendNotification(ctx context.Context, req *connect.Request[i
 		m["User"] = targetUsers[usrID]
 		m["Sender"] = senderUser
 		m["IDM"] = map[string]any{
-			"SiteName":  svc.Config.SiteName,
-			"SiteURL":   svc.Config.SiteNameURL,
-			"PublicURL": svc.Config.PublicURL,
+			"SiteName":  svc.Config.UserInterface.SiteName,
+			"SiteURL":   svc.Config.UserInterface.SiteNameURL,
+			"PublicURL": svc.Config.UserInterface.PublicURL,
 		}
 		m["Ctx"] = rctx
 
@@ -279,7 +279,7 @@ func (svc *Service) AddWebPushSubscription(ctx context.Context, req *connect.Req
 	}
 
 	params := repo.CreateWebPushSubscriptionForUserParams{
-		ID: id.String(),
+		ID:        id.String(),
 		UserID:    claims.Subject,
 		UserAgent: req.Header().Get("User-Agent"),
 		Endpoint:  sub.Endpoint,

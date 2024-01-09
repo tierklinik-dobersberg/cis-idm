@@ -27,8 +27,8 @@ const (
 
 // FieldConfig describes how user-extra data looks like.
 type FieldConfig struct {
-	Name        string          `json:"name" hcl:",label"`
-	Type        FieldType       `json:"type" hcl:"type,optional"`
+	Type        FieldType       `json:"type" hcl:"type,label"`
+	Name        string          `json:"name" hcl:"name,label"`
 	Visibility  FieldVisibility `json:"visibility" hcl:"visibility,optional"`
 	Writeable   bool            `json:"writeable" hcl:"writeable,optional"`
 	Description string          `json:"description" hcl:"description,optional"`

@@ -58,7 +58,7 @@ func (p *Providers) SendMailVerification(ctx context.Context, user repo.User, ma
 	}
 	if err := mailer.SendTemplate(ctx, p.Config, p.TemplateEngine, p.Mailer, msg, tmpl.VerifyMail, &tmpl.VerifyMailCtx{
 		User:       user,
-		VerifyLink: fmt.Sprintf(p.Config.VerifyMailURL, secret),
+		VerifyLink: fmt.Sprintf(p.Config.UserInterface.VerifyMailURL, secret),
 	}); err != nil {
 		return err
 	}

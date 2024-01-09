@@ -126,7 +126,7 @@ func (svc *AuthService) Login(ctx context.Context, req *connect.Request[idmv1.Lo
 			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid message: missing required totp field"))
 		}
 
-		claims, err := jwt.ParseAndVerify([]byte(svc.Config.JWTSecret), req.Msg.GetTotp().State)
+		claims, err := jwt.ParseAndVerify([]byte(svc.Config.JWT.Secret), req.Msg.GetTotp().State)
 		if err != nil {
 			return nil, connect.NewError(connect.CodeUnauthenticated, err)
 		}
@@ -235,9 +235,9 @@ func (svc *AuthService) Logout(ctx context.Context, req *connect.Request[idmv1.L
 
 	// clear the refresh token cookie
 	clearRefreshCookie := http.Cookie{
-		Name:     svc.Config.RefreshTokenCookieName,
+		Name:     svc.Config.JWT.RefreshTokenCookieName,
 		Value:    "",
-		Domain:   svc.Config.Domain,
+		Domain:   svc.Config.Server.Domain,
 		MaxAge:   -1,
 		SameSite: http.SameSiteLaxMode,
 		Path:     "/tkd.idm.v1.AuthService/RefreshToken",
@@ -245,9 +245,9 @@ func (svc *AuthService) Logout(ctx context.Context, req *connect.Request[idmv1.L
 	}
 
 	clearAccessCookie := http.Cookie{
-		Name:     svc.Config.AccessTokenCookieName,
+		Name:     svc.Config.JWT.AccessTokenCookieName,
 		Value:    "",
-		Domain:   svc.Config.Domain,
+		Domain:   svc.Config.Server.Domain,
 		MaxAge:   -1,
 		SameSite: http.SameSiteLaxMode,
 		Path:     "/",
@@ -262,12 +262,12 @@ func (svc *AuthService) Logout(ctx context.Context, req *connect.Request[idmv1.L
 }
 
 func (svc *AuthService) RefreshToken(ctx context.Context, req *connect.Request[idmv1.RefreshTokenRequest]) (*connect.Response[idmv1.RefreshTokenResponse], error) {
-	refreshCookie := middleware.FindCookie(svc.Config.RefreshTokenCookieName, req.Header())
+	refreshCookie := middleware.FindCookie(svc.Config.JWT.RefreshTokenCookieName, req.Header())
 	if refreshCookie == nil {
 		return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("no refresh cookie provided"))
 	}
 
-	claims, err := jwt.ParseAndVerify([]byte(svc.Config.JWTSecret), refreshCookie.Value)
+	claims, err := jwt.ParseAndVerify([]byte(svc.Config.JWT.Secret), refreshCookie.Value)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("invalid refresh token: %w", err))
 	}
@@ -383,9 +383,15 @@ func (svc *AuthService) RegisterUser(ctx context.Context, req *connect.Request[i
 		return nil, err
 	}
 
+	switch svc.Config.RegistrationMode {
+	case config.RegistrationModeDisabled:
+		if count > 0 {
+			return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("registration feature is disabled"))
+		}
+	}
+
 	// deny registrytion if FeatureSelfRegistration is not enabled and we already have a user.
 	if !svc.Config.FeatureEnabled(config.FeatureSelfRegistration) && count > 0 {
-		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("registration feature is disabled"))
 	}
 
 	passwordHash, err := bcrypt.GenerateFromPassword([]byte(req.Msg.Password), bcrypt.DefaultCost)
@@ -403,11 +409,18 @@ func (svc *AuthService) RegisterUser(ctx context.Context, req *connect.Request[i
 		}
 	}()
 
-	// Deny registration if a token is required but none is provided.
-	// In case we don't have users, we still allow the registration since
-	// the admin needs to bootstrap the first user.
-	if svc.Config.RegistrationRequiresToken && count > 0 && req.Msg.RegistrationToken == "" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("registration token is missing"))
+	// if there's at least one user make sure we apply the configured registration mode
+	if count > 0 {
+		switch svc.Config.RegistrationMode {
+		case config.RegistrationModePublic:
+			// everything fine, public registrations are allowed
+		case config.RegistrationModeToken:
+			if req.Msg.RegistrationToken == "" {
+				return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("registration token is missing"))
+			}
+
+			// config.RegistrationModeDisabled is already handled above.
+		}
 	}
 
 	userModel, err := svc.CreateUser(
@@ -499,7 +512,7 @@ func (svc *AuthService) CreateUser(ctx context.Context, tx *sql.Tx, params repo.
 	// ensure we have a valid registration token if IDM_REGISTRATION_REQUIRES_TOKEN is set to true.
 	// Note that we also accept a registration token even if it's not required so users can be
 	// bootstrapped with a set of initial roles.
-	if svc.Config.RegistrationRequiresToken || token != "" {
+	if token != "" {
 		tokenModel, err := db.GetRegistrationToken(ctx, repo.GetRegistrationTokenParams{
 			Token: token,
 			Expires: sql.NullTime{
@@ -609,7 +622,7 @@ func (svc *AuthService) RequestPasswordReset(ctx context.Context, req *connect.R
 
 		if err := mailer.SendTemplate(ctx, svc.Config, svc.TemplateEngine, svc.Mailer, msg, tmpl.RequestPasswordReset, &tmpl.RequestPasswordResetCtx{
 			User:      user,
-			ResetLink: fmt.Sprintf(svc.Config.PasswordResetURL, code),
+			ResetLink: fmt.Sprintf(svc.Config.UserInterface.PasswordResetURL, code),
 		}); err != nil {
 			defer func() {
 				_ = svc.Cache.DeleteKey(ctx, cacheKey)

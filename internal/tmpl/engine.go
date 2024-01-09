@@ -107,9 +107,9 @@ func RenderKnown[T Context](cfg config.Config, engine TemplateEngine, known Know
 }
 
 func RenderKnownTo[T Context](cfg config.Config, engine TemplateEngine, known Known[T], args T, target io.Writer) error {
-	args.SetPublicURL(cfg.PublicURL)
-	args.SetSiteName(cfg.SiteName)
-	args.SetSiteURL(cfg.SiteNameURL)
+	args.SetPublicURL(cfg.UserInterface.PublicURL)
+	args.SetSiteName(cfg.UserInterface.SiteName)
+	args.SetSiteURL(cfg.UserInterface.SiteNameURL)
 
 	if err := engine.ExecuteTemplate(target, known.Name, args); err != nil {
 		return err

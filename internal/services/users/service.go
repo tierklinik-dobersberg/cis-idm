@@ -60,7 +60,7 @@ func (svc *Service) Impersonate(ctx context.Context, req *connect.Request[idmv1.
 	tokenMessage := &idmv1.ImpersonateResponse{}
 	res := connect.NewResponse(tokenMessage)
 
-	token, _, err := svc.AddAccessToken(user, roles, svc.Config.AccessTokenTTL.AsDuration(), "", "impersonate", res.Header())
+	token, _, err := svc.AddAccessToken(user, roles, svc.Config.AccessTTL(), "", "impersonate", res.Header())
 	if err != nil {
 		return nil, err
 	}
@@ -536,7 +536,7 @@ func (svc *Service) InviteUser(ctx context.Context, req *connect.Request[idmv1.I
 		mail, err := mailer.PrepareTemplate(ctx, svc.Config, svc.TemplateEngine, msg, tmpl.InviteMail, &tmpl.InviteMailCtx{
 			Name:        userInvite.Name,
 			Inviter:     creator,
-			RegisterURL: fmt.Sprintf(svc.Config.RegistrationURL, token, userInvite.Email, strings.ToLower(userInvite.Name)),
+			RegisterURL: fmt.Sprintf(svc.Config.UserInterface.RegistrationURL, token, userInvite.Email, strings.ToLower(userInvite.Name)),
 		})
 		if err != nil {
 			merr.Errors = append(merr.Errors, fmt.Errorf("failed to send message to %s: %w", userInvite.Email, err))
@@ -679,7 +679,7 @@ func (svc *Service) SendAccountCreationNotice(ctx context.Context, req *connect.
 		if err := mailer.SendTemplate(ctx, svc.Config, svc.TemplateEngine, svc.Mailer, msg, tmpl.AccountCreationNotice, &tmpl.AccountCreationNoticeCtx{
 			Creator:   creator,
 			User:      target,
-			ResetLink: fmt.Sprintf(svc.Config.PasswordResetURL, code),
+			ResetLink: fmt.Sprintf(svc.Config.UserInterface.PasswordResetURL, code),
 		}); err != nil {
 			defer func() {
 				_ = svc.Cache.DeleteKey(ctx, cacheKey)

@@ -11,6 +11,7 @@ import (
 	"github.com/gofrs/uuid"
 	"github.com/mileusna/useragent"
 	"github.com/tierklinik-dobersberg/apis/pkg/log"
+	"github.com/tierklinik-dobersberg/cis-idm/internal/config"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/middleware"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/repo"
 )
@@ -50,6 +51,23 @@ func (svc *Service) BeginRegistrationHandler(w http.ResponseWriter, r *http.Requ
 
 			http.Error(w, "internal server error", http.StatusInternalServerError)
 			return
+		}
+
+		switch svc.Config.RegistrationMode {
+		case config.RegistrationModeDisabled:
+			http.Error(w, "user registration is disabled", http.StatusUnauthorized)
+
+			return
+
+		case config.RegistrationModeToken:
+			if payload.Token == "" {
+				http.Error(w, "registration token is missing", http.StatusBadRequest)
+
+				return
+			}
+
+		case config.RegistrationModePublic:
+			// all fine.
 		}
 
 		// a user is performing an initial registration
@@ -132,7 +150,7 @@ func (svc *Service) BeginRegistrationHandler(w http.ResponseWriter, r *http.Requ
 	http.SetCookie(w, &http.Cookie{
 		Name:     "registration_session",
 		Value:    sessionID.String(),
-		Secure:   *svc.Config.SecureCookie,
+		Secure:   *svc.Config.Server.SecureCookie,
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
 		Path:     "/",

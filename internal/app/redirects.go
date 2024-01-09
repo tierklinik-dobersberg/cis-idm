@@ -21,7 +21,7 @@ func (p *Providers) HandleRequestedRedirect(ctx context.Context, requestedRedire
 			return "", err
 		}
 
-		for _, allowedDomain := range p.Config.AllowedDomainRedirects {
+		for _, allowedDomain := range p.Config.Server.AllowedDomainRedirects {
 			if strings.HasPrefix(allowedDomain, ".") {
 				if strings.HasSuffix(u.Host, allowedDomain) {
 					return u.String(), nil
@@ -33,7 +33,7 @@ func (p *Providers) HandleRequestedRedirect(ctx context.Context, requestedRedire
 			}
 		}
 
-		log.L(ctx).Warnf("requested redirect to %s is not allowed (%v)", string(decoded), p.Config.AllowedDomainRedirects)
+		log.L(ctx).Warnf("requested redirect to %s is not allowed (%v)", string(decoded), p.Config.Server.AllowedDomainRedirects)
 	}
 
 	return "", nil
