@@ -24,7 +24,7 @@ require (
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.8.0
 	github.com/tidwall/sjson v1.2.5
-	github.com/tierklinik-dobersberg/apis v0.0.0-20240108090456-e98c4d174803
+	github.com/tierklinik-dobersberg/apis v0.0.0-20240114092554-d2f8ba6a3e71
 	github.com/vincent-petithory/dataurl v1.0.0
 	golang.org/x/crypto v0.17.0
 	golang.org/x/exp v0.0.0-20231219180239-dc181d75b848
