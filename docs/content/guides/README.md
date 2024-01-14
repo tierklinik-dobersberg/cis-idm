@@ -1,6 +1,6 @@
-# Guides
+# Documentation
 
-Welcome to our collection of `cisidm` guides.
+Welcome the `cisidm` documentation.
 
 **Check the navigation bar on the left for an overview of available guides and references.**
 

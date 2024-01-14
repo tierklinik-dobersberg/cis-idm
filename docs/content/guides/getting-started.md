@@ -1,19 +1,23 @@
+---
+next:
+  text: User and Role Management
+  link: ./user-role-management.md
+---
+
 # Getting Started
 
-Welcome to the Getting-Started Guide for `cisidm`. On this page we will walk through a simple docker-compose based setup to get you started.
+Welcome to the Getting-Started Guide for `cisidm`. On this page we will walk
+through a simple docker-compose based setup to get you started.
 
 ## Overview
 
-The easiest way to get started using `cisidm` is to deploy it and the database (rqlite) using docker-compose.
-In this guide we will setup a docker deployment with the following service:
-
-- [**rqlite**](https://rqlite.io/)  
-  rqlite is a database based on sqlite with clustering support using RAFT. It used by cisidm to store all it's
-  data like users, roles, webauthn credentials and more.
+The easiest way to get started using `cisidm` is to deploy it using
+docker-compose. In this guide we will setup a docker deployment with the
+following service:
 
 - [**traefik**](https://doc.traefik.io/traefik/):  
-  A flexible and powerful reverse proxy that will handle automatic HTTPS via Let's Encrypt and secure
-  our services by enforcing authentication via cisidm.
+  A flexible and powerful reverse proxy that will handle automatic HTTPS via
+  Let's Encrypt and secure our services by enforcing authentication via cisidm.
 
 - [**cisidm**](https://github.com/tierklinik-dobersberg/cis-idm):  
   The identity management server.
@@ -23,8 +27,9 @@ In this guide we will setup a docker deployment with the following service:
 
 :::warning Customization Required
 
-Please make sure to update the configurations in this guide to match your domains and e-mail addresses!
-You will also need DNS to be setup correctly (i.e. your sub-domains pointing to your server/IP address).
+Please make sure to update the configurations in this guide to match your
+domains and e-mail addresses! You will also need DNS to be setup correctly (i.e.
+your sub-domains pointing to your server/IP address).
 
 :::
 
@@ -33,71 +38,78 @@ You will also need DNS to be setup correctly (i.e. your sub-domains pointing to 
 Prepare the directory structure for our deployment.
 
 ```bash
-mkdir -p cisidm-demo/config;
+mkdir -p cisidm-demo/config
 ```
 
-The `cisidm-config/config` folder will hold the configuration files for `cisidm` and `traefik`.
-Our `docker-compose.yml` file will be placed directly in `cisidm-config`.
+The `cisidm-config/config` folder will hold the configuration files for `cisidm`
+and `traefik`. Our `docker-compose.yml` file will be placed directly in
+`cisidm-config`.
 
 ## Configuration File
 
-Create the configuration file for `cisidm` in `cisidm-demo/config/idm-config.yml`:
+Create the configuration file for `cisidm` in `cisidm-demo/config/idm-config.hcl`:
 
 <CodeGroup>
   <CodeGroupItem title="idm-config.yml">
 
-```yaml
-# The domain that cisidm is going to protect. If you plan on deploying other services using sub-domains make sure
-# to set the this field to the top-level domain. Otherwise, browser will not send the access token cookie for sub-domains.
-domain: example.com
+```hcl
+# Configures where the SQLite3 database should be stored.
+database_url = "file:/data/idm.db"
 
-# Whether or not the cookie should only be sent for HTTPS. It's best to keep this at true.
-secureCookie: true
+# Disable self-registration of users. This means that any user account must be
+# created by an administrator using the `idmctl` cli utility.
+registration = "disabled"
 
-# The secret key used to sign the JWT access tokens. Choose some secure random string here.
-# Note that if you ever change this value any access and refresh tokens will be invalidated and your users
-# will need to re-authenticate.
-jwtSecret: "some-secure-secret"
+# This configures some defaults for the built-in server.
+server {
+    secure_cookies = true
+    domain = "example.com"
+    allowed_origins = [
+        "https://example.com",
+        "https://*.example.com",
+    ]
+    trusted_networks = [
+        "traefik"
+    ]
+    allowed_redirects = [
+        "example.com",
+        ".example.com"
+    ]
+}
 
-# The address for the rqlite database
-rqliteURL: http://rqlite:4001/
+jwt {
+    secret = "some-secure-random-string"
+}
 
-# The default log level. Possible values are debug, info, warn and error
-logLevel: info
+ui {
+    site_name = "Example Inc"
+    public_url = "https://account.example.com"
+}
 
-# A list of IP networks (in CIDR notation) or hostnames from which cisidm will trust the
-# X-Forwarded-For headers.
-trustedNetworks:
-  - traefik
+policies {
+    debug = false
 
-# Whether or not your users require a registration token. Setting this to false enables public registration.
-registrationRequiresToken: true
+    policy "superuser" {
+        content = <<EOT
+        package cisidm.forward_auth
 
-# The name of your deployment.
-siteName: Example Site
+        import future.keywords.in
 
-# A URL that will be used in email templates and on the self-service UI.
-siteNameUrl: https://example.com
+        allow {
+            user_is_superuser
+        }
 
-# Configuration for the forward authentication support.
-forwardAuth:
-  # We require authentication for all sub-domains of example.com
-  - url: "http(s){0,1}://(.*).example.com"
-    required: true
+        user_is_superuser {
+            input.subject
+            input.subject.roles
 
-# The public URL under which the login screen and self-service UI can be accessed.
-publicURL: https://account.example.com
+            some role in input.subject.roles
+            role.ID = "idm_superuser"
+        }
+        EOT
+    }
+}
 
-# Configures how long access tokens issued to your user are valid. You can keep this relatively short since
-# users will also get a long-lived refresh token.
-accessTokenTTL: "1h"
-
-# cisidm automatically redirects your users back to the protected services after a successful login. To prevent open-redirect
-# attacks make sure to restrict the allowed redirects. It's best to just allow the top-level domain and any
-# sub-domains of your deployment.
-allowedRedirects:
-  - example.com
-  - .example.com
 ```
 
   </CodeGroupItem>
@@ -124,21 +136,6 @@ volumes:
     driver: local
 
 services:
-  rqlite:
-    image: rqlite/rqlite:latest
-    hostname: "12e94f6300a8"
-    restart: unless-stopped
-    environment:
-      HTTP_ADDR_ADV: localhost
-    command:
-      - "-on-disk=true"
-      - "-node-id=1"
-      - "-fk"
-    ports:
-      - 4001:4001
-    volumes:
-      - db:/rqlite/file
-
   # Traefik ###################################################
 
   traefik:
@@ -158,8 +155,9 @@ services:
       - "--certificatesresolvers.resolver.acme.storage=/secrets/acme.json"
       - "--certificatesresolvers.resolver.acme.httpchallenge.entrypoint=http"
 
-      # disable for production
-      # - "--certificatesresolvers.resolver.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory"
+      # disable for production, this enables the use of Let's Encrypt staging servers
+      # so any misconfiguration will not get you rate-limited.
+      - "--certificatesresolvers.resolver.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory"
 
     ports:
       - target: 80
@@ -180,7 +178,8 @@ services:
     image: ghcr.io/tierklinik-dobersberg/cis-idm:latest
     restart: unless-stopped
     volumes:
-      - ./config/idm-config.yml:/etc/config.yml:ro
+      - ./config/idm-config.yml:/etc/config.hcl:ro
+      - db:/data
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.idm.rule=Host(`account.dobersberg.vet`)"
@@ -190,9 +189,7 @@ services:
       - "traefik.http.middlewares.auth.forwardauth.address=http://cisidm:8080/validate"
       - "traefik.http.middlewares.auth.forwardauth.authResponseHeaders=X-Remote-User,X-Remote-User-ID,X-Remote-Mail,X-Remote-Mail-Verified,X-Remote-Avatar-URL,X-Remote-Role,X-Remote-User-Display-Name"
     environment:
-      CONFIG_FILE: "/etc/config.yml"
-    depends_on:
-      - rqlite
+      CONFIG_FILE: "/etc/config.hcl"
 
   echoserver:
     image: gcr.io/google_containers/echoserver:1.4
@@ -222,34 +219,8 @@ volumes:
   db:
 ```
 
-This just tells docker-compose which file-version we're using and that we want a volume named `db` that will hold our rqlite database.
+This just tells docker-compose which file-version we're using and that we want a volume named `db` that will hold our sqlite3 database.
 
-### RQLite Container
-
-```yaml
-rqlite:
-  image: rqlite/rqlite:latest
-  hostname: "rqlite-node-1"
-  restart: unless-stopped
-  environment:
-    HTTP_ADDR_ADV: localhost
-  command:
-    - "-on-disk=true"
-    - "-node-id=1"
-    - "-fk"
-  ports:
-    - 4001:4001
-  volumes:
-    - db:/rqlite/file
-```
-
-This defines the rqlite database service. Note that rqlite needs a stable hostname that's why we force the hostname to `rqlite-node-1`:
-
-We also pass a few parameters to the rqlite server:
-
-- `-on-disk=true`: Tells rqlite to store the sqlite database on the disk. By default, rqlite just keeps the database in memory as it's expected to run in cluster mode. For this simple setup, we just run one rqlite node so we want that data to be persisted to disk.
-- `-node-id=1`: Each rqlite node in the cluster needs a stable ID. Even though we don't use clustering support here we still need to set a node ID.
-- `-fk`: Enables foreign key support in the underlying sqlite database. This is required as the database schema from `cisidm` relies on cascading deletes.
 
 ### Traefik Container
 
@@ -331,11 +302,9 @@ cisidm:
     - "traefik.http.middlewares.auth.forwardauth.authResponseHeaders=X-Remote-User,X-Remote-User-ID,X-Remote-Mail,X-Remote-Mail-Verified,X-Remote-Avatar-URL,X-Remote-Role,X-Remote-User-Display-Name"
   environment:
     CONFIG_FILE: "/etc/config.yml"
-  depends_on:
-    - rqlite
 ```
 
-This configures the `cisidm` docker container, mounts the configuration file to `/etc/config.yml` and tells traefik that is should be reachable at `account.example.com`.
+This configures the `cisidm` docker container, mounts the configuration file to `/etc/config.hcl` and tells traefik that is should be reachable at `account.example.com`.
 
 It also configures a new HTTP middleware `auth` that uses the forward-auth feature of traefik:
 
@@ -344,6 +313,10 @@ It also configures a new HTTP middleware `auth` that uses the forward-auth featu
 
 - `traefik.http.middlewares.auth.forwardauth.authResponseHeaders=....`  
   When `cisidm` successfully authenticated a request, it will return a set of headers that contain information about the logged in user. With this setting, we tell traefik to forward those headers to the actual service container. This enables service containers to know which user performs the access without the need to parse and validate the JWT token issued by `cisidm` for every successful authentication.
+
+### Echoserver
+
+
 
 ## First Start
 
@@ -354,11 +327,16 @@ docker-compose up -d
 ```
 
 :::tip Admin User
-Whenever `cisidm` starts, it checks if a user with super-user privileges (member of the `idm_superuser` role) exists. If not, a new registration token will be created and logged to stdout.
 
-To create your initial admin user, copy that token from the log output (`docker-compose logs cisidm | grep "superuser account"`) and visit `https://account.example.com/registration?token=YOUR_TOKEN` and replace `YOUR_TOKEN` with the token from the log output.
+The first user that registers it self on the web-interface will be granted admin privileges (i.e. the `idm_superuser` role is assigned). Note that cisidm permits at least one registration even if `registration` mode is set to `token` or `disabled`.
 
-It's also possible to use the cli tool for the registration: `idmctl register-user --registration-token YOUR-TOKEN your-username`.
+Open `https://account.example.com/register` in your browser to create your initial admin user.
+It's also possible to use the `idmctl` cli utility:
+
+```bash
+idmctl register my-username --password my-password
+```
+
 :::
 
 <br />

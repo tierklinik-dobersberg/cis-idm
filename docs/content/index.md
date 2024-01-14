@@ -7,7 +7,7 @@ actions:
     link: /guides/getting-started
     type: primary
   - text: Introduction
-    link: /guides/
+    link: /guides/intro.md
     type: secondary
 
 features:

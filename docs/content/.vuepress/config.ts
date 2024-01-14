@@ -2,7 +2,7 @@ import { defaultTheme, defineUserConfig } from "vuepress";
 
 export default defineUserConfig({
   lang: "en-US",
-  title: "Identity Management Service",
+  title: "CIS-IDM",
   base: "/cis-idm/",
   description: "",
   theme: defaultTheme({
@@ -15,7 +15,7 @@ export default defineUserConfig({
       "/guides/": [
         {
           text: "Introduction",
-          link: "/intro.md",
+          link: "/guides/intro.md",
         },
         {
           text: "How Tos",
@@ -29,8 +29,20 @@ export default defineUserConfig({
               link: "/guides/user-role-management.md",
             },
             {
+              text: "Additional User Fields",
+              link: "/guides/extra-user-fields.md",
+            },
+            {
+              text: "Policies",
+              link: "/guides/policies.md"
+            },
+            {
               text: "CLI Reference",
               link: "/guides/cli-reference.md",
+            },
+            {
+              text: "Configuration File Reference",
+              link: "/guides/config-reference.md"
             },
           ],
         },
@@ -40,29 +52,39 @@ export default defineUserConfig({
           children: [
             {
               text: "WebAuthN",
+              link: "/guides/setup-webauthn.md"
             },
             {
               text: "E-Mail",
+              link: "/guides/setup-email.md"
             },
             {
               text: "SMS (Twilio)",
+              link: "/guides/setup-sms.md"
             },
             {
               text: "WebPush Notifications",
+              link: "/guides/setup-webpush.md"
             },
             {
               text: "OpenID Connect (OIDC)",
-            },
-            {
-              text: "Configuration File Reference",
+              link: "/guides/setup-oidc.md"
             },
           ],
         },
         {
-          text: "Developer Docs",
+          text: "Developer Documentation",
+          collapsible: true,
           children: [
             {
-              text: "ConnectRPC APIs",
+              text: "Setup",
+            },
+            {
+              text: "Architecture",
+            },
+            {
+              text: "Connect RPCs and APIs",
+              collapsible: true,
               children: [
                 {
                   text: "with Go",
@@ -81,7 +103,7 @@ export default defineUserConfig({
     },
     navbar: [
       {
-        text: "Guides",
+        text: "Documentation",
         link: "/guides/",
       },
       {
