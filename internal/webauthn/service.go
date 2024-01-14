@@ -25,7 +25,7 @@ func New(providers *app.Providers, authService *auth.AuthService) (http.Handler,
 		RPDisplayName: providers.Config.UserInterface.SiteName,
 		RPID:          providers.Config.Server.Domain,
 		RPOrigins: []string{
-			// TODO(ppacher): allow the user to specify mor rp-origins here.
+			// TODO(ppacher): allow the user to specify more rp-origins here.
 			providers.Config.UserInterface.PublicURL,
 		},
 	}

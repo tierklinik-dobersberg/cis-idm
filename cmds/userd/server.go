@@ -186,24 +186,24 @@ func setupPublicServer(providers *app.Providers) (*http.Server, error) {
 	// Setup CORS middleware
 	corsOpts := cors.Config{
 		AllowedOrigins: append([]string{
-			providers.Config.PublicURL,
-			fmt.Sprintf("http://%s", providers.Config.Domain),
-			fmt.Sprintf("https://%s", providers.Config.Domain),
-		}, providers.Config.AllowedOrigins...),
+			providers.Config.UserInterface.PublicURL,
+			fmt.Sprintf("http://%s", providers.Config.Server.Domain),
+			fmt.Sprintf("https://%s", providers.Config.Server.Domain),
+		}, providers.Config.Server.AllowedOrigins...),
 		AllowCredentials: true,
 	}
 
 	// Get a static file handler.
 	// This will either return a handler for the embed.FS, a local directory using http.Dir
 	// or a reverse proxy to some other service.
-	staticFilesHandler, err := getStaticFilesHandler(providers.Config.StaticFiles)
+	staticFilesHandler, err := getStaticFilesHandler(providers.Config.Server.StaticFiles)
 	if err != nil {
 		return nil, err
 	}
 
 	serveMux.Handle("/", staticFilesHandler)
 
-	extraFilesHandler, err := getExtraFilesHandler(providers.Config.ExtraAssetsDirectory)
+	extraFilesHandler, err := getExtraFilesHandler(providers.Config.Server.ExtraAssetsDirectory)
 	if err != nil {
 		return nil, err
 	}
@@ -236,7 +236,7 @@ func setupPublicServer(providers *app.Providers) (*http.Server, error) {
 	// finally, return a http.Server that uses h2c for HTTP/2 support and
 	// wrap the finnal handler in CORS and a JWT middleware.
 	return server.CreateWithOptions(
-		providers.Config.PublicListenAddr,
+		providers.Config.Server.PublicListenAddr,
 
 		middleware.NewJWTMiddleware(providers.Config, providers.Datastore, serveMux, func(r *http.Request) bool {
 			// Skip JWT token verification for the /validate endpoint as
@@ -250,7 +250,7 @@ func setupPublicServer(providers *app.Providers) (*http.Server, error) {
 		}),
 
 		server.WithCORS(corsOpts),
-		server.WithTrustedProxies(providers.Config.TrustedNetworks),
+		server.WithTrustedProxies(providers.Config.Server.TrustedNetworks),
 	)
 }
 
@@ -308,7 +308,7 @@ func setupAdminServer(providers *app.Providers) (*http.Server, error) {
 	serveMux.Handle("/validate", auth.NewForwardAuthHandler(providers))
 
 	return server.CreateWithOptions(
-		providers.Config.AdminListenAddr,
+		providers.Config.Server.AdminListenAddr,
 		middleware.NewJWTMiddleware(
 			providers.Config,
 			providers.Datastore,
@@ -323,8 +323,8 @@ func setupAdminServer(providers *app.Providers) (*http.Server, error) {
 					claims := jwt.Claims{
 						Subject:  clientIP,
 						ID:       clientIP,
-						Audience: providers.Config.Audience,
-						Issuer:   providers.Config.Domain,
+						Audience: providers.Config.JWT.Audience,
+						Issuer:   providers.Config.Server.Domain,
 						Scopes:   []jwt.Scope{jwt.ScopeAccess},
 						Name:     clientIP,
 						AppMetadata: &jwt.AppMetadata{
@@ -354,7 +354,7 @@ func setupAdminServer(providers *app.Providers) (*http.Server, error) {
 			},
 		),
 
-		server.WithTrustedProxies(providers.Config.TrustedNetworks),
+		server.WithTrustedProxies(providers.Config.Server.TrustedNetworks),
 	)
 }
 

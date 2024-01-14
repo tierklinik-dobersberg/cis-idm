@@ -33,7 +33,7 @@ type FieldConfig struct {
 	Writeable   bool            `json:"writeable" hcl:"writeable,optional"`
 	Description string          `json:"description" hcl:"description,optional"`
 	DisplayName string          `json:"display_name" hcl:"display_name,optional"`
-	Properties  []*FieldConfig  `json:"properties" hcl:"properties,block"`
+	Properties  []*FieldConfig  `json:"property" hcl:"property,block"`
 	ElementType *FieldConfig    `json:"element_type" hcl:"element_type,block"`
 }
 

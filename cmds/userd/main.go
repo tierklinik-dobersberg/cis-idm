@@ -15,6 +15,7 @@ import (
 	"github.com/tierklinik-dobersberg/cis-idm/internal/common"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/config"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/mailer"
+	"github.com/tierklinik-dobersberg/cis-idm/internal/policy"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/repo"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/sms"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/tmpl"
@@ -31,7 +32,7 @@ func main() {
 	}
 
 	// get configuration from environment
-	cfg, err := config.FromEnvironment(ctx, configFilePath)
+	cfg, err := config.LoadFile(configFilePath)
 	if err != nil {
 		logrus.Fatalf("failed to parse config from environment: %s", err)
 	}
@@ -49,13 +50,13 @@ func main() {
 	}
 
 	// prepare all application providers.
-	providers, err := setupAppProviders(ctx, cfg)
+	providers, err := setupAppProviders(ctx, *cfg)
 	if err != nil {
 		logrus.Fatal(err.Error())
 	}
 
 	// bootstrap the application by creating required roles.
-	if err := bootstrap.Bootstrap(ctx, cfg, providers.Datastore); err != nil {
+	if err := bootstrap.Bootstrap(ctx, providers.Config, providers.Datastore); err != nil {
 		cancel()
 
 		logrus.Fatalf("failed to bootstrap: %s", err)
@@ -140,6 +141,22 @@ func setupAppProviders(ctx context.Context, cfg config.Config) (*app.Providers, 
 	cache := cache.NewInMemoryCache()
 	commonService := common.New(datastore, cfg, cache)
 
+	// prepare engine options
+	options := []policy.EngineOption{}
+	for _, p := range cfg.PolicyConfig.Policies {
+		options = append(options, policy.WithRawPolicy(p.Name, p.Content))
+	}
+
+	if cfg.PolicyConfig.Debug {
+		options = append(options, policy.WithDebug())
+	}
+
+	// prepare rego policy engine
+	engine, err := policy.NewEngine(ctx, cfg.PolicyConfig.Directories, options...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to prepare policy engine: %w", err)
+	}
+
 	providers := &app.Providers{
 		TemplateEngine: tmplEngine,
 		SMSSender:      smsProvider,
@@ -150,6 +167,7 @@ func setupAppProviders(ctx context.Context, cfg config.Config) (*app.Providers, 
 		ProtoRegistry:  reg,
 		Validator:      validator,
 		Cache:          cache,
+		PolicyEngine:   engine,
 	}
 
 	return providers, nil

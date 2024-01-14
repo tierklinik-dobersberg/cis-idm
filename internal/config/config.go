@@ -1,7 +1,6 @@
 package config
 
 import (
-	"context"
 	"fmt"
 	"net/url"
 	"os"
@@ -10,10 +9,8 @@ import (
 	"time"
 
 	"github.com/ghodss/yaml"
-	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclsimple"
-	"github.com/tierklinik-dobersberg/apis/pkg/log"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/permission"
 	"golang.org/x/exp/slices"
 )
@@ -68,9 +65,37 @@ const (
 	RegistrationModeDisabled = RegistrationMode("disabled")
 )
 
+type Policy struct {
+	Name    string `json:"name" hcl:"name,label"`
+	Content string `json:"content" hcl:"content"`
+}
+
+type PolicyConfig struct {
+	Directories      []string `json:"directories" hcl:"directories,optional"`
+	ForwardAuthQuery string   `json:"forward_auth_query" hcl:"forward_auth_query,optional"`
+	Debug            bool     `json:"debug" hcl:"debug,optional"`
+
+	Policies []Policy `json:"policy" hcl:"policy,block"`
+}
+
+func (cfg *PolicyConfig) ApplyDefaultsAndValidate() error {
+	if cfg == nil {
+		return nil
+	}
+
+	if cfg.ForwardAuthQuery == "" {
+		cfg.ForwardAuthQuery = "data.cisidm.forward_auth"
+	}
+
+	return nil
+}
+
 type Config struct {
 	// LogLevel defines the log level to use.
 	LogLevel string `json:"log_level" hcl:"log_level,optional"`
+
+	// PolicyConfig holds the configuration for rego policies.
+	PolicyConfig PolicyConfig `json:"policy" hcl:"policies,block"`
 
 	// Server holds the server configuration block include CORS, listen addresses
 	// and cookie settings.
@@ -82,10 +107,6 @@ type Config struct {
 	// UserInterface configures settings for user facing interfaces like the built-in
 	// Web-Interface or mail/SMS templates.
 	UserInterface *UserInterface `hcl:"ui,block" json:"ui"`
-
-	// ForwardAuth configures domains and URLs that require authentication
-	// when passed to the /validate endpoint.
-	ForwardAuth []*ForwardAuthEntry `json:"forward_auth" hcl:"forward_auth,block"`
 
 	// DryRun may be set to enable dry-run mode which allows overwriting
 	// notification targets.
@@ -233,6 +254,10 @@ func (file *Config) applyDefaults() error {
 		return fmt.Errorf("jwt: %w", err)
 	}
 
+	if err := file.PolicyConfig.ApplyDefaultsAndValidate(); err != nil {
+		return fmt.Errorf("policies: %w", err)
+	}
+
 	if len(file.FeatureSet) == 0 {
 		file.FeatureSet = []Feature{FeatureAll}
 	}
@@ -268,44 +293,6 @@ func (file Config) DynmicRolesEnabled() bool {
 	}
 
 	return *file.EnableDynamicRoles
-}
-
-func (file Config) AuthRequiredForURL(ctx context.Context, method string, url string) (*ForwardAuthEntry, bool, error) {
-	merr := new(multierror.Error)
-	l := log.L(ctx)
-
-	for idx, fae := range file.ForwardAuth {
-		matches, err := fae.Matches(method, url)
-		if err != nil {
-			l.Debugf("forward-auth[%d] failed to match: %s", idx, err)
-
-			merr.Errors = append(merr.Errors, fmt.Errorf("invalid regex %q: %w", fae.URL, err))
-
-			continue
-		}
-
-		if matches {
-			l.Debugf("forward-auth[%d] entry matches request to %s %s", idx, method, url)
-
-			return fae, fae.IsRequired(), merr.ErrorOrNil()
-		} else {
-			l.Debugf("forward-auth[%d] entry does not match request to %s %s", idx, method, url)
-		}
-	}
-
-	return nil, false, merr.ErrorOrNil()
-}
-
-// FromEnvironment returns a Config object parsed from environment variables.
-func FromEnvironment(ctx context.Context, cfgFilePath string) (cfg Config, err error) {
-	parsedFile, err := LoadFile(cfgFilePath)
-	if err != nil {
-		return cfg, fmt.Errorf("failed to parse config file %q: %w", cfgFilePath, err)
-	}
-
-	cfg = *parsedFile
-
-	return cfg, nil
 }
 
 func (file *Config) parseFeatureSet() error {

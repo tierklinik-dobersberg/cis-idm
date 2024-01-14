@@ -19,6 +19,7 @@ interface LoggedInUser {
   displayName: string;
   avatarUrl: string;
   username: string;
+  hasWebauthn?: boolean;
 }
 
 interface LoggedInUserHistory {
@@ -125,10 +126,14 @@ export class LoginComponent implements OnInit {
     const justLoggedOut = this.currentRoute.snapshot.queryParamMap.has("logout");
 
     try {
-      if (this.autofillSupported && !justLoggedOut) {
+      // only try webauthn login with discoveryble credentials if there was at least
+      // one user that logged in on this device.
+
+      if (this.autofillSupported && !justLoggedOut && this.loggedInUsers?.length > 0) {
         const response: any = await firstValueFrom(this.http.post(`/webauthn/login/begin/`, {}, {
           withCredentials: true
         }));
+
         const loginValue = await startAuthentication(response.publicKey!, false)
 
         const loginResponse: any = await firstValueFrom(this.http.post(`/webauthn/login/finish`, loginValue, {
@@ -138,12 +143,6 @@ export class LoginComponent implements OnInit {
           }
         }))
 
-        if (loginResponse.redirectTo) {
-          window.location.href = loginResponse.redirectTo;
-
-          return
-        }
-
         await this.profile.loadProfile();
 
         const user = await firstValueFrom(this.profile.profile)
@@ -152,8 +151,15 @@ export class LoginComponent implements OnInit {
             id: user!.user!.id,
             displayName: user!.user!.displayName || user!.user!.username,
             username: user!.user!.username,
-            avatarUrl: `/avatar/${user!.user!.id}`
+            avatarUrl: `/avatar/${user!.user!.id}`,
+            hasWebauthn: true
           })
+        }
+
+        if (loginResponse.redirectTo) {
+          window.location.href = loginResponse.redirectTo;
+
+          return
         }
 
         await this.router.navigate(['/profile'])

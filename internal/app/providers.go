@@ -19,6 +19,7 @@ import (
 	"github.com/tierklinik-dobersberg/cis-idm/internal/conv"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/mailer"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/middleware"
+	"github.com/tierklinik-dobersberg/cis-idm/internal/policy"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/repo"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/sms"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/tmpl"
@@ -37,6 +38,7 @@ type Providers struct {
 	ProtoRegistry  *protoregistry.Files
 	Validator      *protovalidate.Validator
 	Cache          cache.Cache
+	PolicyEngine   *policy.Engine
 }
 
 func (p *Providers) SendMailVerification(ctx context.Context, user repo.User, mail repo.UserEmail) error {

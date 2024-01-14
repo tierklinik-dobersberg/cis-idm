@@ -7,14 +7,14 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"slices"
 	"strings"
 
-	gojwt "github.com/dgrijalva/jwt-go"
 	"github.com/tierklinik-dobersberg/apis/pkg/log"
+	"github.com/tierklinik-dobersberg/apis/pkg/server"
 	"github.com/tierklinik-dobersberg/apis/pkg/spa"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/app"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/middleware"
+	"github.com/tierklinik-dobersberg/cis-idm/internal/policy"
 )
 
 func NewForwardAuthHandler(providers *app.Providers) http.Handler {
@@ -75,74 +75,128 @@ func NewForwardAuthHandler(providers *app.Providers) http.Handler {
 		reqCopy.URL = u
 		reqCopy.Method = method
 
-		claims, isAllowed, err := middleware.AuthenticateRequest(providers.Config, providers.Datastore, reqCopy)
-		if !isAllowed {
-			var (
-				verr = new(gojwt.ValidationError)
-			)
+		// try to authenticate the request.
+		claims, authErr := middleware.AuthenticateRequest(providers.Config, providers.Datastore, reqCopy)
+
+		// prepare the input for the rego policy query
+		input := ForwardAuthInput{
+			Method:   reqCopy.Method,
+			Path:     reqCopy.URL.Path,
+			Query:    reqCopy.URL.Query(),
+			Host:     reqCopy.Host,
+			Headers:  reqCopy.Header,
+			ClientIP: server.RealIPFromContext(ctx).String(),
+		}
+
+		// If we got valid JWT claims, resolve the SubjectInput
+		if claims != nil {
+			kind := ""
+			if claims.AppMetadata != nil {
+				kind = claims.AppMetadata.LoginKind
+			}
+
+			input.Subject, err = policy.NewSubjectInput(ctx, providers.Datastore, providers.Config.PermissionTree(), claims.Subject, kind)
+			if err != nil {
+				l.Errorf("failed to resolve subject input: %s", err)
+
+				// clear out the subject and let rego policies still evaluate the request.
+				input.Subject = nil
+			}
+		}
+
+		// Execute rego policies to find a decision
+		var result ForwardAuthPolicyResult
+
+		query := providers.Config.PolicyConfig.ForwardAuthQuery
+		if err := providers.PolicyEngine.QueryOne(ctx, query, input, &result); err != nil {
+			l.Errorf("failed to evaluate rego policies: %s; request will be denied", err)
+
+			handleRedirect(w, r, "", "")
+
+			return
+		}
+
+		// Regardless of if the request is permitted, add all headers from
+		// the policy to the response
+		if len(result.Headers) > 0 {
+			for key, values := range result.Headers {
+				for _, val := range values {
+					w.Header().Add(key, val)
+				}
+			}
+		}
+
+		// evalute the result
+		if !result.Allow {
+			// The request has been denied by policy, now figure out how to reply:
+
+			if authErr != nil {
+				l = l.WithField("token_error", authErr)
+			}
+
+			if result.StatusCode > 0 {
+				l = l.WithField("status_code", result.StatusCode)
+			}
+
+			l.Infof("request has been denied by policy")
 
 			switch {
-			case err == nil:
-				l.Debugf("request not allowed")
+			// If a status code has been assigned than we directly reply with
+			// this code. This is useful if a request should be denied even if
+			// it is authenticated.
+			case result.StatusCode > 0:
+				w.WriteHeader(result.StatusCode)
+
+			// If there wasn't even a token or the token has been rejected,
+			// redirect to the login page.
+			case errors.Is(authErr, middleware.ErrNoToken),
+				errors.Is(authErr, middleware.ErrTokenRejected):
+
 				handleRedirect(w, r, providers.Config.UserInterface.LoginRedirectURL, redirectUrl)
 
-			case errors.As(err, verr) && (verr.Errors&gojwt.ValidationErrorExpired) > 0:
-				l.Debugf("request not allowed: JWT token expired")
+			// If the token has been expired, redirect to the refresh token page
+			case errors.Is(authErr, middleware.ErrTokenExpired):
 				handleRedirect(w, r, providers.Config.UserInterface.RefreshRedirectURL, redirectUrl)
 
-			default:
-				l.Debugf("request not allowed: %s", err)
+			// We got a valid token but our rego policies denied the request. Respond without any
+			// redirection
+			case authErr == nil:
+
 				handleRedirect(w, r, "", "")
+
+			// request was denied by rego policies and we do have some invalid token at hand.
+			// redirect the user to the login page.
+			default:
+				handleRedirect(w, r, providers.Config.UserInterface.LoginRedirectURL, redirectUrl)
 			}
 
 			return
 		}
 
-		if err != nil {
-			l.Errorf("request not allowed due to errors: %s", err)
-			handleRedirect(w, r, providers.Config.UserInterface.LoginRedirectURL, redirectUrl)
+		l.Infof("request has been allowed by policy")
 
-			return
-		}
-
-		if claims != nil {
-			w.Header().Add("X-Remote-User-ID", claims.Subject)
-			w.Header().Add("X-Remote-User", claims.Name)
-			w.Header().Add("X-Remote-Avatar-URL", fmt.Sprintf("%s/avatar/%s", providers.Config.UserInterface.PublicURL, claims.Subject))
+		// If we got an authenticated subject, add those headers as well
+		// TODO(ppacher): make the default header names configurable
+		if sub := input.Subject; sub != nil {
+			w.Header().Add("X-Remote-User-ID", sub.ID)
+			w.Header().Add("X-Remote-User", sub.Username)
+			w.Header().Add("X-Remote-Avatar-URL", fmt.Sprintf("%s/avatar/%s", providers.Config.UserInterface.PublicURL, sub.ID))
 
 			if claims.DisplayName != "" {
-				w.Header().Add("X-Remote-User-Display-Name", claims.DisplayName)
+				w.Header().Add("X-Remote-User-Display-Name", sub.DisplayName)
 			}
 
 			if claims.Email != "" {
-				w.Header().Add("X-Remote-Mail", claims.Email)
+				w.Header().Add("X-Remote-Mail", sub.Email)
 			}
 
-			var permissions []string
-			if claims.AppMetadata != nil && claims.AppMetadata.Authorization != nil {
-				for _, r := range claims.AppMetadata.Authorization.Roles {
-					w.Header().Add("X-Remote-Role", r)
-
-					rolePermissions, err := providers.Datastore.GetRolePermissions(ctx, r)
-					if err != nil {
-						l.Errorf("failed to get permissions for role %q", r)
-
-						continue
-					}
-
-					permissions = append(permissions, rolePermissions...)
-				}
+			for _, r := range sub.Roles {
+				w.Header().Add("X-Remote-Role", r.ID)
 			}
 
 			// all all permissions from all roles to the headers.
-			slices.Sort(permissions)
-			allPermissions, err := providers.Config.PermissionTree().Resolve(permissions)
-			if err == nil {
-				for _, p := range allPermissions {
-					w.Header().Add("X-Permission", p)
-				}
-			} else {
-				l.Errorf("failed to resolve role permissions: %s", err)
+			for _, p := range sub.Permissions {
+				w.Header().Add("X-Remote-Permission", p)
 			}
 
 			l.Infof("request by user %s (name=%q) is allowed", claims.Subject, claims.Name)
