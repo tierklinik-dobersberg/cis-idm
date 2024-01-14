@@ -3,6 +3,7 @@ package cmds
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/bufbuild/connect-go"
 	"github.com/mdp/qrterminal"
@@ -13,6 +14,7 @@ import (
 	"github.com/vincent-petithory/dataurl"
 	"golang.org/x/crypto/ssh/terminal"
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func GetProfileCommand(root *cli.Root) *cobra.Command {
@@ -65,9 +67,106 @@ func GetProfileCommand(root *cli.Root) *cobra.Command {
 		GetDisable2FACommand(root),
 		GetGenerateRecoveryCodesCommand(root),
 		GetSetAvatarCommand(root),
+		GetAPITokenCommand(root),
 	)
 
 	return cmd
+}
+
+func GetAPITokenCommand(root *cli.Root) *cobra.Command {
+	cmd := &cobra.Command{
+		Use: "api-token",
+	}
+
+	cmd.AddCommand(
+		GetGenerateAPITokenCommand(root),
+		GetListAPITokensCommand(root),
+		GetRevokeAPITokenCommand(root),
+	)
+
+	return cmd
+}
+
+func GetGenerateAPITokenCommand(root *cli.Root) *cobra.Command {
+	var (
+		expiresAt string
+		roles     []string
+	)
+
+	cmd := &cobra.Command{
+		Use:  "generate [name]",
+		Args: cobra.ExactArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			roleIds := root.MustResolveRoleIds(roles)
+
+			req := &idmv1.GenerateAPITokenRequest{
+				Roles:       roleIds,
+				Description: args[0],
+			}
+
+			if expiresAt != "" {
+				e, err := time.Parse(time.RFC3339, expiresAt)
+				if err != nil {
+					logrus.Fatalf("invalid value for --expires: %s", err)
+				}
+
+				req.Expires = timestamppb.New(e)
+			}
+
+			res, err := root.SelfService().GenerateAPIToken(root.Context(), connect.NewRequest(req))
+
+			if err != nil {
+				logrus.Fatal(err.Error())
+			}
+
+			root.Print(res)
+		},
+	}
+
+	cmd.Flags().StringVar(&expiresAt, "expires", "", "A Timestamp in RFC3339 at which the token should expire")
+	cmd.Flags().StringSliceVar(&roles, "role", nil, "A list of roles to assign")
+
+	return cmd
+}
+
+func GetListAPITokensCommand(root *cli.Root) *cobra.Command {
+	return &cobra.Command{
+		Use:  "list",
+		Args: cobra.NoArgs,
+		Run: func(cmd *cobra.Command, args []string) {
+			res, err := root.SelfService().ListAPITokens(
+				root.Context(),
+				connect.NewRequest(new(idmv1.ListAPITokensRequest)),
+			)
+			if err != nil {
+				logrus.Fatalf(err.Error())
+			}
+
+			root.Print(res.Msg)
+		},
+	}
+}
+
+func GetRevokeAPITokenCommand(root *cli.Root) *cobra.Command {
+	return &cobra.Command{
+		Use:     "delete [token-id]",
+		Aliases: []string{"revoke"},
+		Args:    cobra.ExactArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			res, err := root.SelfService().RemoveAPIToken(
+				root.Context(),
+				connect.NewRequest(&idmv1.RemoveAPITokenRequest{
+					Id: args[0],
+				}),
+			)
+
+			if err != nil {
+				logrus.Fatalf(err.Error())
+			}
+
+			root.Print(res.Msg)
+		},
+	}
 }
 
 func GetChangePasswordCommand(root *cli.Root) *cobra.Command {

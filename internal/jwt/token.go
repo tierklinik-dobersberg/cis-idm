@@ -38,13 +38,23 @@ type Authorization struct {
 	Roles []string `json:"roles,omitempty" xml:"roles" yaml:"roles,omitempty"`
 }
 
+type LoginKind string
+
+const (
+	LoginKindInvalid  LoginKind = ""
+	LoginKindPassword LoginKind = "password"
+	LoginKindMFA      LoginKind = "mfa"
+	LoginKindWebauthn LoginKind = "webauthn"
+	LoginKindAPI      LoginKind = "api"
+)
+
 // AppMetadata defines app specific metadata attached to
 // JWT tokens issued by cisd.
 type AppMetadata struct {
 	TokenVersion  string         `json:"token_version" xml:"token_version" yaml:"token_version"`
 	ParentTokenID string         `json:"parent_token" xml:"parent_token" yaml:"parent_token"`
 	Authorization *Authorization `json:"authorization,omitempty" xml:"authorization" yaml:"authorization,omitempty"`
-	LoginKind     string         `json:"loginKind,omitempty"`
+	LoginKind     LoginKind      `json:"loginKind,omitempty"`
 }
 
 // Claims represents the claims added to a JWT token issued

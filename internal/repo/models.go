@@ -71,6 +71,7 @@ type UserAddress struct {
 }
 
 type UserApiToken struct {
+	ID        string
 	Token     string
 	Name      string
 	UserID    string
@@ -79,8 +80,8 @@ type UserApiToken struct {
 }
 
 type UserApiTokenRole struct {
-	Token  string
-	RoleID string
+	TokenID string
+	RoleID  string
 }
 
 type UserEmail struct {

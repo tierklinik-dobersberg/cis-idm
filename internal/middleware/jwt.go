@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	gojwt "github.com/dgrijalva/jwt-go"
 	"github.com/sirupsen/logrus"
@@ -17,10 +18,13 @@ import (
 )
 
 var (
-	ErrNoToken       = errors.New("no authentication token")
-	ErrTokenRejected = errors.New("authentication token has been rejected")
-	ErrTokenExpired  = errors.New("token has expired")
+	ErrNoToken         = errors.New("no authentication token")
+	ErrInvalidAPIToken = errors.New("invalid API token")
+	ErrTokenRejected   = errors.New("authentication token has been rejected")
+	ErrTokenExpired    = errors.New("token has expired")
 )
+
+const APITokenPrefix = "it."
 
 func AuthenticateRequest(cfg config.Config, ds *repo.Queries, req *http.Request) (*jwt.Claims, error) {
 	ctx := req.Context()
@@ -29,6 +33,55 @@ func AuthenticateRequest(cfg config.Config, ds *repo.Queries, req *http.Request)
 
 	if token == "" {
 		return nil, ErrNoToken
+	}
+
+	// check if this is an API token
+	if strings.HasPrefix(token, APITokenPrefix) {
+		res, err := ds.GetUserForAPIToken(ctx, token)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return nil, ErrInvalidAPIToken
+			}
+
+			return nil, err
+		}
+
+		// make sure that token is stil valid
+		if res.UserApiToken.ExpiresAt.Valid && res.UserApiToken.ExpiresAt.Time.After(time.Now()) {
+			return nil, ErrTokenExpired
+		}
+
+		userRoles, err := ds.GetRolesForUser(ctx, res.User.ID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to query user roles: %w", err)
+		}
+
+		roleIds := make([]string, len(userRoles))
+		for rIdx, r := range userRoles {
+			roleIds[rIdx] = r.ID
+		}
+
+		// construct claims for the user
+		claims := jwt.Claims{
+			ID:          res.UserApiToken.ID,
+			IssuedAt:    time.Now().Unix(),
+			NotBefore:   time.Now().Unix(),
+			Subject:     res.User.ID,
+			Name:        res.User.Username,
+			DisplayName: res.User.DisplayName,
+			Scopes: []jwt.Scope{
+				jwt.ScopeAccess,
+			},
+			AppMetadata: &jwt.AppMetadata{
+				TokenVersion: "1",
+				Authorization: &jwt.Authorization{
+					Roles: roleIds,
+				},
+				LoginKind: jwt.LoginKindAPI,
+			},
+		}
+
+		return &claims, nil
 	}
 
 	// first, try to parse the token as a JWT and if that worked, immediately
@@ -143,11 +196,18 @@ func NewJWTMiddleware(cfg config.Config, repo *repo.Queries, next http.Handler, 
 		if claims != nil {
 			l.Debugf("adding claims for user %s (name=%q) to request context", claims.Subject, claims.Name)
 
+			var loginKind jwt.LoginKind
+
+			if claims.AppMetadata != nil {
+				loginKind = claims.AppMetadata.LoginKind
+			}
+
 			ctx = ContextWithClaims(ctx, claims)
 			ctx = log.WithLogger(ctx, log.L(ctx).WithFields(logrus.Fields{
 				"jwt:sub":         claims.Subject,
 				"jwt:name":        claims.Name,
 				"jwt:tokenSource": tokenSource,
+				"jwt:kind":        loginKind,
 			}))
 
 			r = r.WithContext(ctx)

@@ -10,7 +10,7 @@ import (
 	"github.com/tierklinik-dobersberg/cis-idm/internal/repo"
 )
 
-func (p *Providers) AddRefreshToken(user repo.User, roles []repo.Role, kind string, headers http.Header) (string, string, error) {
+func (p *Providers) AddRefreshToken(user repo.User, roles []repo.Role, kind jwt.LoginKind, headers http.Header) (string, string, error) {
 	ttl := p.Config.RefreshTTL()
 
 	for _, overwrite := range p.Config.Overwrites {
@@ -49,7 +49,7 @@ func (p *Providers) AddRefreshToken(user repo.User, roles []repo.Role, kind stri
 	return signedToken, tokenID, nil
 }
 
-func (p *Providers) AddAccessToken(user repo.User, roles []repo.Role, ttl time.Duration, parentTokenID string, kind string, headers http.Header) (string, string, error) {
+func (p *Providers) AddAccessToken(user repo.User, roles []repo.Role, ttl time.Duration, parentTokenID string, kind jwt.LoginKind, headers http.Header) (string, string, error) {
 	defaultTTL := p.Config.AccessTTL()
 
 	for _, overwrite := range p.Config.Overwrites {
@@ -92,7 +92,7 @@ func (p *Providers) AddAccessToken(user repo.User, roles []repo.Role, ttl time.D
 
 }
 
-func (p *Providers) CreateSignedJWT(user repo.User, roles []repo.Role, parentTokenID string, ttl time.Duration, kind string, scopes ...jwt.Scope) (string, string, error) {
+func (p *Providers) CreateSignedJWT(user repo.User, roles []repo.Role, parentTokenID string, ttl time.Duration, kind jwt.LoginKind, scopes ...jwt.Scope) (string, string, error) {
 	auth := &jwt.Authorization{}
 	for _, g := range roles {
 		auth.Roles = append(auth.Roles, g.ID)

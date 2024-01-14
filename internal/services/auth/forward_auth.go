@@ -13,6 +13,7 @@ import (
 	"github.com/tierklinik-dobersberg/apis/pkg/server"
 	"github.com/tierklinik-dobersberg/apis/pkg/spa"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/app"
+	"github.com/tierklinik-dobersberg/cis-idm/internal/jwt"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/middleware"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/policy"
 )
@@ -90,12 +91,12 @@ func NewForwardAuthHandler(providers *app.Providers) http.Handler {
 
 		// If we got valid JWT claims, resolve the SubjectInput
 		if claims != nil {
-			kind := ""
+			kind := jwt.LoginKindInvalid
 			if claims.AppMetadata != nil {
 				kind = claims.AppMetadata.LoginKind
 			}
 
-			input.Subject, err = policy.NewSubjectInput(ctx, providers.Datastore, providers.Config.PermissionTree(), claims.Subject, kind)
+			input.Subject, err = policy.NewSubjectInput(ctx, providers.Datastore, providers.Config.PermissionTree(), claims.Subject, kind, claims.ID)
 			if err != nil {
 				l.Errorf("failed to resolve subject input: %s", err)
 

@@ -11,6 +11,20 @@ import (
 	"time"
 )
 
+const addRoleToToken = `-- name: AddRoleToToken :exec
+INSERT INTO user_api_token_roles (token_id, role_id) VALUES (?, ?)
+`
+
+type AddRoleToTokenParams struct {
+	TokenID string
+	RoleID  string
+}
+
+func (q *Queries) AddRoleToToken(ctx context.Context, arg AddRoleToTokenParams) error {
+	_, err := q.db.ExecContext(ctx, addRoleToToken, arg.TokenID, arg.RoleID)
+	return err
+}
+
 const checkAndDeleteRecoveryCode = `-- name: CheckAndDeleteRecoveryCode :execrows
 DELETE FROM
 	mfa_backup_codes
@@ -30,6 +44,29 @@ func (q *Queries) CheckAndDeleteRecoveryCode(ctx context.Context, arg CheckAndDe
 		return 0, err
 	}
 	return result.RowsAffected()
+}
+
+const createAPIToken = `-- name: CreateAPIToken :exec
+INSERT INTO user_api_tokens (id, token, name, user_id, expires_at) VALUES (?, ?, ?, ?, ?)
+`
+
+type CreateAPITokenParams struct {
+	ID        string
+	Token     string
+	Name      string
+	UserID    string
+	ExpiresAt sql.NullTime
+}
+
+func (q *Queries) CreateAPIToken(ctx context.Context, arg CreateAPITokenParams) error {
+	_, err := q.db.ExecContext(ctx, createAPIToken,
+		arg.ID,
+		arg.Token,
+		arg.Name,
+		arg.UserID,
+		arg.ExpiresAt,
+	)
+	return err
 }
 
 const createRegistrationToken = `-- name: CreateRegistrationToken :exec
@@ -106,6 +143,40 @@ func (q *Queries) DeleteExpiredTokens(ctx context.Context, expiresAt time.Time) 
 	return result.RowsAffected()
 }
 
+const getAPITokensForUser = `-- name: GetAPITokensForUser :many
+SELECT id, token, name, user_id, expires_at, created_at FROM user_api_tokens WHERE user_id = ?
+`
+
+func (q *Queries) GetAPITokensForUser(ctx context.Context, userID string) ([]UserApiToken, error) {
+	rows, err := q.db.QueryContext(ctx, getAPITokensForUser, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []UserApiToken
+	for rows.Next() {
+		var i UserApiToken
+		if err := rows.Scan(
+			&i.ID,
+			&i.Token,
+			&i.Name,
+			&i.UserID,
+			&i.ExpiresAt,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getRegistrationToken = `-- name: GetRegistrationToken :one
 SELECT
 	token, expires, allowed_usage, initial_roles, created_by, created_at
@@ -135,6 +206,81 @@ func (q *Queries) GetRegistrationToken(ctx context.Context, arg GetRegistrationT
 		&i.InitialRoles,
 		&i.CreatedBy,
 		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getRolesForToken = `-- name: GetRolesForToken :many
+SELECT roles.id, roles.name, roles.description, roles.delete_protected, roles.origin
+FROM user_api_tokens
+JOIN user_api_token_roles ON user_api_tokens.id = user_api_token_roles.token_id
+JOIN roles ON user_api_token_roles.role_id = roles.id
+WHERE user_api_tokens.id = ?
+`
+
+func (q *Queries) GetRolesForToken(ctx context.Context, id string) ([]Role, error) {
+	rows, err := q.db.QueryContext(ctx, getRolesForToken, id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Role
+	for rows.Next() {
+		var i Role
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Description,
+			&i.DeleteProtected,
+			&i.Origin,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getUserForAPIToken = `-- name: GetUserForAPIToken :one
+SELECT 
+    users.id, users.username, users.display_name, users.first_name, users.last_name, users.extra, users.avatar, users.birthday, users.password, users.totp_secret,
+    user_api_tokens.id, user_api_tokens.token, user_api_tokens.name, user_api_tokens.user_id, user_api_tokens.expires_at, user_api_tokens.created_at
+FROM user_api_tokens
+JOIN users ON user_api_tokens.user_id = users.id
+WHERE user_api_tokens.token = ?
+`
+
+type GetUserForAPITokenRow struct {
+	User         User
+	UserApiToken UserApiToken
+}
+
+func (q *Queries) GetUserForAPIToken(ctx context.Context, token string) (GetUserForAPITokenRow, error) {
+	row := q.db.QueryRowContext(ctx, getUserForAPIToken, token)
+	var i GetUserForAPITokenRow
+	err := row.Scan(
+		&i.User.ID,
+		&i.User.Username,
+		&i.User.DisplayName,
+		&i.User.FirstName,
+		&i.User.LastName,
+		&i.User.Extra,
+		&i.User.Avatar,
+		&i.User.Birthday,
+		&i.User.Password,
+		&i.User.TotpSecret,
+		&i.UserApiToken.ID,
+		&i.UserApiToken.Token,
+		&i.UserApiToken.Name,
+		&i.UserApiToken.UserID,
+		&i.UserApiToken.ExpiresAt,
+		&i.UserApiToken.CreatedAt,
 	)
 	return i, err
 }
@@ -252,6 +398,23 @@ WHERE
 func (q *Queries) RemoveAllRecoveryCodes(ctx context.Context, userID string) error {
 	_, err := q.db.ExecContext(ctx, removeAllRecoveryCodes, userID)
 	return err
+}
+
+const revokeUserAPIToken = `-- name: RevokeUserAPIToken :execrows
+DELETE FROM user_api_tokens WHERE id = ? AND user_id = ?
+`
+
+type RevokeUserAPITokenParams struct {
+	ID     string
+	UserID string
+}
+
+func (q *Queries) RevokeUserAPIToken(ctx context.Context, arg RevokeUserAPITokenParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, revokeUserAPIToken, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const validateRegistrationToken = `-- name: ValidateRegistrationToken :one

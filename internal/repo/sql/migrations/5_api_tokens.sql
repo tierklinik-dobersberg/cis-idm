@@ -1,6 +1,7 @@
 -- +migrate Up
 CREATE TABLE IF NOT EXISTS user_api_tokens (
-    token TEXT NOT NULL PRIMARY KEY UNIQUE,
+    id TEXT PRIMARY KEY NOT NULL,
+    token TEXT NOT NULL,
     name TEXT NOT NULL,
     user_id TEXT NOT NULL,
     expires_at TIMESTAMP,
@@ -9,9 +10,9 @@ CREATE TABLE IF NOT EXISTS user_api_tokens (
 );
 
 CREATE TABLE IF NOT EXISTS user_api_token_roles (
-    token TEXT NOT NULL,
+    token_id TEXT NOT NULL,
     role_id TEXT NOT NULL,
-    CONSTRAINT fk_user_api_token_roles_token FOREIGN KEY(token) REFERENCES user_api_tokens(token) ON DELETE CASCADE,
+    CONSTRAINT fk_user_api_token_roles_token FOREIGN KEY(token_id) REFERENCES user_api_tokens(id) ON DELETE CASCADE,
     CONSTRAINT fk_user_api_token_roles_role FOREIGN KEY(role_id) REFERENCES roles(id) ON DELETE CASCADE
 );
 

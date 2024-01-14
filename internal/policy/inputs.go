@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/tierklinik-dobersberg/apis/pkg/log"
+	"github.com/tierklinik-dobersberg/cis-idm/internal/jwt"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/permission"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/repo"
 )
@@ -43,30 +44,37 @@ type SubjectInput struct {
 
 	// TokenKind reports how the access token used to perform the request was
 	// obtained. Valid values are "password", "mfa" and "webauthn".
-	TokenKind string `mapstructure:"token_kind" json:"token_kind"`
+	TokenKind jwt.LoginKind `mapstructure:"token_kind" json:"token_kind"`
 }
 
 type Store interface {
 	GetUserByID(context.Context, string) (repo.User, error)
 	GetRolesForUser(context.Context, string) ([]repo.Role, error)
+	GetRolesForToken(context.Context, string) ([]repo.Role, error)
 	GetRolePermissions(context.Context, string) ([]string, error)
 	GetPrimaryEmailForUserByID(context.Context, string) (repo.UserEmail, error)
 }
 
-func NewSubjectInput(ctx context.Context, repo Store, permtree permission.Tree, userID string, tokenKind string) (*SubjectInput, error) {
-	user, err := repo.GetUserByID(ctx, userID)
+func NewSubjectInput(ctx context.Context, ds Store, permtree permission.Tree, userID string, tokenKind jwt.LoginKind, tokenID string) (*SubjectInput, error) {
+	user, err := ds.GetUserByID(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user %q: %w", userID, err)
 	}
 
-	roles, err := repo.GetRolesForUser(ctx, userID)
+	var roles []repo.Role
+	if tokenKind == jwt.LoginKindAPI {
+		roles, err = ds.GetRolesForToken(ctx, tokenID)
+	} else {
+		roles, err = ds.GetRolesForUser(ctx, userID)
+	}
+
 	if err != nil {
-		return nil, fmt.Errorf("failed to get user roles: %w", err)
+		return nil, fmt.Errorf("failed to get user or token roles: %w", err)
 	}
 
 	permissionSet := make([]string, 0, len(roles))
 	for _, role := range roles {
-		rolePermissions, err := repo.GetRolePermissions(ctx, role.ID)
+		rolePermissions, err := ds.GetRolePermissions(ctx, role.ID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get permissions for role %q: %w", role.ID, err)
 		}
@@ -80,7 +88,7 @@ func NewSubjectInput(ctx context.Context, repo Store, permtree permission.Tree, 
 	}
 
 	var mail string
-	if primary, err := repo.GetPrimaryEmailForUserByID(ctx, userID); err == nil {
+	if primary, err := ds.GetPrimaryEmailForUserByID(ctx, userID); err == nil {
 		mail = primary.Address
 	} else {
 		if !errors.Is(err, sql.ErrNoRows) {

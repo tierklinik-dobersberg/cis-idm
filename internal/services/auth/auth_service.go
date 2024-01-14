@@ -62,7 +62,7 @@ func (svc *AuthService) Login(ctx context.Context, req *connect.Request[idmv1.Lo
 		}
 	}
 
-	kind := "password"
+	kind := jwt.LoginKindPassword
 
 	switch r.AuthType {
 	case idmv1.AuthType_AUTH_TYPE_PASSWORD:
@@ -165,7 +165,7 @@ func (svc *AuthService) Login(ctx context.Context, req *connect.Request[idmv1.Lo
 			}
 		}
 
-		kind = "mfa"
+		kind = jwt.LoginKindMFA
 
 		// continue outside of the switch block and issue access and refresh tokens
 	default:
@@ -300,10 +300,11 @@ func (svc *AuthService) RefreshToken(ctx context.Context, req *connect.Request[i
 		RedirectTo:  redirectTo,
 	})
 
-	kind := ""
+	kind := jwt.LoginKindInvalid
 	if claims.AppMetadata != nil {
 		kind = claims.AppMetadata.LoginKind
 	}
+
 	token, _, err := svc.AddAccessToken(user, roles, req.Msg.Ttl.AsDuration(), claims.ID, kind, resp.Header())
 	if err != nil {
 		return nil, err
