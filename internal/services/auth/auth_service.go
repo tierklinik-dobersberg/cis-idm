@@ -326,9 +326,19 @@ func (svc *AuthService) Introspect(ctx context.Context, req *connect.Request[idm
 		return nil, fmt.Errorf("invalid user")
 	}
 
-	profile, err := svc.GetUserProfileProto(ctx, user)
-	if err != nil {
-		return nil, err
+	var profile *idmv1.Profile
+	if claims.AppMetadata != nil && claims.AppMetadata.LoginKind == jwt.LoginKindAPI {
+		roles, err := svc.Datastore.GetRolesForToken(ctx, claims.ID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get token roles")
+		}
+
+		profile = conv.ProfileProtoFromUser(ctx, user, conv.WithRoles(roles...))
+	} else {
+		profile, err = svc.GetUserProfileProto(ctx, user)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if paths := req.Msg.GetReadMask().GetPaths(); len(paths) > 0 {

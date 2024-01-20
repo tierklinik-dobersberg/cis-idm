@@ -60,13 +60,11 @@ func NewAuthInterceptor(registry *protoregistry.Files) connect.UnaryInterceptorF
 			opts, ok := proto.GetExtension(methodDesc.Options(), commonv1.E_Auth).(*commonv1.AuthDecorator)
 
 			if ok && opts != nil {
-				log.L(ctx).Debugf("checking authentication requirement: %#v", opts)
-
 				switch opts.Require {
 				case commonv1.AuthRequirement_AUTH_REQ_REQUIRED:
 					l.Debugf("service method requires authentication")
 					if claims == nil {
-						return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("not access token provided"))
+						return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("no access token provided"))
 					}
 
 					// make sure the user has at least one of the required roles assigned
@@ -91,7 +89,7 @@ func NewAuthInterceptor(registry *protoregistry.Files) connect.UnaryInterceptorF
 					l.WithField("requirement", opts.String()).Infof("unhandeled authentication requirement")
 				}
 			} else {
-				l.Debug("not authentication requirement specified for service method")
+				l.Debug("no authentication requirement specified for service method")
 			}
 
 			ctx = log.WithLogger(ctx, l)

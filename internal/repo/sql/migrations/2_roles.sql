@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS roles (
     name TEXT NOT NULL UNIQUE,
     description TEXT NOT NULL DEFAULT '',
     delete_protected BOOL NOT NULL DEFAULT FALSE,
-    origin TEXT NOT NULL
+    origin TEXT NOT NULL 
 );
 
 CREATE TABLE IF NOT EXISTS role_assignments (

@@ -265,9 +265,9 @@ input = {
         # reported.
         roles = [
             {
-                ID: "<role-id>",
-                Name: "<role-name>",
-                Description: "<role-description>"
+                ID = "<role-id>",
+                Name = "<role-name>",
+                Description = "<role-description>"
             }
         ]
 

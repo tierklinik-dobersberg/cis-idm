@@ -58,7 +58,7 @@ func (svc *Service) sendWebPushNotification(
 
 		notif := notifFromProto(kind.Notification)
 
-		if tmplCtx == nil {
+		if tmplCtx != nil {
 			t := textTemplate.New("")
 
 			fm := textTemplate.FuncMap(tmpl.PrepareFunctionMap())

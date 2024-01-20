@@ -43,7 +43,7 @@ BEGIN TRANSACTION;
     INSERT INTO webpush_subscriptions SELECT * from backup.webpush_subscriptions;
     INSERT INTO token_invalidation SELECT * from backup.token_invalidation;
     
-    INSERT INTO roles SELECT * from backup.roles;
+    INSERT INTO roles SELECT *, 'api' from backup.roles;
     INSERT INTO role_assignments SELECT * from backup.role_assignments;
 
 COMMIT;

@@ -11,7 +11,6 @@ import (
 
 	"github.com/tierklinik-dobersberg/apis/pkg/log"
 	"github.com/tierklinik-dobersberg/apis/pkg/server"
-	"github.com/tierklinik-dobersberg/apis/pkg/spa"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/app"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/jwt"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/middleware"
@@ -127,16 +126,14 @@ func NewForwardAuthHandler(providers *app.Providers) http.Handler {
 			}
 		}
 
+		l = l.WithField("policyResult", result)
+
 		// evalute the result
 		if !result.Allow {
 			// The request has been denied by policy, now figure out how to reply:
 
 			if authErr != nil {
 				l = l.WithField("token_error", authErr)
-			}
-
-			if result.StatusCode > 0 {
-				l = l.WithField("status_code", result.StatusCode)
 			}
 
 			l.Infof("request has been denied by policy")
@@ -147,6 +144,9 @@ func NewForwardAuthHandler(providers *app.Providers) http.Handler {
 			// it is authenticated.
 			case result.StatusCode > 0:
 				w.WriteHeader(result.StatusCode)
+				if _, err := w.Write([]byte(result.ResponseBody)); err != nil {
+					l.Errorf("failed to write response body: %s", err)
+				}
 
 			// If there wasn't even a token or the token has been rejected,
 			// redirect to the login page.
@@ -176,6 +176,16 @@ func NewForwardAuthHandler(providers *app.Providers) http.Handler {
 
 		l.Infof("request has been allowed by policy")
 
+		if result.AssignSubject != "" {
+			l.Infof("loading subject overwrite")
+			input.Subject, err = policy.NewSubjectInput(ctx, providers.Datastore, providers.Config.PermissionTree(), result.AssignSubject, "", "")
+			if err != nil {
+				l.Errorf("failed to overwrite request subject: %s", err)
+				handleRedirect(w, r, "", "")
+				return
+			}
+		}
+
 		// If we got an authenticated subject, add those headers as well
 		// TODO(ppacher): make the default header names configurable
 		if sub := input.Subject; sub != nil {
@@ -183,11 +193,11 @@ func NewForwardAuthHandler(providers *app.Providers) http.Handler {
 			w.Header().Add("X-Remote-User", sub.Username)
 			w.Header().Add("X-Remote-Avatar-URL", fmt.Sprintf("%s/avatar/%s", providers.Config.UserInterface.PublicURL, sub.ID))
 
-			if claims.DisplayName != "" {
+			if sub.DisplayName != "" {
 				w.Header().Add("X-Remote-User-Display-Name", sub.DisplayName)
 			}
 
-			if claims.Email != "" {
+			if sub.Email != "" {
 				w.Header().Add("X-Remote-Mail", sub.Email)
 			}
 
@@ -200,7 +210,7 @@ func NewForwardAuthHandler(providers *app.Providers) http.Handler {
 				w.Header().Add("X-Remote-Permission", p)
 			}
 
-			l.Infof("request by user %s (name=%q) is allowed", claims.Subject, claims.Name)
+			l.Infof("request by user %s (name=%q) is allowed", sub.ID, sub.Username)
 		} else {
 			l.Infof("anonymous request is allowed")
 		}
@@ -210,8 +220,6 @@ func NewForwardAuthHandler(providers *app.Providers) http.Handler {
 }
 
 func handleRedirect(w http.ResponseWriter, r *http.Request, baseUrl string, url string) {
-	spa.SetCORSHeaders(w, r)
-
 	if url == "" || baseUrl == "" {
 		http.Error(w, "not allowed", http.StatusForbidden)
 
