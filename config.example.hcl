@@ -295,14 +295,8 @@ field "object" "notification-settings" {
 
 # Role, Permissions, Policies and user/role overwrites
 # -------------------------------------------------------------------------------------------------------
-
-# The (single) policies block configures Open-Policy-Agent / Rego policies for
-# cisidm.
-#
-# Please refer to the documentation of cisidm on how to write policies and to
-# the offical OPA documentation for the REGO policy language.
-#
-policies {
+    
+forward_auth {
     # This configures the rego query to evaluate forward auth expressions. You
     # only ever need to change this if your rego policies do not live under the
     # cisidm.forward_auth package. Note that the query is expected to return a
@@ -315,7 +309,78 @@ policies {
     #                 sent to the user instead of letting cisidm figure out if
     #                 the user should be redirected to the login/refresh page.
     #
-    forward_auth_query = "data.cisidm.forward_auth"
+    rego_query = "data.cisidm.forward_auth"
+
+    # The default policy for forward_auth queries.
+	# This may either be set to "allow" or "deny" (default).
+	#
+	# Depending on the value  cisidm will look for different rules
+	# when evaluating policies.
+    #
+	# If set to "allow", cisidm will evaluate any "deny" rule.
+	# If set to "deny", cisidm will evaluate any "allow" rule.
+    default = "deny"
+
+    # Whether or not Cross-Origin-Resource-Sharing (CORS) Preflight should
+    # always be allowed. This defaults to true.
+    #
+    # This is a performance optimization to avoid evaluating rego policies
+    # for preflight requests.
+    #
+    # When disabled, your rego policies likely need to account for
+    # CORS Preflight requests. A rule like the following could be used:
+    #
+    # ```
+    #    package cisidm.forward_auth
+    #
+    #    import rego.v1
+    #
+    #    allow if {
+    #        input.method = "OPTIONS"
+    #        "Origin" in input.headers
+    #    }
+    #
+    # ```
+    allow_cors_preflight = true   
+
+    # Below are the default values for headers set when the request is allowed to be
+    # forwarded to the protected upstream service.
+    # To disable a header you must explicitly set the configuration stanza to an empty
+    # string (for example: user_id_header = "").
+    #
+    # Note that forwarding of those headers to the upstream service must likely be configured
+    # in your reverse proxy.
+    
+    # The header that holds the unique user id
+    user_id_header = "X-Remote-User-ID"
+
+    # The header that holds the username
+    username_header = "X-Remote-User"
+
+    # The header that holds the user's primary email address
+    mail_header = "X-Remote-Mail"
+
+    # The header that holds all assigned role IDs
+    role_header = "X-Remote-Role"
+
+    # The header that holds the URL to retrieve the user avatar.
+    avatar_header = "X-Remote-Avatar-URL"
+
+    # The header that holds the user's choosen display_name, if any.
+    display_name_header = "X-Remote-User-Display-Name"
+
+    # The header that holds all resolved user permissions (that is, a distinct set
+    # of all permissions of all user roles)
+    permission_header = "X-Remote-Permission"
+}
+
+# The (single) policies block configures Open-Policy-Agent / Rego policies for
+# cisidm.
+#
+# Please refer to the documentation of cisidm on how to write policies and to
+# the offical OPA documentation for the REGO policy language.
+#
+policies {
 
     # Enable rego policy debugging.
     debug = false
@@ -353,11 +418,13 @@ policies {
 }
 
 # A list of permissions that are stored in cisidm. Note that it's completely
-# fine to use the permission feature without every specifying some in the
+# fine to use the permission feature without specifying some in the
 # configuration. cisidm does treat permissions as "unknown" strings since
 # evaluation of privileges is either done using rego policies or by other
 # micro-service applications that just request a list of user permissions.
-# Though, for permissions specified here, cisidm builds a hierarchical tree so
+
+
+# Though, for permissions specified here, cisidm can build a hierarchical tree so
 # it's easier to assign multiple permissions by using a shared prefix.
 # Hierarchical levels of a permission string are seperated using colons (":").
 #
@@ -386,6 +453,11 @@ policies {
 # per-se but the can be used in rego policies to implement
 # permission/attribute-based access control (ABAC) rather than
 # role-based-access-control (RBAC).
+#
+# To enable permission trees set the following to true:
+permission_trees = false
+
+# Here are some examples for permissions.
 permissions = [
     "roster:write:create",
     "roster:write:approve",
