@@ -29,7 +29,7 @@ func NewService(p *app.Providers) *Service {
 }
 
 func (svc *Service) CreateRole(ctx context.Context, req *connect.Request[idmv1.CreateRoleRequest]) (*connect.Response[idmv1.CreateRoleResponse], error) {
-	if !svc.Config.DynmicRolesEnabled() {
+	if !svc.Config.DynamicRolesEnabled() {
 		return nil, connect.NewError(connect.CodePermissionDenied, fmt.Errorf("dynamic role configuration is not enabled"))
 	}
 
@@ -73,7 +73,7 @@ func (svc *Service) CreateRole(ctx context.Context, req *connect.Request[idmv1.C
 }
 
 func (svc *Service) UpdateRole(ctx context.Context, req *connect.Request[idmv1.UpdateRoleRequest]) (*connect.Response[idmv1.UpdateRoleResponse], error) {
-	if !svc.Config.DynmicRolesEnabled() {
+	if !svc.Config.DynamicRolesEnabled() {
 		return nil, connect.NewError(connect.CodePermissionDenied, fmt.Errorf("dynamic role configuration is not enabled"))
 	}
 
@@ -133,7 +133,7 @@ func (svc *Service) UpdateRole(ctx context.Context, req *connect.Request[idmv1.U
 }
 
 func (svc *Service) DeleteRole(ctx context.Context, req *connect.Request[idmv1.DeleteRoleRequest]) (*connect.Response[idmv1.DeleteRoleResponse], error) {
-	if !svc.Config.DynmicRolesEnabled() {
+	if !svc.Config.DynamicRolesEnabled() {
 		return nil, connect.NewError(connect.CodePermissionDenied, fmt.Errorf("dynamic role management is not enabled"))
 	}
 

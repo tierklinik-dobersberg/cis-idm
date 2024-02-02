@@ -10,7 +10,7 @@ export default defineUserConfig({
     docsRepo: "https://github.com/tierklinik-dobersberg/cis-idm",
     docsBranch: "main",
     docsDir: "docs/content",
-    editLinkPattern: ":repo/-/edit/:branch/:path",
+    editLinkPattern: ":repo/edit/:branch/:path",
     sidebar: {
       "/guides/": [
         {

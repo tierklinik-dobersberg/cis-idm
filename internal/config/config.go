@@ -135,6 +135,9 @@ type Config struct {
 	// be modified or deleted.
 	EnableDynamicRoles *bool `json:"enable_dynamic_roles" hcl:"enable_dynamic_roles,optional"`
 
+	// PermissionTrees may be set to true to enable permission trees.
+	PermissionTrees bool `json:"permission_trees" hcl:"permission_trees,optional"`
+
 	// Permissions defines the hierarchical set of available permissions.
 	// Note that the specified permission tree will be merged into the default set of permissions
 	// that are built into cisidm.
@@ -166,7 +169,7 @@ type Config struct {
 	// file.
 	featureMap map[Feature]bool `json:"-"`
 
-	permissionTree permission.Tree
+	permissionTree permission.Resolver
 }
 
 func (cfg *Config) AccessTTL() time.Duration {
@@ -224,15 +227,21 @@ func LoadFile(path string) (*Config, error) {
 		return &f, err
 	}
 
-	f.permissionTree = permission.Tree{}
-	for _, p := range f.Permissions {
-		f.permissionTree.Insert(p)
+	if f.PermissionTrees {
+		tree := permission.Tree{}
+		for _, p := range f.Permissions {
+			tree.Insert(p)
+		}
+
+		f.permissionTree = tree
+	} else {
+		f.permissionTree = permission.NoTree{}
 	}
 
 	return &f, nil
 }
 
-func (file *Config) PermissionTree() permission.Tree {
+func (file *Config) PermissionTree() permission.Resolver {
 	return file.permissionTree
 }
 
@@ -279,7 +288,7 @@ func (file *Config) applyDefaults() error {
 	if len(file.ExtraDataConfig) > 0 {
 		for key, cfg := range file.ExtraDataConfig {
 			if err := cfg.ValidateConfig(FieldVisibilityPublic); err != nil {
-				return fmt.Errorf("extraData: %s: %w", key, err)
+				return fmt.Errorf("extraData: #%d: %w", key, err)
 			}
 		}
 	}
@@ -287,7 +296,7 @@ func (file *Config) applyDefaults() error {
 	return nil
 }
 
-func (file Config) DynmicRolesEnabled() bool {
+func (file Config) DynamicRolesEnabled() bool {
 	if file.EnableDynamicRoles == nil {
 		return false
 	}

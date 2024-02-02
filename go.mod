@@ -12,15 +12,19 @@ require (
 	github.com/go-webauthn/webauthn v0.10.0
 	github.com/gofrs/uuid v4.4.0+incompatible
 	github.com/hashicorp/go-multierror v1.1.1
+	github.com/hashicorp/hcl/v2 v2.19.1
 	github.com/kevinburke/twilio-go v0.0.0-20231009225535-38b36b35294d
+	github.com/mattn/go-sqlite3 v1.14.19
 	github.com/mdp/qrterminal v1.0.1
 	github.com/mennanov/fmutils v0.2.1
 	github.com/mileusna/useragent v1.3.4
 	github.com/mitchellh/go-server-timing v1.0.1
 	github.com/mitchellh/mapstructure v1.5.0
+	github.com/open-policy-agent/opa v0.60.0
 	github.com/ory/mail v2.3.1+incompatible
 	github.com/pquerna/otp v1.4.0
 	github.com/rqlite/gorqlite v0.0.0-20231117160833-4e4ea5aa6d88
+	github.com/rubenv/sql-migrate v1.6.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.8.0
 	github.com/tidwall/sjson v1.2.5
@@ -79,7 +83,6 @@ require (
 	github.com/gorilla/mux v1.8.1 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.16.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
-	github.com/hashicorp/hcl/v2 v2.19.1 // indirect
 	github.com/huandu/xstrings v1.4.0 // indirect
 	github.com/imdario/mergo v0.3.16 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
@@ -87,14 +90,12 @@ require (
 	github.com/kevinburke/rest v0.0.0-20231107185522-a9c371f90234 // indirect
 	github.com/klauspost/compress v1.16.0 // indirect
 	github.com/mattn/go-runewidth v0.0.9 // indirect
-	github.com/mattn/go-sqlite3 v1.14.19 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/go-wordwrap v0.0.0-20150314170334-ad45545899c7 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/moby/locker v1.0.1 // indirect
 	github.com/olekukonko/tablewriter v0.0.5 // indirect
-	github.com/open-policy-agent/opa v0.60.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0-rc5 // indirect
 	github.com/peterh/liner v1.2.2 // indirect
@@ -105,7 +106,6 @@ require (
 	github.com/prometheus/procfs v0.10.1 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20200313005456-10cdbea86bc0 // indirect
 	github.com/rs/cors v1.10.1 // indirect
-	github.com/rubenv/sql-migrate v1.6.0 // indirect
 	github.com/sebest/xff v0.0.0-20210106013422-671bd2870b3a // indirect
 	github.com/sergi/go-diff v1.3.1 // indirect
 	github.com/shopspring/decimal v1.3.1 // indirect
