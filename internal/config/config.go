@@ -72,11 +72,30 @@ type Policy struct {
 
 type PolicyConfig struct {
 	Directories      []string `json:"directories" hcl:"directories,optional"`
-	ForwardAuthQuery string   `json:"forward_auth_query" hcl:"forward_auth_query,optional"`
-	DefaultForwardAuthPolicy string `json:"forward_auth_default" hcl:"forward_auth_default,optional"`
 	Debug            bool     `json:"debug" hcl:"debug,optional"`
 
 	Policies []Policy `json:"policy" hcl:"policy,block"`
+}
+
+type ForwardAuthConfig struct {
+	// RegoQuery is the rego policy query that cis-idm should perform
+	// when evaluating forward auth policies.
+	// Defaults to "data.cisidm.forward_auth"
+	RegoQuery string   `json:"rego_query" hcl:"rego_query,optional"`
+
+	// Default holds the default policy for forward auth queries.
+	// This may either be set to "allow" or "deny" (default).
+	//
+	// Depending on the value of Default cisidm will look for different rules
+	// when evaluating policies.
+	// If Default is set to "allow", cisidm will evaluate any "deny" rule.
+	// If Default is set to "deny", cisidm will evaluate any "allow" rule.
+	Default string `json:"default" hcl:"default,optional"`
+
+	// AllowCORSPreflight might be set to enable or disable automatic pass-through of
+	// CORS preflight requests.
+	// Defaults to true.
+	AllowCORSPreflight *bool `json:"allow_cors_preflight" hcl:"allow_cors_preflight,optional"`
 }
 
 func (cfg *PolicyConfig) ApplyDefaultsAndValidate() error {
@@ -84,12 +103,29 @@ func (cfg *PolicyConfig) ApplyDefaultsAndValidate() error {
 		return nil
 	}
 
-	if cfg.DefaultForwardAuthPolicy == "" {
-		cfg.DefaultForwardAuthPolicy = "deny"
+	return nil
+}
+
+func (cfg *ForwardAuthConfig) ApplyDefaultsAndValidate() error {
+	if cfg == nil {
+		return nil
 	}
 
-	if cfg.ForwardAuthQuery == "" {
-		cfg.ForwardAuthQuery = "data.cisidm.forward_auth"
+	switch cfg.Default {
+	case "":
+		cfg.Default = "deny"
+	case "allow", "deny":
+	default:
+		return fmt.Errorf("default: invalid value, expected \"allow\" or \"deny\"")
+	}
+
+	if cfg.RegoQuery == "" {
+		cfg.RegoQuery = "data.cisidm.forward_auth"
+	}
+
+	if cfg.AllowCORSPreflight == nil {
+		val := true
+		cfg.AllowCORSPreflight = &val
 	}
 
 	return nil
@@ -101,6 +137,9 @@ type Config struct {
 
 	// PolicyConfig holds the configuration for rego policies.
 	PolicyConfig PolicyConfig `json:"policy" hcl:"policies,block"`
+
+	// ForwardAuth provides forward auth configuration.
+	ForwardAuth ForwardAuthConfig `json:"forward_auth" hcl:"forward_auth,block"`
 
 	// Server holds the server configuration block include CORS, listen addresses
 	// and cookie settings.
@@ -270,6 +309,10 @@ func (file *Config) applyDefaults() error {
 
 	if err := file.PolicyConfig.ApplyDefaultsAndValidate(); err != nil {
 		return fmt.Errorf("policies: %w", err)
+	}
+
+	if err := file.ForwardAuth.ApplyDefaultsAndValidate(); err != nil {
+		return fmt.Errorf("forward_auth: %w", err)
 	}
 
 	if len(file.FeatureSet) == 0 {

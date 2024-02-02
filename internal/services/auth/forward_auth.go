@@ -23,7 +23,7 @@ func NewForwardAuthHandler(providers *app.Providers) http.Handler {
 
 		parsedForwardedUri, err := url.ParseRequestURI(r.Header.Get("x-forwarded-uri"))
 		if err != nil {
-			log.L(ctx).Errorf("failed to parse X-Forwareded-URI %q: %s", r.Header.Get("x-forwarded-uri"), err)
+			log.L(ctx).Errorf("failed to parse X-Forwarded-URI %q: %s", r.Header.Get("x-forwarded-uri"), err)
 		}
 
 		method := r.Header.Get("x-forwarded-method")
@@ -45,10 +45,12 @@ func NewForwardAuthHandler(providers *app.Providers) http.Handler {
 		var redirectUrl = requestURL
 
 		// Skip access checks for CORS preflight requests.
-		if strings.ToUpper(method) == "OPTIONS" {
-			w.WriteHeader(http.StatusOK)
+		if s := providers.Config.ForwardAuth.AllowCORSPreflight; s == nil || *s {
+			if strings.ToUpper(method) == "OPTIONS" && r.Header.Get("Origin") != "" && r.Header.Get("Access-Control-Request-Method") != "" {
+				w.WriteHeader(http.StatusOK)
 
-			return
+				return
+			}
 		}
 
 		// if the request does not accept text/html it's likely a XHR or fetch request.
@@ -107,7 +109,7 @@ func NewForwardAuthHandler(providers *app.Providers) http.Handler {
 		// Execute rego policies to find a decision
 		var result ForwardAuthPolicyResult
 
-		query := providers.Config.PolicyConfig.ForwardAuthQuery
+		query := providers.Config.ForwardAuth.RegoQuery
 		if err := providers.PolicyEngine.QueryOne(ctx, query, input, &result); err != nil {
 			l.Errorf("failed to evaluate rego policies: %s; request will be denied", err)
 
@@ -129,13 +131,13 @@ func NewForwardAuthHandler(providers *app.Providers) http.Handler {
 		l = l.WithField("policyResult", result)
 
 		var isAllowed bool
-		if providers.Config.PolicyConfig.DefaultForwardAuthPolicy == "deny" {
+		if providers.Config.ForwardAuth.Default == "deny" {
 			isAllowed = result.Allow
 		} else {
 			isAllowed = !result.Deny
 		}
 
-		// evalute the result
+		// evaluate the result
 		if !isAllowed {
 			// The request has been denied by policy, now figure out how to reply:
 
