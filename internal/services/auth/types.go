@@ -32,7 +32,12 @@ type ForwardAuthInput struct {
 
 type ForwardAuthPolicyResult struct {
 	// Allow should be set to true if the request should be allowed.
+	// This is queried when forward_auth_default is set to "deny".
 	Allow bool `mapstructure:"allow"`
+
+	// Deny should be set to true if the request should be denied.
+	// This is queried when forward_auth_default is set to "allow"
+	Deny bool `mapstructure:"deny"`
 
 	// StatusCode may be set to the status code to return to the client.
 	// This is only used when the request is denied.

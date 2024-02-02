@@ -128,8 +128,15 @@ func NewForwardAuthHandler(providers *app.Providers) http.Handler {
 
 		l = l.WithField("policyResult", result)
 
+		var isAllowed bool
+		if providers.Config.PolicyConfig.DefaultForwardAuthPolicy == "deny" {
+			isAllowed = result.Allow
+		} else {
+			isAllowed = !result.Deny
+		}
+
 		// evalute the result
-		if !result.Allow {
+		if !isAllowed {
 			// The request has been denied by policy, now figure out how to reply:
 
 			if authErr != nil {

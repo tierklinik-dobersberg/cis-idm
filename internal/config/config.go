@@ -73,6 +73,7 @@ type Policy struct {
 type PolicyConfig struct {
 	Directories      []string `json:"directories" hcl:"directories,optional"`
 	ForwardAuthQuery string   `json:"forward_auth_query" hcl:"forward_auth_query,optional"`
+	DefaultForwardAuthPolicy string `json:"forward_auth_default" hcl:"forward_auth_default,optional"`
 	Debug            bool     `json:"debug" hcl:"debug,optional"`
 
 	Policies []Policy `json:"policy" hcl:"policy,block"`
@@ -81,6 +82,10 @@ type PolicyConfig struct {
 func (cfg *PolicyConfig) ApplyDefaultsAndValidate() error {
 	if cfg == nil {
 		return nil
+	}
+
+	if cfg.DefaultForwardAuthPolicy == "" {
+		cfg.DefaultForwardAuthPolicy = "deny"
 	}
 
 	if cfg.ForwardAuthQuery == "" {

@@ -55,7 +55,7 @@ type Store interface {
 	GetPrimaryEmailForUserByID(context.Context, string) (repo.UserEmail, error)
 }
 
-func NewSubjectInput(ctx context.Context, ds Store, permtree permission.Tree, userID string, tokenKind jwt.LoginKind, tokenID string) (*SubjectInput, error) {
+func NewSubjectInput(ctx context.Context, ds Store, permissionResolver permission.Resolver, userID string, tokenKind jwt.LoginKind, tokenID string) (*SubjectInput, error) {
 	user, err := ds.GetUserByID(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user %q: %w", userID, err)
@@ -82,7 +82,7 @@ func NewSubjectInput(ctx context.Context, ds Store, permtree permission.Tree, us
 		permissionSet = append(permissionSet, rolePermissions...)
 	}
 
-	resolvedPermissions, err := permtree.Resolve(permissionSet)
+	resolvedPermissions, err := permissionResolver.Resolve(permissionSet)
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve user permissions: %w", err)
 	}
