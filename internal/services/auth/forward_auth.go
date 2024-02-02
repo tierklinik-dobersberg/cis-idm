@@ -196,27 +196,44 @@ func NewForwardAuthHandler(providers *app.Providers) http.Handler {
 		}
 
 		// If we got an authenticated subject, add those headers as well
-		// TODO(ppacher): make the default header names configurable
 		if sub := input.Subject; sub != nil {
-			w.Header().Add("X-Remote-User-ID", sub.ID)
-			w.Header().Add("X-Remote-User", sub.Username)
-			w.Header().Add("X-Remote-Avatar-URL", fmt.Sprintf("%s/avatar/%s", providers.Config.UserInterface.PublicURL, sub.ID))
+			fwCfg := providers.Config.ForwardAuth
 
-			if sub.DisplayName != "" {
-				w.Header().Add("X-Remote-User-Display-Name", sub.DisplayName)
+			if h := fwCfg.UserIDHeader; *h != "" {
+				w.Header().Add(*h, sub.ID)
 			}
 
-			if sub.Email != "" {
-				w.Header().Add("X-Remote-Mail", sub.Email)
+			if h := fwCfg.UsernameHeader; *h != "" {
+				w.Header().Add(*h, sub.Username)
 			}
 
-			for _, r := range sub.Roles {
-				w.Header().Add("X-Remote-Role", r.ID)
+			if h := fwCfg.AvatarURLHeader; *h != "" {
+				w.Header().Add(*h, fmt.Sprintf("%s/avatar/%s", providers.Config.UserInterface.PublicURL, sub.ID))
 			}
 
-			// all all permissions from all roles to the headers.
-			for _, p := range sub.Permissions {
-				w.Header().Add("X-Remote-Permission", p)
+			if h := fwCfg.DisplayNameHeader; *h != "" {
+				if sub.DisplayName != "" {
+					w.Header().Add(*h, sub.DisplayName)
+				}
+			}
+
+			if h := fwCfg.MailHeader; *h != "" {
+				if sub.Email != "" {
+					w.Header().Add(*h, sub.Email)
+				}
+			}
+
+			if h := fwCfg.RoleHeader; *h != "" {
+				for _, r := range sub.Roles {
+					w.Header().Add(*h, r.ID)
+				}
+			}
+
+			if h := fwCfg.ResolvedPermissionHeader; *h != "" {
+				// all all permissions from all roles to the headers.
+				for _, p := range sub.Permissions {
+					w.Header().Add(*h, p)
+				}
 			}
 
 			l.Infof("request by user %s (name=%q) is allowed", sub.ID, sub.Username)

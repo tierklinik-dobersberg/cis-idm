@@ -71,8 +71,8 @@ type Policy struct {
 }
 
 type PolicyConfig struct {
-	Directories      []string `json:"directories" hcl:"directories,optional"`
-	Debug            bool     `json:"debug" hcl:"debug,optional"`
+	Directories []string `json:"directories" hcl:"directories,optional"`
+	Debug       bool     `json:"debug" hcl:"debug,optional"`
 
 	Policies []Policy `json:"policy" hcl:"policy,block"`
 }
@@ -81,7 +81,7 @@ type ForwardAuthConfig struct {
 	// RegoQuery is the rego policy query that cis-idm should perform
 	// when evaluating forward auth policies.
 	// Defaults to "data.cisidm.forward_auth"
-	RegoQuery string   `json:"rego_query" hcl:"rego_query,optional"`
+	RegoQuery string `json:"rego_query" hcl:"rego_query,optional"`
 
 	// Default holds the default policy for forward auth queries.
 	// This may either be set to "allow" or "deny" (default).
@@ -96,7 +96,25 @@ type ForwardAuthConfig struct {
 	// CORS preflight requests.
 	// Defaults to true.
 	AllowCORSPreflight *bool `json:"allow_cors_preflight" hcl:"allow_cors_preflight,optional"`
+
+	UserIDHeader             *string `json:"user_id_header" hcl:"user_id_header,optional"`
+	UsernameHeader           *string `json:"username_header" hcl:"username_header,optional"`
+	MailHeader               *string `json:"mail_header" hcl:"mail_header,optional"`
+	RoleHeader               *string `json:"role_header" hcl:"role_header,optional"`
+	AvatarURLHeader          *string `json:"avatar_url_header" hcl:"avatar_url_header,optional"`
+	DisplayNameHeader        *string `json:"display_name_header" hcl:"display_name_header,optional"`
+	ResolvedPermissionHeader *string `json:"permission_header" hcl:"permission_header,optional"`
 }
+
+var (
+	defaultUserIDHeader      = "X-Remote-User-ID"
+	defaultUsernameHeader    = "X-Remote-User"
+	defaultMailHeader        = "X-Remote-Mail"
+	defaultRoleHeader        = "X-Remote-Role"
+	defaultDisplayNameHeader = "X-Remote-User-Display-Name"
+	defaultAvatarURLHeader   = "X-Remote-Avatar-URL"
+	defaultPermissionHeader  = "X-Remote-Permission"
+)
 
 func (cfg *PolicyConfig) ApplyDefaultsAndValidate() error {
 	if cfg == nil {
@@ -126,6 +144,34 @@ func (cfg *ForwardAuthConfig) ApplyDefaultsAndValidate() error {
 	if cfg.AllowCORSPreflight == nil {
 		val := true
 		cfg.AllowCORSPreflight = &val
+	}
+
+	if cfg.UserIDHeader == nil {
+		cfg.UserIDHeader = &defaultUserIDHeader
+	}
+
+	if cfg.UsernameHeader == nil {
+		cfg.UsernameHeader = &defaultUsernameHeader
+	}
+
+	if cfg.MailHeader == nil {
+		cfg.MailHeader = &defaultMailHeader
+	}
+
+	if cfg.RoleHeader == nil {
+		cfg.RoleHeader = &defaultRoleHeader
+	}
+
+	if cfg.AvatarURLHeader == nil {
+		cfg.AvatarURLHeader = &defaultAvatarURLHeader
+	}
+
+	if cfg.DisplayNameHeader == nil {
+		cfg.DisplayNameHeader = &defaultDisplayNameHeader
+	}
+
+	if cfg.ResolvedPermissionHeader == nil {
+		cfg.ResolvedPermissionHeader = &defaultPermissionHeader
 	}
 
 	return nil
