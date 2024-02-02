@@ -131,7 +131,7 @@ func (p *Providers) GenerateRegistrationToken(ctx context.Context, creator repo.
 	return tokenModel.Token, nil
 }
 
-func getCurrentFieldVisiblity(ctx context.Context, id string) config.FieldVisibility {
+func getCurrentFieldVisiblity(ctx context.Context, id string) string {
 	if claims := middleware.ClaimsFromContext(ctx); claims != nil {
 		if claims.AppMetadata != nil && claims.AppMetadata.Authorization != nil && slices.Contains(claims.AppMetadata.Authorization.Roles, "idm_superuser") {
 			return config.FieldVisibilityPrivate

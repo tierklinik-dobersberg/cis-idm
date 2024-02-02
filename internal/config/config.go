@@ -40,9 +40,31 @@ type Overwrite struct {
 	Type string `json:"type" hcl:"type,label"` // role or user
 	ID   string `json:"id" hcl:"id,label"`
 
-	AccessTokenTTL  JSONDuration `json:"access_token_ttl" hcl:"access_token_ttl,optional"`
-	RefreshTokenTTL JSONDuration `json:"refresh_token_ttl" hcl:"refresh_token_ttl,optional"`
+	AccessTokenTTL  string `json:"access_token_ttl" hcl:"access_token_ttl,optional"`
+	RefreshTokenTTL string `json:"refresh_token_ttl" hcl:"refresh_token_ttl,optional"`
+
+	accessTTL  time.Duration
+	refreshTTL time.Duration
 }
+
+func (ov *Overwrite) Validate() error {
+	var err error
+
+	ov.accessTTL, err = time.ParseDuration(ov.AccessTokenTTL)
+	if err != nil {
+		return fmt.Errorf("access_token_ttl: %w", err)
+	}
+
+	ov.refreshTTL, err = time.ParseDuration(ov.RefreshTokenTTL)
+	if err != nil {
+		return fmt.Errorf("refresh_token_ttl: %w", err)
+	}
+
+	return nil
+}
+
+func (ov *Overwrite) AccessTTL() time.Duration  { return ov.accessTTL }
+func (ov *Overwrite) RefreshTTL() time.Duration { return ov.refreshTTL }
 
 type WebPush struct {
 	Admin           string `json:"admin" hcl:"admin"`
@@ -212,7 +234,7 @@ type Config struct {
 	Roles []Role `json:"roles" hcl:"role,block"`
 
 	// Overwrites may hold configuration overwrites per user or role.
-	Overwrites []Overwrite `json:"overwrites" hcl:"overwrites,block"`
+	Overwrites []Overwrite `json:"overwrite" hcl:"overwrite,block"`
 
 	// EnableDynamicRoles controles whether or not roles can be created/updated/deleted
 	// via the tkd.idm.v1.RoleService API.
@@ -382,8 +404,14 @@ func (file *Config) applyDefaults() error {
 	if len(file.ExtraDataConfig) > 0 {
 		for key, cfg := range file.ExtraDataConfig {
 			if err := cfg.ValidateConfig(FieldVisibilityPublic); err != nil {
-				return fmt.Errorf("extraData: #%d: %w", key, err)
+				return fmt.Errorf("field[%d]: %w", key, err)
 			}
+		}
+	}
+
+	for idx, ov := range file.Overwrites {
+		if err := ov.Validate(); err != nil {
+			return fmt.Errorf("overwrite[%d]: %w", idx, err)
 		}
 	}
 

@@ -6,35 +6,31 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
-type FieldType string
-
 const (
-	FieldTypeString = FieldType("string")
-	FieldTypeNumber = FieldType("number")
-	FieldTypeBool   = FieldType("bool")
-	FieldTypeObject = FieldType("object")
-	FieldTypeList   = FieldType("list")
+	FieldTypeString = "string"
+	FieldTypeNumber = "number"
+	FieldTypeBool   = "bool"
+	FieldTypeObject = "object"
+	FieldTypeList   = "list"
 )
 
-type FieldVisibility string
-
 const (
-	FieldVisibilityPublic        = FieldVisibility("public")
-	FieldVisibilitySelf          = FieldVisibility("self")
-	FieldVisibilityPrivate       = FieldVisibility("private")
-	FieldVisibilityAuthenticated = FieldVisibility("authenticated")
+	FieldVisibilityPublic        = "public"
+	FieldVisibilitySelf          = "self"
+	FieldVisibilityPrivate       = "private"
+	FieldVisibilityAuthenticated = "authenticated"
 )
 
 // FieldConfig describes how user-extra data looks like.
 type FieldConfig struct {
-	Type        FieldType       `json:"type" hcl:"type,label"`
-	Name        string          `json:"name" hcl:"name,label"`
-	Visibility  FieldVisibility `json:"visibility" hcl:"visibility,optional"`
-	Writeable   bool            `json:"writeable" hcl:"writeable,optional"`
-	Description string          `json:"description" hcl:"description,optional"`
-	DisplayName string          `json:"display_name" hcl:"display_name,optional"`
-	Properties  []*FieldConfig  `json:"property" hcl:"property,block"`
-	ElementType *FieldConfig    `json:"element_type" hcl:"element_type,block"`
+	Type        string         `json:"type" hcl:"type,label"`
+	Name        string         `json:"name" hcl:"name,label"`
+	Visibility  string         `json:"visibility" hcl:"visibility,optional"`
+	Writeable   bool           `json:"writeable" hcl:"writeable,optional"`
+	Description string         `json:"description" hcl:"description,optional"`
+	DisplayName string         `json:"display_name" hcl:"display_name,optional"`
+	Properties  []*FieldConfig `json:"property" hcl:"property,block"`
+	ElementType *FieldConfig   `json:"element_type" hcl:"element_type,block"`
 }
 
 func (fc FieldConfig) Validate(data *structpb.Value) error {
@@ -106,7 +102,7 @@ func (fc FieldConfig) Validate(data *structpb.Value) error {
 	return nil
 }
 
-func (fc *FieldConfig) ApplyVisibility(current FieldVisibility, value *structpb.Value) *structpb.Value {
+func (fc *FieldConfig) ApplyVisibility(current string, value *structpb.Value) *structpb.Value {
 	effectiveVisilbity := getEffectiveVisibility(current, fc.Visibility)
 
 	if effectiveVisilbity != current {
@@ -137,7 +133,7 @@ func (fc *FieldConfig) ApplyVisibility(current FieldVisibility, value *structpb.
 	return value
 }
 
-func (fc *FieldConfig) ValidateConfig(fieldVisiblity FieldVisibility) error {
+func (fc *FieldConfig) ValidateConfig(fieldVisiblity string) error {
 	// add some sense defaults
 	if fc.Type == "" {
 		fc.Type = FieldTypeString
@@ -189,7 +185,7 @@ func (fc *FieldConfig) ValidateConfig(fieldVisiblity FieldVisibility) error {
 	return nil
 }
 
-func isValidFieldVisiblity(v FieldVisibility) bool {
+func isValidFieldVisiblity(v string) bool {
 	switch v {
 	case FieldVisibilityAuthenticated,
 		FieldVisibilitySelf,
@@ -201,8 +197,8 @@ func isValidFieldVisiblity(v FieldVisibility) bool {
 	}
 }
 
-func getEffectiveVisibility(previous FieldVisibility, next FieldVisibility) FieldVisibility {
-	m := map[FieldVisibility]int{
+func getEffectiveVisibility(previous string, next string) string {
+	m := map[string]int{
 		FieldVisibilityPrivate:       0,
 		FieldVisibilitySelf:          1,
 		FieldVisibilityAuthenticated: 2,
@@ -219,7 +215,7 @@ func getEffectiveVisibility(previous FieldVisibility, next FieldVisibility) Fiel
 	return next
 }
 
-func isValidFieldType(v FieldType) bool {
+func isValidFieldType(v string) bool {
 	switch v {
 	case FieldTypeBool,
 		FieldTypeList,

@@ -32,8 +32,8 @@ func (p *Providers) AddRefreshToken(user repo.User, roles []repo.Role, kind jwt.
 			}
 		}
 
-		if (hasUser || hasRole) && overwrite.RefreshTokenTTL.AsDuration() > 0 {
-			ttl = overwrite.RefreshTokenTTL.AsDuration()
+		if (hasUser || hasRole) && overwrite.RefreshTTL() > 0 {
+			ttl = overwrite.RefreshTTL()
 		}
 	}
 
@@ -70,8 +70,8 @@ func (p *Providers) AddAccessToken(user repo.User, roles []repo.Role, ttl time.D
 				}
 			}
 		}
-		if (hasUser || hasRole) && overwrite.AccessTokenTTL.AsDuration() > 0 {
-			defaultTTL = overwrite.AccessTokenTTL.AsDuration()
+		if (hasUser || hasRole) && overwrite.AccessTTL() > 0 {
+			defaultTTL = overwrite.AccessTTL()
 		}
 	}
 
