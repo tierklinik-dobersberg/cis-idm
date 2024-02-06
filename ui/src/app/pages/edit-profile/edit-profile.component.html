@@ -1,64 +1,123 @@
 <div class="tkd-card">
-    <header class="flex !flex-row w-full items-center">
-        <a routerLink="/profile">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-                stroke="currentColor" class="w-6 h-6">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
-            </svg>
-        </a>
+  <header class="flex !flex-row w-full items-center">
+    <a routerLink="/profile">
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke-width="1.5"
+        stroke="currentColor"
+        class="w-6 h-6"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          d="M15.75 19.5L8.25 12l7.5-7.5"
+        />
+      </svg>
+    </a>
 
-        <h1 class="flex-grow">Profil bearbeiten</h1>
-    </header>
-    <content>
-        <section>
-            <form (ngSubmit)="saveProfile()" class="flex flex-col gap-4">
-                <ul class="flex flex-col gap-4 list-none">
-                    <li class="flex flex-row items-center justify-between" *ngIf="config.features.allowUsernameChange">
-                        <div class="flex flex-col gap-0.5 w-full">
-                            <span
-                                class="text-xs text-gray-500 uppercase dark:text-emerald-200 dark:text-opacity-70">Benutzername</span>
-                            <input class="w-full tkd-input" type="text" name="displayName" [formControl]="username"
-                                placeholder="Benutzername" autocomplete="username">
-                        </div>
-                    </li>
+    <h1 class="flex-grow">Profil bearbeiten</h1>
+  </header>
+  <content>
+    <section>
+      <form (ngSubmit)="saveProfile()" class="flex flex-col gap-4">
+        <ul class="flex flex-col gap-4 list-none">
+          <li
+            class="flex flex-row justify-between items-center"
+            *ngIf="config.features.allowUsernameChange"
+          >
+            <div class="flex flex-col gap-0.5 w-full">
+              <span
+                class="text-xs text-gray-500 uppercase dark:text-emerald-200 dark:text-opacity-70"
+                >Benutzername</span
+              >
+              <input
+                class="w-full tkd-input"
+                type="text"
+                name="displayName"
+                [formControl]="username"
+                placeholder="Benutzername"
+                autocomplete="username"
+              />
+            </div>
+          </li>
 
-                    <li class="flex flex-row items-center justify-between gap-4">
-                        <div class="flex flex-col gap-0.5 w-full">
-                            <span
-                                class="text-xs text-gray-500 uppercase dark:text-emerald-200 dark:text-opacity-70">Vorname</span>
-                            <input class="w-full tkd-input" type="text" name="firstname" [formControl]="firstName"
-                                placeholder="Vorname" autocomplete="given-name">
-                        </div>
-                        <div class="flex flex-col gap-0.5 w-full">
-                            <span
-                                class="text-xs text-gray-500 uppercase dark:text-emerald-200 dark:text-opacity-70">Nachname</span>
-                            <input class="w-full tkd-input" type="text" name="lastname" [formControl]="lastName"
-                                placeholder="Nachname" autocomplete="family-name">
-                        </div>
-                    </li>
+          <li class="flex flex-row gap-4 justify-between items-center">
+            <div class="flex flex-col gap-0.5 w-full">
+              <span
+                class="text-xs text-gray-500 uppercase dark:text-emerald-200 dark:text-opacity-70"
+                >Vorname</span
+              >
+              <input
+                class="w-full tkd-input"
+                type="text"
+                name="firstname"
+                [formControl]="firstName"
+                placeholder="Vorname"
+                autocomplete="given-name"
+              />
+            </div>
+            <div class="flex flex-col gap-0.5 w-full">
+              <span
+                class="text-xs text-gray-500 uppercase dark:text-emerald-200 dark:text-opacity-70"
+                >Nachname</span
+              >
+              <input
+                class="w-full tkd-input"
+                type="text"
+                name="lastname"
+                [formControl]="lastName"
+                placeholder="Nachname"
+                autocomplete="family-name"
+              />
+            </div>
+          </li>
 
-                    <li class="flex flex-row items-center justify-between">
-                        <div class="flex flex-col gap-0.5 w-full">
-                            <span
-                                class="text-xs text-gray-500 uppercase dark:text-emerald-200 dark:text-opacity-70">Anzeige
-                                Name</span>
-                            <input class="w-full tkd-input" type="text" name="displayName" [formControl]="displayName"
-                                placeholder="Anzeige Name" autocomplete="name">
-                        </div>
-                    </li>
+          <li class="flex flex-row justify-between items-center">
+            <div class="flex flex-col gap-0.5 w-full">
+              <span
+                class="text-xs text-gray-500 uppercase dark:text-emerald-200 dark:text-opacity-70"
+                >Anzeige Name</span
+              >
+              <input
+                class="w-full tkd-input"
+                type="text"
+                name="displayName"
+                [formControl]="displayName"
+                placeholder="Anzeige Name"
+                autocomplete="name"
+              />
+            </div>
+          </li>
 
-                    <li class="flex flex-row items-center justify-between">
-                        <div class="flex flex-col gap-0.5 w-full">
-                            <span
-                                class="text-xs text-gray-500 uppercase dark:text-emerald-200 dark:text-opacity-70">Geburtsdatum</span>
-                            <input class="w-full tkd-input" type="date" name="birthday" [formControl]="birthday"
-                                placeholder="Geburtsdatum" autocomplete="bday">
-                        </div>
-                    </li>
-                </ul>
+          <li class="flex flex-row justify-between items-center">
+            <div class="flex flex-col gap-0.5 w-full border-none">
+              <label
+                class="text-xs text-gray-500 uppercase peer dark:text-emerald-200 dark:text-opacity-70"
+                >Geburtsdatum</label
+              >
+              <div
+                class="relative"
+                data-te-datepicker-init
+                data-te-format="yyyy-mm-dd"
+                #datepicker
+              >
+                <input
+                  class="w-full tkd-input"
+                  type="text"
+                  name="birthday"
+                  [formControl]="birthday"
+                  placeholder="Geburtsdatum"
+                  autocomplete="bday"
+                />
+              </div>
+            </div>
+          </li>
+        </ul>
 
-                <button type="submit" class="tkd-btn">Speichern</button>
-            </form>
-        </section>
-    </content>
+        <button type="submit" class="tkd-btn">Speichern</button>
+      </form>
+    </section>
+  </content>
 </div>
