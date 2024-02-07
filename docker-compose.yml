@@ -7,7 +7,6 @@ secrets:
 services:
   traefik:
     image: "traefik:v2.10"
-    container_name: "traefik"
     command:
       #- "--log.level=DEBUG"
       - "--api.insecure=true"
