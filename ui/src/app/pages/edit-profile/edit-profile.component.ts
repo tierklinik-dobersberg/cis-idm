@@ -21,11 +21,12 @@ import { ProfileService } from 'src/services/profile.service';
 import { Datepicker } from 'tw-elements';
 import { LayoutService } from '@tierklinik-dobersberg/angular/layout';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { TkdButtonDirective } from 'src/app/components/button';
 
 @Component({
   selector: 'app-edit-profile',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterModule, TkdButtonDirective],
   templateUrl: './edit-profile.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -66,7 +67,68 @@ export class EditProfileComponent implements OnInit, AfterViewInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
         dt.close();
-        dt.update({ inline: this.layout.md });
+        dt.update({
+          inline: this.layout.md,
+          disableFuture: true,
+          confirmDateOnSelect: true,
+          startDay: 1,
+          monthsFull: [
+            'Jänner',
+            'Feburar',
+            'März',
+            'April',
+            'Mai',
+            'Juni',
+            'Juli',
+            'August',
+            'September',
+            'Oktober',
+            'November',
+            'Dezember',
+          ],
+          monthsShort: [
+            'Jän',
+            'Feb',
+            'Mär',
+            'Apr',
+            'Mai',
+            'Jun',
+            'Jul',
+            'Aug',
+            'Sep',
+            'Okt',
+            'Nov',
+            'Dez',
+          ],
+          weekdaysFull: [
+            'Sonntag',
+            'Montag',
+            'Dienstag',
+            'Mittwoch',
+            'Donnerstag',
+            'Freitag',
+            'Samstag',
+          ],
+          weekdaysNarrow: [
+            'S',
+            'M',
+            'D',
+            'M',
+            'D',
+            'F',
+            'S',
+          ],
+          weekdaysShort: [
+            'Son',
+            'Mon',
+            'Die',
+            'Mit',
+            'Don',
+            'Fre',
+            'Sam',
+          ],
+          title: 'Geburtstag auswählen'
+        });
       });
 
     this.destroyRef.onDestroy(() => dt.dispose());
