@@ -4,6 +4,8 @@ import { Router, RouterModule } from "@angular/router";
 import { Profile } from '@tierklinik-dobersberg/apis/gen/es/tkd/idm/v1/user_pb';
 import { Observable } from 'rxjs';
 import { AUTH_SERVICE } from "src/app/clients";
+import { TkdAvatarComponent } from "src/app/components/avatar";
+import { TkdButtonDirective } from "src/app/components/button";
 import { ConfigService } from "src/app/config.service";
 import { ProfileService } from 'src/services/profile.service';
 
@@ -17,7 +19,9 @@ import { ProfileService } from 'src/services/profile.service';
   ],
   imports: [
     CommonModule,
-    RouterModule
+    RouterModule,
+    TkdAvatarComponent,
+    TkdButtonDirective,
   ]
 })
 export class ProfileComponent {

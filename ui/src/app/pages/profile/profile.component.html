@@ -7,7 +7,7 @@
           Hallo <span class="font-medium">{{ profile.user?.displayName || profile.user?.username }}</span>
         </h1>
       </div>
-      <img routerLink="./edit-avatar" class="w-12 h-12 rounded-full shadow cursor-pointer" [attr.src]="profile.user?.avatar">
+      <tkd-avatar routerLink="./edit-avatar" class="w-14 h-14 cursor-pointer border border-white" [src]="profile.user?.avatar"></tkd-avatar>
     </header>
 
     <content>
@@ -67,17 +67,17 @@
           Sicherheit
         </h2>
         <div class="flex flex-col gap-2 sm:flex-row">
-          <button routerLink="./change-password" type="button" class="self-stretch flex-1 flex-grow tkd-btn-outline">
+          <button routerLink="./change-password" type="button" class="self-stretch flex-1 flex-grow" tkd-button="secondary">
             Passwort ändern
           </button>
-          <button routerLink="./manage-mfa" type="button" class="self-stretch flex-1 flex-grow tkd-btn-outline">
+          <button routerLink="./manage-mfa" type="button" class="self-stretch flex-1 flex-grow" tkd-button="secondary">
             Sicherheits & Login-Methoden
           </button>
         </div>
       </section>
 
       <section>
-        <button type="button" (click)="logout()" class="self-stretch tkd-btn">
+        <button type="button" (click)="logout()" class="self-stretch" tkd-button="primary">
           Abmelden
         </button>
       </section>
@@ -129,7 +129,7 @@
           </span>
         </div>
 
-        <button class="tkd-btn-outline" routerLink="./edit-address">Adresse hinzufügen</button>
+        <button tkd-button="tertiary" routerLink="./edit-address">Adresse hinzufügen</button>
       </section>
     </content>
   </div>
@@ -157,7 +157,7 @@
             <span class="flex flex-row items-center flex-grow gap-2">
               {{ addr.number }}
               <span
-                class="bg-opacity-50 text-emerald-600 bg-emerald-200 border-emerald-600 dark:text-emerald-200 dark:border-emerald-500 tkd-tag dark:bg-emerald-600"
+                class=" text-emerald-700 bg-emerald-100  dark:text-emerald-200 tkd-tag dark:bg-emerald-600"
                 *ngIf="addr.primary">
                 primary
               </span>
@@ -188,7 +188,7 @@
             Es wurden noch keine Telefonnummern hinterlegt.
           </span>
         </div>
-        <button class="tkd-btn-outline" routerLink="./edit-phone">Telefonnummer hinzufügen</button>
+        <button tkd-button="tertiary" routerLink="./edit-phone">Telefonnummer hinzufügen</button>
       </section>
       <section *ngIf="config.features.emails">
         <h2 class="flex flex-row items-center justify-between">
@@ -206,7 +206,7 @@
             <span class="flex flex-row items-center flex-grow gap-2">
               {{ addr.address }}
               <span
-                class="bg-opacity-50 text-emerald-600 bg-emerald-200 border-emerald-600 dark:text-emerald-200 dark:border-emerald-500 tkd-tag dark:bg-emerald-600"
+                class=" text-emerald-700 bg-emerald-100  dark:text-emerald-200 tkd-tag dark:bg-emerald-600"
                 *ngIf="addr.primary">
                 primary
               </span>
@@ -237,7 +237,7 @@
             Es wurden noch keine E-Mail Adressen hinterlegt.
           </span>
         </div>
-        <button class="tkd-btn-outline" routerLink="./edit-mail">E-Mail Adresse hinzufügen</button>
+        <button tkd-button="tertiary" routerLink="./edit-mail">E-Mail Adresse hinzufügen</button>
       </section>
     </content>
   </div>
