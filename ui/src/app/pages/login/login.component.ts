@@ -10,6 +10,8 @@ import { browserSupportsWebAuthn, browserSupportsWebAuthnAutofill, startAuthenti
 import { AuthType, LoginResponse, RequiredMFAKind } from "@tierklinik-dobersberg/apis";
 import { first, firstValueFrom, from, switchMap } from "rxjs";
 import { AUTH_SERVICE, NOTIFY_SERVICE } from "src/app/clients";
+import { TkdAvatarComponent } from "src/app/components/avatar";
+import { TkdButtonDirective } from "src/app/components/button";
 import { ConfigService } from "src/app/config.service";
 import { SecurityCodeComponent } from "src/app/shared/security-code/security-code.component";
 import { ProfileService } from "src/services/profile.service";
@@ -48,6 +50,8 @@ function isValidState(s: any): s is States {
     RouterModule,
     SecurityCodeComponent,
     HttpClientModule,
+    TkdButtonDirective,
+    TkdAvatarComponent,
   ]
 })
 export class LoginComponent implements OnInit {
