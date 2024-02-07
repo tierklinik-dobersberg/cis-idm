@@ -5,6 +5,7 @@ import { SwUpdate } from '@angular/service-worker';
 import { concat, first, interval, startWith } from 'rxjs';
 import { ProfileService } from 'src/services/profile.service';
 import { Tooltip, Sidenav, Datepicker, Input, initTE } from 'tw-elements';
+import { LayoutService } from '@tierklinik-dobersberg/angular/layout';
 
 @Component({
   selector: 'app-root',
@@ -16,7 +17,10 @@ export class AppComponent implements OnInit {
   private readonly document = inject(DOCUMENT);
   private readonly updates = inject(SwUpdate);
   private readonly appRef = inject(ApplicationRef);
+  readonly layout = inject(LayoutService).withAutoUpdate();
   readonly profileService = inject(ProfileService);
+
+  get siteName() { return this.config.config.siteName }
 
   ngOnInit() {
     initTE({ Sidenav, Tooltip, Datepicker, Input });

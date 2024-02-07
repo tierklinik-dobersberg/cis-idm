@@ -1,6 +1,7 @@
 import { APP_INITIALIZER, NgModule, isDevMode } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
-
+import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
+import { OverlayModule } from '@angular/cdk/overlay';
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import {
@@ -21,6 +22,9 @@ import { ConfigService, RemoteConfig } from './config.service';
 import { ServiceWorkerModule } from '@angular/service-worker';
 import { NavigationComponent } from './navigation';
 import { TkdLayoutModule } from '@tierklinik-dobersberg/angular/layout';
+import { TkdButtonDirective } from './components/button';
+import { TkdImageComponent } from './components/image';
+import { TkdAvatarComponent } from './components/avatar';
 
 const loadConfigFactory = (client: HttpClient) => {
   return () =>
@@ -39,6 +43,11 @@ const loadConfigFactory = (client: HttpClient) => {
     HttpClientModule,
     AppRoutingModule,
     TkdLayoutModule,
+    TkdButtonDirective,
+    TkdImageComponent,
+    TkdAvatarComponent,
+    BrowserAnimationsModule,
+    OverlayModule,
     ServiceWorkerModule.register('ngsw-worker.js', {
       enabled: !isDevMode(),
       // Register the ServiceWorker as soon as the application is stable
