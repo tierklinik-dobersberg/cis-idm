@@ -25,6 +25,7 @@ import { TkdLayoutModule } from '@tierklinik-dobersberg/angular/layout';
 import { TkdButtonDirective } from './components/button';
 import { TkdImageComponent } from './components/image';
 import { TkdAvatarComponent } from './components/avatar';
+import { TkdMenuModule } from './components/menu';
 
 const loadConfigFactory = (client: HttpClient) => {
   return () =>
@@ -46,6 +47,7 @@ const loadConfigFactory = (client: HttpClient) => {
     TkdButtonDirective,
     TkdImageComponent,
     TkdAvatarComponent,
+    TkdMenuModule,
     BrowserAnimationsModule,
     OverlayModule,
     ServiceWorkerModule.register('ngsw-worker.js', {
