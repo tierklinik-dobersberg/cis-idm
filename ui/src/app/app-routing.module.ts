@@ -19,7 +19,7 @@ const routes: Routes = [
   { path: "profile/edit-phone/:id", canActivate: [authGuard], loadComponent: () => import('./pages/add-edit-phone/add-edit-phone.component').then(m => m.AddEditPhoneComponent)},
   { path: "profile/verify-phone/:id", canActivate: [authGuard], loadComponent: () => import('./pages/verify-phone/verify-phone.component').then(m => m.VerifyPhoneComponent)},
   { path: "profile/verify-mail", canActivate: [authGuard], loadComponent: () => import('./pages/verify-mail/verify-mail.component').then(m => m.VerifyMailComponent) },
-  { path: "profile/manage-mfa", canActivate: [authGuard], loadComponent: () => import('./pages/manage-mfa/manage-mfa.component').then(m => m.ManageMfaComponent)},
+  { path: "security", canActivate: [authGuard], loadComponent: () => import('./pages/security-overview/security-overview.component').then(m => m.SecurityOverviewComponent)},
   { path: "profile/edit-avatar", canActivate: [authGuard], loadComponent: () => import('./pages/edit-avatar/edit-avatar.component').then(m => m.EditAvatarComponent)},
   { path: "**", redirectTo: '/login' }
 ];

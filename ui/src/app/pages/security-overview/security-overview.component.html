@@ -1,13 +1,6 @@
 <div class="flex flex-col items-stretch w-screen max-w-2xl gap-4" *ngIf="profile$ | async as profile">
   <div class="w-full tkd-card">
     <header class="flex !flex-row w-full items-center">
-      <a (click)="goBack()">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
-          class="w-6 h-6">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
-        </svg>
-      </a>
-
       <h1 class="flex-grow">Authentifizierung und Sicherheits Einstellungen verwalten</h1>
     </header>
 
@@ -19,12 +12,12 @@
       </section>
 
       <section *ngIf="enrollmentStep === null && !disableTotpMode">
-        <button class="tkd-btn" *ngIf="hasPublicKeyCreds" (click)="registerWebAuthN()">Neues Gerät / Passkey
+        <button tkd-button="secondary" *ngIf="hasPublicKeyCreds" (click)="registerWebAuthN()">Neues Gerät / Passkey
           registrieren</button>
-        <button class="tkd-btn-outline" *ngIf="profile.totpEnabled" (click)="disableTotp()">TOTP 2FA
+        <button tkd-button="secondary" *ngIf="profile.totpEnabled" (click)="disableTotp()">TOTP 2FA
           Deaktivieren</button>
-        <button class="tkd-btn" *ngIf="!profile.totpEnabled" (click)="enableTotp()">TOTP 2FA Aktivieren</button>
-        <button class="tkd-btn" *ngIf="profile.totpEnabled" (click)="generateRecoveryCodes()">Neue Recovery Codes
+        <button tkd-button="secondary" *ngIf="!profile.totpEnabled" (click)="enableTotp()">TOTP 2FA Aktivieren</button>
+        <button tkd-button="secondary" *ngIf="profile.totpEnabled" (click)="generateRecoveryCodes()">Neue Recovery Codes
           erstellen</button>
       </section>
 
@@ -36,7 +29,7 @@
             <app-security-code [(ngModel)]="code" name="code" required></app-security-code>
           </div>
 
-          <button class="tkd-btn" type="submit">Bestätigen</button>
+          <button tkd-button="primary" type="submit">Bestätigen</button>
         </form>
 
       </section>
@@ -55,7 +48,7 @@
             <app-security-code [(ngModel)]="code" name="code" required></app-security-code>
           </div>
 
-          <button [disabled]="!form.valid" class="tkd-btn" type="submit">Bestätigen</button>
+          <button [disabled]="!form.valid" tkd-button="primary" type="submit">Bestätigen</button>
         </form>
       </section>
 

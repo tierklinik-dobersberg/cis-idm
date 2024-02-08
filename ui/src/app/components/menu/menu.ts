@@ -16,7 +16,10 @@ export class TkdMenuDirective {
 
 @Directive({
   selector: '[tkd-menu-item]',
-  hostDirectives: [RouterLinkActive],
+  hostDirectives: [{
+    directive: RouterLinkActive,
+    inputs: ['routerLinkActiveOptions'],
+  }],
   standalone: true,
 })
 export class TkdMenuItemDirective implements OnInit {
@@ -28,7 +31,7 @@ export class TkdMenuItemDirective implements OnInit {
   })
 
   @HostBinding('class')
-  readonly classList = 'flex flex-row gap-3 border-r-2 border-transparent justify-start items-center pr-3 py-2 text-base cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-600 pl-12 [&>svg:first-child]:-ml-8 [&>svg]:h-5 [&>svg]:w-5 [&>ul[tkd-menu]]:w-full';
+  readonly classList = 'transition duration-150 ease-in-out flex flex-row gap-3 border-r-2 border-transparent justify-start items-center pr-3 py-2 text-base cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-600 pl-12 [&>svg:first-child]:-ml-8 [&>svg]:h-5 [&>svg]:w-5 [&>ul[tkd-menu]]:w-full';
 
   ngOnInit(): void {
     if (this.routerLink) {

@@ -1,0 +1,10 @@
+<ng-template [ngIf]="mode === 'side'">
+  <ng-container *ngTemplateOutlet="navigationTemplate"></ng-container>
+</ng-template>
+
+<ng-template #navigationTemplate>
+  <nav id="sidenav" [@animate] (@animate.done)="animationDone($event)"
+    class="flex flex-col flex-grow z-[1035] bg-white w-64 overflow-hidden shadow-[0_4px_12px_0_rgba(0,0,0,0.07),_0_2px_4px_rgba(0,0,0,0.05)] dark:bg-slate-800">
+    <ng-content></ng-content>
+  </nav>
+</ng-template>
