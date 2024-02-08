@@ -1,0 +1,71 @@
+<div
+  *ngIf="profile | async as profile"
+  class="flex overflow-x-hidden flex-col gap-16 items-center mt-8 max-w-screen-md"
+>
+  <header class="flex flex-col gap-3 items-center dark:text-white">
+    <div class="w-32 h-32">
+      <tkd-avatar
+        [@avatar]
+        [src]="profile.user?.avatar"
+        class="w-32 h-32"
+      ></tkd-avatar>
+    </div>
+    <h1 class="text-4xl font-light">
+      Hallo <span class="font-medium">{{ profile | displayName }},</span>
+    </h1>
+  </header>
+
+  <div class="tkd-card" *ngIf="profileIncomplete || avatarMissing">
+    <header>
+      <div class="flex flex-col flex-grow gap-2 justify-center">
+        <h3>Willkommen zurück!</h3>
+        <h1>Bitte vervollständige dein Profil!</h1>
+      </div>
+    </header>
+
+    <content>
+      <section>
+        <p>Dein Profile benötigt noch etwas Aufmerksamkeit!</p>
+
+        <div class="flex justify-center items-center w-full">
+          <ul class="flex flex-col gap-3 w-full">
+            <li *ngIf="profileIncomplete">
+              <button
+                class="w-full"
+                tkd-button="secondary"
+                routerLink="/profile/edit"
+              >
+                Bearbeite dein Profile
+              </button>
+            </li>
+            <li *ngIf="avatarMissing">
+              <button
+                class="w-full"
+                tkd-button="secondary"
+                routerLink="/profile/edit-avatar"
+              >
+                Füge ein Profilbild hinzu
+              </button>
+            </li>
+          </ul>
+        </div>
+      </section>
+    </content>
+  </div>
+
+  <div class="tkd-card" *ngIf="emailMissing || primaryMailMissing">
+    <header>
+      <div class="flex flex-col flex-grow gap-2 justify-center">
+        <h1 *ngIf="emailMissing">Bitte füge eine E-Mail Adresse hinzu</h1>
+        <h1 *ngIf="!emailMissing">Bitte wähle deine primäre E-Mail Adresse</h1>
+      </div>
+    </header>
+    <content>
+      <section *ngIf="emailMissing">
+        <p>In deinem Profil ist noch keine E-Mail Adresse hinterlegt:</p>
+        <button tkd-button="secondary">E-Mail hinzufügen</button>
+      </section>
+      <section *ngIf="!emailMissing"></section>
+    </content>
+  </div>
+</div>

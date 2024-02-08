@@ -26,6 +26,7 @@ import { TkdButtonDirective } from './components/button';
 import { TkdImageComponent } from './components/image';
 import { TkdAvatarComponent } from './components/avatar';
 import { TkdMenuModule } from './components/menu';
+import { TkdSideNavComponent } from './components/navigation';
 
 const loadConfigFactory = (client: HttpClient) => {
   return () =>
@@ -48,6 +49,7 @@ const loadConfigFactory = (client: HttpClient) => {
     TkdImageComponent,
     TkdAvatarComponent,
     TkdMenuModule,
+    TkdSideNavComponent,
     BrowserAnimationsModule,
     OverlayModule,
     ServiceWorkerModule.register('ngsw-worker.js', {
