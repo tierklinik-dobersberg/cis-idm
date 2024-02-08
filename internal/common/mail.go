@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/bufbuild/connect-go"
+	"github.com/gofrs/uuid"
 	"github.com/tierklinik-dobersberg/apis/pkg/log"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/config"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/repo"
@@ -15,6 +16,15 @@ func (svc *Service) AddEmailAddressToUser(ctx context.Context, mailModel repo.Us
 
 	if !svc.cfg.FeatureEnabled(config.FeatureEMails) {
 		return nil, nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("email: %w", config.ErrFeatureDisabled))
+	}
+
+	if mailModel.ID == "" {
+		id, err := uuid.NewV4()
+		if err != nil {
+			return nil, nil, err
+		}
+
+		mailModel.ID = id.String()
 	}
 
 	addedMail, err := svc.repo.CreateEMail(ctx, repo.CreateEMailParams{

@@ -8,6 +8,7 @@ import (
 
 	"github.com/bufbuild/connect-go"
 	"github.com/bufbuild/protovalidate-go"
+	"github.com/gofrs/uuid"
 	idmv1 "github.com/tierklinik-dobersberg/apis/gen/go/tkd/idm/v1"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/config"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/repo"
@@ -16,6 +17,15 @@ import (
 func (svc *Service) AddUserAddress(ctx context.Context, model repo.UserAddress) ([]repo.UserAddress, error) {
 	if !svc.cfg.FeatureEnabled(config.FeatureAddresses) {
 		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("addresses: %w", config.ErrFeatureDisabled))
+	}
+
+	if model.ID == "" {
+		id, err := uuid.NewV4()
+		if err != nil {
+			return nil, err
+		}
+
+		model.ID = id.String()
 	}
 
 	if _, err := svc.repo.CreateUserAddress(ctx, repo.CreateUserAddressParams{
