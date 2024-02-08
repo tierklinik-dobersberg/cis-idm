@@ -1,4 +1,4 @@
-import { AsyncPipe, NgClass, NgIf } from '@angular/common';
+import { AsyncPipe, NgClass, NgFor, NgForOf, NgIf } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
@@ -15,6 +15,8 @@ import { ProfileService } from 'src/services/profile.service';
 import { TkdAvatarComponent } from 'src/app/components/avatar';
 import { trigger, transition, style, animate } from '@angular/animations';
 import { Router, RouterModule } from '@angular/router';
+import { EMail, PhoneNumber } from '@tierklinik-dobersberg/apis';
+import { SELF_SERVICE } from 'src/app/clients';
 
 @Component({
   standalone: true,
@@ -22,6 +24,8 @@ import { Router, RouterModule } from '@angular/router';
   imports: [
     NgIf,
     NgClass,
+    NgFor,
+    NgForOf,
     AsyncPipe,
     TkdButtonDirective,
     DisplayNamePipe,
@@ -62,6 +66,8 @@ import { Router, RouterModule } from '@angular/router';
 })
 export class WelcomePageComponent implements OnInit {
   readonly profile = inject(ProfileService).profile;
+  private readonly selfService = inject(SELF_SERVICE);
+  private readonly profileService = inject(ProfileService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly cdr = inject(ChangeDetectorRef);
 
@@ -73,6 +79,16 @@ export class WelcomePageComponent implements OnInit {
 
   primaryMailMissing = false;
   primaryPhoneMissing = false;
+
+  get everythingDone() {
+    return !this.avatarMissing &&
+      !this.profileIncomplete &&
+      !this.addressMissing &&
+      !this.phoneMissing &&
+      !this.emailMissing &&
+      !this.primaryMailMissing &&
+      !this.primaryPhoneMissing;
+  }
 
   ngOnInit(): void {
     this.profile
@@ -93,12 +109,30 @@ export class WelcomePageComponent implements OnInit {
           !user.firstName ||
           !user.lastName ||
           !user.birthday;
+
         this.phoneMissing = !profile.phoneNumbers?.length;
         this.emailMissing = !profile.emailAddresses?.length;
         this.primaryMailMissing = !user.primaryMail;
         this.primaryPhoneMissing = !user.primaryPhoneNumber;
+        this.addressMissing = !profile.addresses?.length;
 
         this.cdr.markForCheck();
       });
+  }
+
+  async markAsPrimaryMail(email: EMail) {
+    await this.selfService.markEmailAsPrimary({
+      id: email.id
+    })
+
+    await this.profileService.loadProfile();
+  }
+
+  async markAsPrimaryPhone(phone: PhoneNumber) {
+    await this.selfService.markPhoneNumberAsPrimary({
+      id: phone.id,
+    })
+
+    await this.profileService.loadProfile();
   }
 }
