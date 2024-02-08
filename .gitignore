@@ -12,3 +12,4 @@ internal/tmpl/templates
 /userd
 .angulardoc.json
 .vscode/
+.nocommit

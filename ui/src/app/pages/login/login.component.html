@@ -20,7 +20,7 @@
             <ul class="space-y-2 list-none">
               <li *ngFor="let user of loggedInUsers; trackBy: trackLoggedInUsers" (click)="selectKnownAccount(user)"
                 class="flex flex-row items-center justify-start gap-4 p-1 rounded cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-600">
-                <img class="w-10 h-10 rounded-full shadow" [attr.src]="user.avatarUrl">
+                <tkd-avatar class="w-10 h-10" [src]="user.avatarUrl"></tkd-avatar>
                 <span class="flex-grow">{{ user.displayName }}</span>
 
                 <a (click)="removeAccount(user)">
@@ -51,14 +51,14 @@
 
           <ng-container *ngSwitchCase="'password-input'">
             <div class="flex flex-row items-center gap-4" *ngIf="selectedUser">
-                <img class="w-10 h-10 rounded-full shadow" [attr.src]="selectedUser.avatarUrl">
+                <tkd-avatar class="w-10 h-10" [src]="selectedUser.avatarUrl"></tkd-avatar>
                 <span class="flex-grow">{{ selectedUser.displayName }}</span>
             </div>
 
-            <button type="button" class="tkd-btn" *ngIf="webauthnSupport && !autofillSupported" (click)="loginUsingWebAuthn()">Mit deinem Gerät anmelden</button>
+            <button type="button" tkd-button="secondary" *ngIf="webauthnSupport && !autofillSupported" (click)="loginUsingWebAuthn()">Mit deinem Gerät anmelden</button>
 
             <span class="-mb-2 text-sm">Passwort:</span>
-            <input required placeholder="Password" autocomplete="current-password webauthn" class="tkd-input" type="password"
+            <input required placeholder="Password" autocomplete="current-password webauthn" class="tkd-input" type="password" autofocus
               name="password" [(ngModel)]="password">
 
             <a (click)="chooseDifferentAccount()" class="inline-block w-full text-sm text-center">Nicht dein Account? Verwende einen anderen.</a>
@@ -79,7 +79,7 @@
           Anmeldung fehlgeschlagen: <br />
           {{ loginErrorMessage }}
         </span>
-        <button [disabled]="!loginForm.valid" type="submit" class="tkd-btn">Weiter</button>
+        <button [disabled]="!loginForm.valid" *ngIf="display !== 'user-select'" type="submit" tkd-button="primary">Weiter</button>
         <a *ngIf="config.features.registration" class="inline-block w-full -mt-2 text-xs text-center"
           routerLink="/registration">Noch keine Account? Registriere dich!</a>
       </section>

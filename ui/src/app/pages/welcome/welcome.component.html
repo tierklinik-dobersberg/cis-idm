@@ -1,0 +1,148 @@
+<div *ngIf="profile | async as profile"
+  class="flex overflow-x-hidden flex-col gap-16 items-center mt-8 max-w-screen-md h-full">
+  <header class="flex flex-col gap-3 items-center dark:text-white">
+    <div class="w-32 h-32">
+      <tkd-avatar [@avatar] [src]="profile.user?.avatar" class="w-32 h-32"></tkd-avatar>
+    </div>
+    <h1 class="text-4xl font-light">
+      Hallo <span class="font-medium">{{ profile | displayName }},</span>
+    </h1>
+  </header>
+
+  <div class="tkd-card" *ngIf="everythingDone">
+    <header>
+      <div class="flex flex-col flex-grow gap-2 justify-center">
+        <h3>Willkommen zurück!</h3>
+        <h1>Hier kannst du dein Benutzerkonto verwalten.</h1>
+      </div>
+    </header>
+    <content>
+      <section>
+        <div class="flex flex-row justify-center gap-8 items-center">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+            stroke="currentColor" class="w-12 h-12 text-green-700">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+          </svg>
+          <p>
+            Es gibt derzeit nichts zu tun!
+          </p>
+        </div>
+      </section>
+      <section>
+        <div class="flex flex-row gap-3 items-stretch justify-center">
+          <button routerLink="/profile" tkd-button="tertiary">Profil bearbeiten</button>
+          <button routerLink="/security" tkd-button="tertiary">Sicherheits-Einstellungen</button>
+        </div>
+      </section>
+    </content>
+  </div>
+
+  <div class="tkd-card" *ngIf="profileIncomplete || avatarMissing">
+    <header>
+      <div class="flex flex-col flex-grow gap-2 justify-center">
+        <h3>Willkommen zurück!</h3>
+        <h1>Bitte vervollständige dein Benutzer-Konto!</h1>
+      </div>
+    </header>
+
+    <content>
+      <section>
+        <p>Dein Profil benötigt noch etwas Aufmerksamkeit!</p>
+
+        <div class="flex justify-center items-center w-full">
+          <ul class="flex flex-col gap-3 w-full">
+            <li *ngIf="profileIncomplete">
+              <button class="w-full" tkd-button="secondary" routerLink="/profile/edit">
+                Bearbeite dein Profil
+              </button>
+            </li>
+            <li *ngIf="avatarMissing">
+              <button class="w-full" tkd-button="secondary" routerLink="/profile/edit-avatar">
+                Füge ein Profilbild hinzu
+              </button>
+            </li>
+          </ul>
+        </div>
+      </section>
+    </content>
+  </div>
+
+  <!-- Incomplete Mail -->
+  <div class="tkd-card" *ngIf="emailMissing || primaryMailMissing">
+    <header>
+      <div class="flex flex-col flex-grow gap-2 justify-center">
+        <h1 *ngIf="emailMissing">Bitte füge eine E-Mail Adresse hinzu</h1>
+        <h1 *ngIf="!emailMissing">Bitte wähle deine primäre E-Mail Adresse</h1>
+      </div>
+    </header>
+    <content>
+      <section *ngIf="emailMissing">
+        <p>In deinem Profil ist noch keine E-Mail Adresse hinterlegt:</p>
+        <button tkd-button="secondary" routerLink="/profile/edit-mail">E-Mail hinzufügen</button>
+      </section>
+      <section *ngIf="!emailMissing">
+        <p>Bitte wähle deine primäre E-Mail Adresse:</p>
+        <table class="w-full">
+          <tbody>
+            <tr *ngFor="let mail of profile.emailAddresses">
+              <td>
+                {{ mail.address }}
+              </td>
+              <td class="text-right">
+                <button tkd-button="secondary" (click)="markAsPrimaryMail(mail)">Verwenden</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    </content>
+  </div>
+
+  <!-- Incomplete Phone -->
+  <div class="tkd-card" *ngIf="phoneMissing || primaryPhoneMissing">
+    <header>
+      <div class="flex flex-col flex-grow gap-2 justify-center">
+        <h1 *ngIf="phoneMissing">Bitte füge eine Telefonnummer hinzu</h1>
+        <h1 *ngIf="!phoneMissing">Bitte wähle deine primäre Telefonnummer</h1>
+      </div>
+    </header>
+    <content>
+      <section *ngIf="phoneMissing">
+        <p>In deinem Profil ist noch keine Telefonnummer hinterlegt:</p>
+        <button tkd-button="secondary" routerLink="/profile/edit-phone">Telefonnummer hinzufügen</button>
+      </section>
+      <section *ngIf="!phoneMissing">
+        <p>Bitte wähle deine primäre Telefonnummer:</p>
+        <table class="w-full">
+          <tbody>
+            <tr *ngFor="let phone of profile.phoneNumbers">
+              <td>
+                {{ phone.number }}
+              </td>
+              <td class="text-right">
+                <button tkd-button="secondary" (click)="markAsPrimaryPhone(phone)">Verwenden</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    </content>
+  </div>
+
+  <!-- Missing Address -->
+  <div class="tkd-card" *ngIf="addressMissing">
+    <header>
+      <div class="flex flex-col flex-grow gap-2 justify-center">
+        <h1>Bitte füge deine Wohnadresse hinzu</h1>
+      </div>
+    </header>
+    <content>
+      <section>
+        <p>In deinem Profil ist noch keine Wohnadresse hinterlegt:</p>
+        <button tkd-button="secondary" routerLink="/profile/edit-address">Adresse hinzufügen</button>
+      </section>
+    </content>
+  </div>
+
+</div>

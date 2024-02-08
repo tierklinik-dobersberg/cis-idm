@@ -23,12 +23,14 @@
     "@bufbuild/connect": "^0.9.1",
     "@bufbuild/connect-web": "^0.9.1",
     "@simplewebauthn/browser": "^7.2.0",
+    "@tierklinik-dobersberg/angular": "^0.0.11",
     "@tierklinik-dobersberg/apis": "^0.0.11",
     "blueimp-load-image": "^5.16.0",
     "countries-list": "^2.6.1",
     "cropperjs": "^1.5.13",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
+    "tw-elements": "^1.1.0",
     "zone.js": "~0.13.0"
   },
   "devDependencies": {

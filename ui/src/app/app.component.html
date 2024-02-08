@@ -1,8 +1,75 @@
-<div class="flex flex-col items-center min-h-screen px-2 pt-16 pb-8 dark:bg-slate-700 bg-slate-50">
-    <div id="content" class="flex flex-col w-full max-w-2xl gap-4 justify-stretch">
-        <router-outlet></router-outlet>
-        <span class="relative mt-8 text-xs text-center uppercase bottom-1 dark:text-emerald-50 dark:text-opacity-50">
-            (C) 2023 Pacher Patrick
-        </span>
+<div
+  class="flex overflow-hidden flex-col w-screen h-screen dark:bg-slate-700 bg-slate-50"
+>
+  <!-- Header -->
+  <div
+    class="bg-white dark:bg-slate-800 w-full shadow-[0_4px_12px_0_rgba(0,0,0,0.07),_0_2px_4px_rgba(0,0,0,0.05)] h-12 flex flex-row relative z-[1035]"
+  >
+    <!-- Page Title -->
+    <h1
+      class="overflow-hidden p-3 pl-2 m-0 w-64 text-lg font-medium whitespace-nowrap lg:text-xl dark:text-white sm:pl-6 text-ellipsis"
+    >
+      {{ siteName }}
+      <span
+        class="hidden pl-2 ml-2 font-light border-l border-slate-300 xs:inline-block"
+        >Konto</span
+      >
+    </h1>
+
+    <!-- Spacer -->
+    <div class="flex-grow"></div>
+
+    <!-- Right content -->
+    <div
+      class="flex flex-row gap-4 items-center pr-2 sm:pr-6"
+      *ngIf="profileService.profile | async as profile"
+    >
+      <button type="button" (click)="nav.sideNav.toggle()" *ngIf="!layout.lg">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke-width="1.5"
+          stroke="currentColor"
+          class="w-6 h-6"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
+          />
+        </svg>
+      </button>
+
+      <!-- Avatar -->
+      <div
+        class="hidden flex-row gap-1 items-center xs:flex sm:gap-2 text-slate-600"
+      >
+        <span class="hidden sm:block">{{
+          profile.user?.displayName || profile.user?.username || "N/A"
+        }}</span>
+        <tkd-avatar class="w-8 h-8" [src]="profile.user?.avatar"></tkd-avatar>
+      </div>
     </div>
+  </div>
+
+  <!-- Content Wrapper with Sidenav -->
+  <div class="flex overflow-hidden relative flex-row flex-grow w-full">
+    <!-- Left-hand Navigation -->
+    <app-nav
+      class="hidden"
+      [ngClass]="{ '!flex': (profileService.profile | async) }"
+      #nav="appNav"
+    ></app-nav>
+
+    <!-- Actual content -->
+    <div
+      id="content"
+      class="flex overflow-auto flex-col flex-grow items-center pt-4"
+    >
+      <div class="max-w-screen-md mb-12">
+        <router-outlet></router-outlet>
+      </div>
+    </div>
+  </div>
 </div>

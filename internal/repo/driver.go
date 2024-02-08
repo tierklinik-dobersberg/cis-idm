@@ -22,6 +22,11 @@ func init() {
 				return fmt.Errorf("failed to register uuid function: %w", err)
 			}
 
+			_, err := sc.Exec("PRAGMA foreign_keys = ON;", nil)
+			if err != nil {
+				return fmt.Errorf("failed to enable foreign key support: %w", err)
+			}
+
 			return nil
 		},
 	})

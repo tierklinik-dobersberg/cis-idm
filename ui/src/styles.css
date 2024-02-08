@@ -3,6 +3,7 @@
 @tailwind components;
 @tailwind utilities;
 
+@import '@angular/cdk/overlay-prebuilt.css';
 @import url('https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@200;300;400;500;700&display=swap');
 
 body {
@@ -32,7 +33,7 @@ a {
     }
 
     .tkd-card {
-        @apply flex flex-col rounded-xl shadow-sm w-full;
+        @apply flex flex-col rounded shadow w-full;
         @apply bg-white text-gray-700;
         @apply dark:text-gray-300 dark:bg-slate-600 dark:bg-opacity-30;
     }
@@ -50,13 +51,13 @@ a {
     }
 
     .tkd-card header {
-        @apply w-full flex-col gap-2 py-1.5 rounded-t-xl min-h-[5rem] flex justify-center px-8;
+        @apply w-full flex-col gap-2 py-1.5 rounded-t min-h-[5rem] flex justify-center px-8;
         @apply bg-slate-100 border border-slate-200;
         @apply dark:bg-slate-600 dark:bg-opacity-100 dark:text-white dark:border dark:border-slate-600;
     }
 
     .tkd-card content {
-        @apply flex flex-col border rounded-xl;
+        @apply flex flex-col border rounded;
         @apply border-slate-200;
         @apply dark:border-slate-600;
     }
@@ -78,7 +79,7 @@ a {
     }
 
     .tkd-tag {
-      @apply inline-block h-fit text-[0.7rem] uppercase rounded px-1 border leading-4;
+      @apply inline-flex flex-row items-center justify-center h-fit text-[0.75rem] uppercase rounded px-1.5 leading-4;
     }
 
     .tkd-base-btn {

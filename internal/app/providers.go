@@ -42,6 +42,10 @@ type Providers struct {
 }
 
 func (p *Providers) SendMailVerification(ctx context.Context, user repo.User, mail repo.UserEmail) error {
+	if p.Config.MailConfig == nil || p.Config.MailConfig.Host == "" {
+		return nil
+	}
+
 	secret, err := bootstrap.GenerateSecret(16)
 	if err != nil {
 		return err

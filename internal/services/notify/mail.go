@@ -22,6 +22,10 @@ func (svc *Service) sendMail(
 	m *mail.Message,
 	msg *idmv1.SendNotificationRequest_Email) ([]*idmv1.DeliveryNotification, error) {
 
+	if svc.Config.MailConfig == nil || svc.Config.MailConfig.Host == "" {
+		return nil, fmt.Errorf("SMTP not configured")
+	}
+
 	userID := user.User.Id
 
 	addr := user.User.GetPrimaryMail().GetAddress()

@@ -8,11 +8,11 @@ import { startRegistration } from '@simplewebauthn/browser';
 import { EnrollTOTPResponseStep1, RegisteredPasskey } from '@tierklinik-dobersberg/apis';
 import { firstValueFrom, from, switchMap } from 'rxjs';
 import { SELF_SERVICE } from 'src/app/clients';
+import { TkdButtonDirective } from 'src/app/components/button';
 import { SecurityCodeComponent } from 'src/app/shared/security-code/security-code.component';
 import { ProfileService } from 'src/services/profile.service';
 
 @Component({
-  selector: 'app-manage-mfa',
   standalone: true,
   imports: [
     CommonModule,
@@ -20,11 +20,12 @@ import { ProfileService } from 'src/services/profile.service';
     FormsModule,
     ReactiveFormsModule,
     HttpClientModule,
+    TkdButtonDirective,
   ],
-  templateUrl: './manage-mfa.component.html',
+  templateUrl: './security-overview.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class ManageMfaComponent implements OnInit {
+export class SecurityOverviewComponent implements OnInit {
   cdr = inject(ChangeDetectorRef);
   profile$ = inject(ProfileService).profile;
   profileService = inject(ProfileService);
@@ -54,25 +55,6 @@ export class ManageMfaComponent implements OnInit {
       this.cdr.markForCheck();
     } catch(err) {
       console.error(err);
-    }
-  }
-
-  goBack() {
-    let navigate = true;
-    if (this.disableTotpMode) {
-      this.disableTotpMode = false;
-      navigate = false;
-    }
-
-    if (this.enrollmentStep !== null) {
-      this.enrollmentStep = null;
-      navigate = false;
-    }
-
-    if (navigate) {
-      this.router.navigate(['/profile'])
-    } else {
-      this.cdr.markForCheck();
     }
   }
 

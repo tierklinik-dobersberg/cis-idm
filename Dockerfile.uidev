@@ -2,7 +2,13 @@ FROM node:16 as builder
 
 WORKDIR /app/ui
 
+
+COPY ui/.npmrc /etc/npmrc
+RUN --mount=type=secret,id=github_token \
+  cat /run/secrets/github_token >> /etc/github_token
+
 USER 1000:1000
 
 ENTRYPOINT ["bash"]
-CMD [ "-c", "npm install && npm update @tierklinik-dobersberg/apis && ./node_modules/.bin/ng serve --host=0.0.0.0 --port=4200 --configuration=development --disable-host-check"]
+EXPOSE 4200
+CMD [ "-c", "export GITHUB_TOKEN=$(cat /etc/github_token) && npm install && npm update @tierklinik-dobersberg/apis && ./node_modules/.bin/ng serve --host=0.0.0.0 --port=4200 --configuration=development --disable-host-check"]

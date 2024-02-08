@@ -1,35 +1,46 @@
 version: "3"
-services:
-  rqlite:
-    image: rqlite/rqlite:latest
-    ports:
-      - 4001:4001
-    environment:
-      HTTP_ADDR_ADV: localhost
 
+secrets:
+  github_token:
+    file: .nocommit/github_token
+
+services:
   traefik:
     image: "traefik:v2.10"
-    container_name: "traefik"
     command:
       #- "--log.level=DEBUG"
       - "--api.insecure=true"
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
+      - "--providers.file.filename=/secrets/traefik-config.yml"
       - "--entrypoints.web.address=:443"
     ports:
-      - "80:80"
-      - "443:443"
-      - "8080:8080"
+      - target: 80
+        published: 80
+        protocol: tcp
+        mode: host
+      - target: 8080
+        published: 8080
+        protocol: tcp
+        mode: host
+      - target: 443
+        published: 443
+        protocol: tcp
+        mode: host
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "./testdata:/secrets:ro"
 
   cisidm:
     build:
       context: .
+      secrets:
+        - github_token
     image: cis-idm:latest
     restart: unless-stopped
     volumes:
-      - ./config.test.yml:/etc/cisidm/config.yml
+      - ./testdata/config.dev.hcl:/etc/cisidm/config.hcl
+      - ./.nocommit/idm:/data
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.idm.rule=Host(`account.dobersberg.dev`)"
@@ -38,7 +49,25 @@ services:
       - "traefik.http.middlewares.auth.forwardauth.address=http://cisidm:8081/validate"
       - "traefik.http.middlewares.auth.forwardauth.authResponseHeaders=X-Remote-User,X-Remote-User-ID,X-Remote-Mail,X-Remote-Mail-Verified,X-Remote-Avatar-URL"
     environment:
-      CONFIG_FILE: "/etc/config.yml"
+      CONFIG_FILE: "/etc/cisidm/config.hcl"
       DEBUG: "true"
-    depends_on:
-      - rqlite
+
+  ui:
+    build:
+      context: .
+      dockerfile: ./Dockerfile.uidev
+      secrets:
+        - github_token
+    image: cis-idm-ui:latest
+    volumes:
+      - ./ui:/app/ui
+
+  echoserver:
+    image: gcr.io/google_containers/echoserver:1.4
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.echo.rule=Host(`account.dobersberg.dev`) && PathPrefix(`/echo/`)"
+      - "traefik.http.routers.echo.entrypoints=web"
+      - "traefik.http.routers.echo.tls=true"
+      - "traefik.http.routers.echo.middlewares=auth"
+      - "traefik.http.services.echo.loadbalancer.server.port=8080"

@@ -6,7 +6,7 @@ WORKDIR /app/ui
 
 COPY ui/.npmrc ui/package.json ui/package-lock.json ./
 RUN --mount=type=secret,id=github_token \
-  echo "//npm.pkg.github.com/:_authToken=$(cat /run/secrets/github_token)" >> ./.npmrc && npm install && rm .npmrc
+  export GITHUB_TOKEN="$(cat /run/secrets/github_token)" && npm install
 
 RUN npx browserslist@latest --update-db
 
