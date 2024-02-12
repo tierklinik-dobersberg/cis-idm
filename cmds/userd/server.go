@@ -234,7 +234,7 @@ func setupPublicServer(providers *app.Providers) (*http.Server, error) {
 	}
 
 	// finally, return a http.Server that uses h2c for HTTP/2 support and
-	// wrap the finnal handler in CORS and a JWT middleware.
+	// wrap the final handler in CORS and a JWT middleware.
 	return server.CreateWithOptions(
 		providers.Config.Server.PublicListenAddr,
 
@@ -313,7 +313,7 @@ func setupAdminServer(providers *app.Providers) (*http.Server, error) {
 			providers.Config,
 			providers.Datastore,
 			http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				if r.URL.Path != "/validate" {
+				if r.URL.Path != "/validate" && middleware.ClaimsFromContext(r.Context()) == nil {
 					log.L(r.Context()).Infof("adding fake admin claims to request: %s", r.URL.Path)
 
 					clientIP := r.RemoteAddr
@@ -344,7 +344,7 @@ func setupAdminServer(providers *app.Providers) (*http.Server, error) {
 			}),
 			func(r *http.Request) bool {
 				// Skip JWT token verification for the /validate endpoint as
-				// the ForwardAuthHanlder will take care of this on it's own due to special
+				// the ForwardAuthHandler will take care of this on it's own due to special
 				// handling of rejected or expired tokens.
 				if r.URL.Path == "/validate" || strings.HasPrefix(r.URL.Path, "/webauthn") {
 					return true

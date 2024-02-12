@@ -29,6 +29,24 @@ database_url = "file:/data/idm.db"
 #
 enable_dynamic_roles = false
 
+# Whether or not users are allowed to change their username.
+# If setting this to true, make sure all connected/protected services use the unique
+# user-ID for identification instead of the username. Otherwise enabling this may pose
+# a security risk.
+allow_username_change = false
+
+# Whether or not user addresses are enabled and can be managed by a user.
+# Set to true if you don't need user addresses.
+#
+# Defaults to false.
+disable_user_addresses = false
+
+# Whether or not user phone numbers are enabled and can be managed by a user.
+# Set to true if you don't need phone number support.
+#
+# Defaults to false.
+disable_phone_numbers = false
+
 # Configures the user registration mode:
 #
 #  - disabled (default): users are not allowed to register themself. In this 
@@ -41,7 +59,7 @@ enable_dynamic_roles = false
 #  - public: Anyone can create a user account on cisidm. Note that it's still possible to use token registration
 #            and user invitations as specified above.
 #
-registration = "public"
+registration = "disabled"
 
 # The server block configures the built-in HTTP/2 servers.
 server {

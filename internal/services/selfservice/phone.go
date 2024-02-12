@@ -12,7 +12,7 @@ import (
 	"github.com/gofrs/uuid"
 	idmv1 "github.com/tierklinik-dobersberg/apis/gen/go/tkd/idm/v1"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/cache"
-	"github.com/tierklinik-dobersberg/cis-idm/internal/config"
+	"github.com/tierklinik-dobersberg/cis-idm/internal/common"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/conv"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/middleware"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/repo"
@@ -21,8 +21,8 @@ import (
 )
 
 func (svc *Service) AddPhoneNumber(ctx context.Context, req *connect.Request[idmv1.AddPhoneNumberRequest]) (*connect.Response[idmv1.AddPhoneNumberResponse], error) {
-	if !svc.Config.FeatureEnabled(config.FeaturePhoneNumbers) {
-		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("phone-numbers: %w", config.ErrFeatureDisabled))
+	if svc.Config.DisablePhoneNumbers {
+		return nil, common.ErrFeatureDisabled
 	}
 
 	claims := middleware.ClaimsFromContext(ctx)
@@ -36,7 +36,7 @@ func (svc *Service) AddPhoneNumber(ctx context.Context, req *connect.Request[idm
 	}
 
 	m := repo.CreateUserPhoneNumberParams{
-		ID: id.String(),
+		ID:          id.String(),
 		UserID:      claims.Subject,
 		PhoneNumber: req.Msg.Number,
 		Verified:    false,
@@ -53,8 +53,8 @@ func (svc *Service) AddPhoneNumber(ctx context.Context, req *connect.Request[idm
 }
 
 func (svc *Service) DeletePhoneNumber(ctx context.Context, req *connect.Request[idmv1.DeletePhoneNumberRequest]) (*connect.Response[idmv1.DeletePhoneNumberResponse], error) {
-	if !svc.Config.FeatureEnabled(config.FeaturePhoneNumbers) {
-		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("phone-numbers: %w", config.ErrFeatureDisabled))
+	if svc.Config.DisablePhoneNumbers {
+		return nil, common.ErrFeatureDisabled
 	}
 
 	claims := middleware.ClaimsFromContext(ctx)
@@ -75,8 +75,8 @@ func (svc *Service) DeletePhoneNumber(ctx context.Context, req *connect.Request[
 }
 
 func (svc *Service) MarkPhoneNumberAsPrimary(ctx context.Context, req *connect.Request[idmv1.MarkPhoneNumberAsPrimaryRequest]) (*connect.Response[idmv1.MarkPhoneNumberAsPrimaryResponse], error) {
-	if !svc.Config.FeatureEnabled(config.FeaturePhoneNumbers) {
-		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("phone-numbers: %w", config.ErrFeatureDisabled))
+	if svc.Config.DisablePhoneNumbers {
+		return nil, common.ErrFeatureDisabled
 	}
 
 	claims := middleware.ClaimsFromContext(ctx)
@@ -97,8 +97,8 @@ func (svc *Service) MarkPhoneNumberAsPrimary(ctx context.Context, req *connect.R
 }
 
 func (svc *Service) ValidatePhoneNumber(ctx context.Context, req *connect.Request[idmv1.ValidatePhoneNumberRequest]) (*connect.Response[idmv1.ValidatePhoneNumberResponse], error) {
-	if !svc.Config.FeatureEnabled(config.FeaturePhoneNumbers) {
-		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("phone-numbers: %w", config.ErrFeatureDisabled))
+	if svc.Config.DisablePhoneNumbers {
+		return nil, common.ErrFeatureDisabled
 	}
 
 	claims := middleware.ClaimsFromContext(ctx)

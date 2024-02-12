@@ -179,7 +179,7 @@ func NewJWTMiddleware(cfg config.Config, repo *repo.Queries, next http.Handler, 
 		// Update the request logger
 		r = r.WithContext(log.WithLogger(ctx, l))
 
-		// check if we should skip token verification on this endpoind
+		// check if we should skip token verification on this endpoint
 		if skipVerifyFunc != nil && skipVerifyFunc(r) {
 			next.ServeHTTP(w, r)
 
@@ -212,7 +212,7 @@ func NewJWTMiddleware(cfg config.Config, repo *repo.Queries, next http.Handler, 
 
 			r = r.WithContext(ctx)
 		} else {
-			l.Debugf("no claims found, request is unauthenticated")
+			l.Debug("no claims found, request is unauthenticated")
 		}
 
 		// call through to the next handler

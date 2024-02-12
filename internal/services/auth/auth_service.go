@@ -80,15 +80,13 @@ func (svc *AuthService) Login(ctx context.Context, req *connect.Request[idmv1.Lo
 		var err error
 		user, err = svc.Datastore.GetUserByName(ctx, passwordAuth.GetUsername())
 		if err != nil {
-			if svc.Config.FeatureEnabled(config.FeatureLoginByMail) {
-				if errors.Is(err, sql.ErrNoRows) {
-					response, err := svc.Datastore.GetUserByEMail(ctx, passwordAuth.GetUsername())
+			if errors.Is(err, sql.ErrNoRows) {
+				response, err := svc.Datastore.GetUserByEMail(ctx, passwordAuth.GetUsername())
 
-					user = response.User
+				user = response.User
 
-					if err == nil && !response.Verified {
-						return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("e-mail address has not been verified"))
-					}
+				if err == nil && !response.Verified {
+					return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("e-mail address has not been verified"))
 				}
 			}
 
@@ -397,12 +395,8 @@ func (svc *AuthService) RegisterUser(ctx context.Context, req *connect.Request[i
 	switch svc.Config.RegistrationMode {
 	case config.RegistrationModeDisabled:
 		if count > 0 {
-			return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("registration feature is disabled"))
+			return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("registration is disabled"))
 		}
-	}
-
-	// deny registrytion if FeatureSelfRegistration is not enabled and we already have a user.
-	if !svc.Config.FeatureEnabled(config.FeatureSelfRegistration) && count > 0 {
 	}
 
 	passwordHash, err := bcrypt.GenerateFromPassword([]byte(req.Msg.Password), bcrypt.DefaultCost)

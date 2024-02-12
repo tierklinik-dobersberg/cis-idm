@@ -26,7 +26,13 @@ import { TkdButtonDirective } from 'src/app/components/button';
 @Component({
   selector: 'app-edit-profile',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterModule, TkdButtonDirective],
+  imports: [
+    CommonModule,
+    FormsModule,
+    ReactiveFormsModule,
+    RouterModule,
+    TkdButtonDirective,
+  ],
   templateUrl: './edit-profile.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -109,25 +115,9 @@ export class EditProfileComponent implements OnInit, AfterViewInit {
             'Freitag',
             'Samstag',
           ],
-          weekdaysNarrow: [
-            'S',
-            'M',
-            'D',
-            'M',
-            'D',
-            'F',
-            'S',
-          ],
-          weekdaysShort: [
-            'Son',
-            'Mon',
-            'Die',
-            'Mit',
-            'Don',
-            'Fre',
-            'Sam',
-          ],
-          title: 'Geburtstag auswählen'
+          weekdaysNarrow: ['S', 'M', 'D', 'M', 'D', 'F', 'S'],
+          weekdaysShort: ['Son', 'Mon', 'Die', 'Mit', 'Don', 'Fre', 'Sam'],
+          title: 'Geburtstag auswählen',
         });
       });
 
@@ -158,7 +148,7 @@ export class EditProfileComponent implements OnInit, AfterViewInit {
       fieldSet.push('birthday');
     }
 
-    if (this.username.dirty && this.config.features.allowUsernameChange) {
+    if (this.username.dirty && this.config.userNameChange) {
       user.username = this.username.value!;
       fieldSet.push('username');
     }

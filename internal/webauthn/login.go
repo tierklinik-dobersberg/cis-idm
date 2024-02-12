@@ -10,7 +10,6 @@ import (
 	"github.com/go-webauthn/webauthn/webauthn"
 	"github.com/gofrs/uuid"
 	"github.com/tierklinik-dobersberg/apis/pkg/log"
-	"github.com/tierklinik-dobersberg/cis-idm/internal/config"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/jwt"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/middleware"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/repo"
@@ -30,16 +29,14 @@ func (svc *Service) BeginLoginHandler(w http.ResponseWriter, r *http.Request) {
 	if userNameOrEmail != "" {
 		user, err := svc.Datastore.GetUserByName(ctx, userNameOrEmail)
 		if err != nil {
-			if svc.Config.FeatureEnabled(config.FeatureLoginByMail) {
-				response, err := svc.Datastore.GetUserByEMail(ctx, userNameOrEmail)
+			response, err := svc.Datastore.GetUserByEMail(ctx, userNameOrEmail)
 
-				user = response.User
+			user = response.User
 
-				if err == nil && !response.Verified {
-					http.Error(w, "e-mail address not verified", http.StatusPreconditionFailed)
+			if err == nil && !response.Verified {
+				http.Error(w, "e-mail address not verified", http.StatusPreconditionFailed)
 
-					return
-				}
+				return
 			}
 		}
 

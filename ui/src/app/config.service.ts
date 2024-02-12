@@ -1,33 +1,22 @@
-import { Injectable } from "@angular/core";
-
-export enum FeatureFlags {
-	FeatureAll         = "all",
-	FeatureAddresses   = "addresses",
-	FeatureEMails      = "emails",
-	FeaturePhoneNumbers= "phoneNumbers",
-	FeatureEMailInvite = "emailInvite",
-	FeatureLoginByMail = "loginByMail",
-  FeatureAllowUsernameChange = "allowUsernameChange",
-  FeatureSelfRegistration = "registration"
-}
+import { Injectable } from '@angular/core';
 
 export interface RemoteConfig {
-    domain: string;
-    loginURL: string;
-    siteName: string;
-    siteNameUrl: string;
-    features: {
-        [key in FeatureFlags]: boolean
-    };
-    logoURL: string;
-    registration: 'public' | 'token' | 'disabled'
+  domain: string;
+  loginURL: string;
+  siteName: string;
+  siteNameUrl: string;
+  logoURL: string;
+  registration: 'public' | 'token' | 'disabled';
+  userAddresses: boolean;
+  phoneNumbers: boolean;
+  userNameChange: boolean;
 }
 
-@Injectable({providedIn: 'root'})
+@Injectable({ providedIn: 'root' })
 export class ConfigService {
-    static Config: RemoteConfig;
+  static Config: RemoteConfig;
 
-    get config(): RemoteConfig {
-        return ConfigService.Config;
-    }
+  get config(): RemoteConfig {
+    return ConfigService.Config;
+  }
 }
