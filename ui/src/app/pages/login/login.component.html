@@ -80,7 +80,7 @@
           {{ loginErrorMessage }}
         </span>
         <button [disabled]="!loginForm.valid" *ngIf="display !== 'user-select'" type="submit" tkd-button="primary">Weiter</button>
-        <a *ngIf="config.features.registration" class="inline-block w-full -mt-2 text-xs text-center"
+        <a *ngIf="config.registration !== 'disabled'" class="inline-block w-full -mt-2 text-xs text-center"
           routerLink="/registration">Noch keine Account? Registriere dich!</a>
       </section>
     </content>

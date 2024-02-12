@@ -10,13 +10,16 @@ import (
 	"github.com/bufbuild/protovalidate-go"
 	"github.com/gofrs/uuid"
 	idmv1 "github.com/tierklinik-dobersberg/apis/gen/go/tkd/idm/v1"
-	"github.com/tierklinik-dobersberg/cis-idm/internal/config"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/repo"
 )
 
+var (
+	ErrFeatureDisabled = connect.NewError(connect.CodeUnavailable, fmt.Errorf("the requested feature has been disabled by an administrator"))
+)
+
 func (svc *Service) AddUserAddress(ctx context.Context, model repo.UserAddress) ([]repo.UserAddress, error) {
-	if !svc.cfg.FeatureEnabled(config.FeatureAddresses) {
-		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("addresses: %w", config.ErrFeatureDisabled))
+	if svc.cfg.DisableUserAddresses {
+		return nil, ErrFeatureDisabled
 	}
 
 	if model.ID == "" {
@@ -48,8 +51,8 @@ func (svc *Service) AddUserAddress(ctx context.Context, model repo.UserAddress) 
 }
 
 func (svc *Service) DeleteUserAddress(ctx context.Context, userID string, addressID string) ([]repo.UserAddress, error) {
-	if !svc.cfg.FeatureEnabled(config.FeatureAddresses) {
-		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("addresses: %w", config.ErrFeatureDisabled))
+	if svc.cfg.DisableUserAddresses {
+		return nil, ErrFeatureDisabled
 	}
 
 	if rows, err := svc.repo.DeleteUserAddress(ctx, repo.DeleteUserAddressParams{
@@ -72,8 +75,8 @@ func (svc *Service) DeleteUserAddress(ctx context.Context, userID string, addres
 }
 
 func (svc *Service) UpdateUserAddress(ctx context.Context, updateModel repo.UserAddress, paths []string) ([]repo.UserAddress, error) {
-	if !svc.cfg.FeatureEnabled(config.FeatureAddresses) {
-		return nil, connect.NewError(connect.CodeUnavailable, fmt.Errorf("addresses: %w", config.ErrFeatureDisabled))
+	if svc.cfg.DisableUserAddresses {
+		return nil, ErrFeatureDisabled
 	}
 
 	addr, err := svc.repo.GetUserAddress(ctx, repo.GetUserAddressParams{

@@ -5,14 +5,12 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/ghodss/yaml"
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclsimple"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/permission"
-	"golang.org/x/exp/slices"
 )
 
 type Twilio struct {
@@ -255,13 +253,18 @@ type Config struct {
 	// that are built into cisidm.
 	Permissions []string `json:"permissions" hcl:"permissions,optional"`
 
-	// FeatureSet is a list of features that should be enabled. See the AllFeatures
-	// global variable for a list of available features. This defaults to "all"
-	FeatureSet []Feature `json:"features" hcl:"features,optional"`
-
-	// RegistrationRequiresToken defines whether or not users are allowed to sign
+	// RegistrationMode defines whether or not users are allowed to sign
 	// up without a registration token.
 	RegistrationMode RegistrationMode `json:"registration" hcl:"registration,optional"`
+
+	// AllowUsernameChange may be set to true if users are allowed to change their username.
+	AllowUsernameChange bool `json:"allow_username_change" hcl:"allow_username_change,optional"`
+
+	// DisableUserAddresses may be set to true to disable user addresses.
+	DisableUserAddresses bool `json:"disable_user_addresses" hcl:"disable_user_addresses,optional"`
+
+	// DisablePhoneNumbers may be set to true if phone number support should be disabled.
+	DisablePhoneNumbers bool `json:"disable_phone_numbers" hcl:"disable_phone_numbers,optional"`
 
 	// Twilio is required for all SMS related features.
 	// TODO(ppacher): print a warning when a SMS feature is enabled
@@ -276,10 +279,6 @@ type Config struct {
 
 	// WebPush holds VAPID keys for web-push integration.
 	WebPush *WebPush `json:"webpush" hcl:"webpush,block"`
-
-	// featureMap is built from FeatureSet and cannot be set using the configuration
-	// file.
-	featureMap map[Feature]bool `json:"-"`
 
 	permissionTree permission.Resolver
 }
@@ -335,10 +334,6 @@ func LoadFile(path string) (*Config, error) {
 		return &f, nil
 	}
 
-	if err := f.parseFeatureSet(); err != nil {
-		return &f, err
-	}
-
 	if f.PermissionTrees {
 		tree := permission.Tree{}
 		for _, p := range f.Permissions {
@@ -383,10 +378,6 @@ func (file *Config) applyDefaults() error {
 		return fmt.Errorf("forward_auth: %w", err)
 	}
 
-	if len(file.FeatureSet) == 0 {
-		file.FeatureSet = []Feature{FeatureAll}
-	}
-
 	if file.MailConfig == nil {
 		file.MailConfig = new(MailConfig)
 	}
@@ -424,44 +415,4 @@ func (file Config) DynamicRolesEnabled() bool {
 	}
 
 	return *file.EnableDynamicRoles
-}
-
-func (file *Config) parseFeatureSet() error {
-	defaultValue := slices.Contains(file.FeatureSet, FeatureAll)
-
-	file.featureMap = make(map[Feature]bool)
-	for _, feat := range AllFeatures {
-		file.featureMap[feat] = defaultValue
-	}
-
-	for _, feat := range file.FeatureSet {
-		if feat == FeatureAll {
-			continue
-		}
-
-		allowed := true
-		if strings.HasPrefix(string(feat), "!") {
-			feat = Feature(strings.TrimPrefix(string(feat), "!"))
-			allowed = false
-		}
-
-		if !slices.Contains(AllFeatures, feat) {
-			return fmt.Errorf("unknown feature flag %q", feat)
-		}
-
-		file.featureMap[feat] = allowed
-	}
-
-	return nil
-}
-
-func (cfg *Config) FeatureEnabled(feature Feature) bool {
-	// if the feature is directly specified return the value
-	// directly.
-	value, ok := cfg.featureMap[feature]
-	if ok {
-		return value
-	}
-
-	return false
 }

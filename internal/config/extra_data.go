@@ -6,12 +6,14 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
+// Available field types.
 const (
 	FieldTypeString = "string"
 	FieldTypeNumber = "number"
 	FieldTypeBool   = "bool"
 	FieldTypeObject = "object"
 	FieldTypeList   = "list"
+	FieldTypeAny    = "any"
 )
 
 const (
@@ -26,7 +28,7 @@ type FieldConfig struct {
 	Type        string         `json:"type" hcl:"type,label"`
 	Name        string         `json:"name" hcl:"name,label"`
 	Visibility  string         `json:"visibility" hcl:"visibility,optional"`
-	Writeable   bool           `json:"writeable" hcl:"writeable,optional"`
+	Writeable   *bool          `json:"writeable" hcl:"writeable,optional"`
 	Description string         `json:"description" hcl:"description,optional"`
 	DisplayName string         `json:"display_name" hcl:"display_name,optional"`
 	Properties  []*FieldConfig `json:"property" hcl:"property,block"`
@@ -95,6 +97,9 @@ func (fc FieldConfig) Validate(data *structpb.Value) error {
 			}
 		}
 
+	case FieldTypeAny:
+		// no validation for "any" fields
+
 	default:
 		return fmt.Errorf("invalid field type configuration")
 	}
@@ -103,9 +108,9 @@ func (fc FieldConfig) Validate(data *structpb.Value) error {
 }
 
 func (fc *FieldConfig) ApplyVisibility(current string, value *structpb.Value) *structpb.Value {
-	effectiveVisilbity := getEffectiveVisibility(current, fc.Visibility)
+	effectiveVisibility := getEffectiveVisibility(current, fc.Visibility)
 
-	if effectiveVisilbity != current {
+	if effectiveVisibility != current {
 		return nil
 	}
 
@@ -123,7 +128,7 @@ func (fc *FieldConfig) ApplyVisibility(current string, value *structpb.Value) *s
 				continue
 			}
 
-			propertyValue = propertyConfig.ApplyVisibility(effectiveVisilbity, propertyValue)
+			propertyValue = propertyConfig.ApplyVisibility(effectiveVisibility, propertyValue)
 			if propertyValue == nil {
 				delete(ov.StructValue.Fields, propertyConfig.Name)
 			}
@@ -133,27 +138,27 @@ func (fc *FieldConfig) ApplyVisibility(current string, value *structpb.Value) *s
 	return value
 }
 
-func (fc *FieldConfig) ValidateConfig(fieldVisiblity string) error {
+func (fc *FieldConfig) ValidateConfig(fieldVisibility string) error {
 	// add some sense defaults
 	if fc.Type == "" {
 		fc.Type = FieldTypeString
 	}
 
 	if fc.Visibility == "" {
-		fc.Visibility = fieldVisiblity
+		fc.Visibility = fieldVisibility
 	}
 
 	if !isValidFieldType(fc.Type) {
 		return fmt.Errorf("invalid field type %q", fc.Type)
 	}
 
-	if !isValidFieldVisiblity(fc.Visibility) {
+	if !isValidFieldVisibility(fc.Visibility) {
 		return fmt.Errorf("invalid field visibility %q", fc.Visibility)
 	}
 
-	effectiveVisibility := getEffectiveVisibility(fieldVisiblity, fc.Visibility)
+	effectiveVisibility := getEffectiveVisibility(fieldVisibility, fc.Visibility)
 	if effectiveVisibility != fc.Visibility {
-		return fmt.Errorf("parent object has stronger visibility %q, %q does not take effect", fieldVisiblity, fc.Visibility)
+		return fmt.Errorf("parent object has stronger visibility %q, %q does not take effect", fieldVisibility, fc.Visibility)
 	}
 
 	switch fc.Type {
@@ -171,13 +176,13 @@ func (fc *FieldConfig) ValidateConfig(fieldVisiblity string) error {
 			return fmt.Errorf("properties: not set")
 		}
 
-		for key, cfg := range fc.Properties {
+		for _, cfg := range fc.Properties {
 			if cfg == nil {
-				return fmt.Errorf("properties: %s: not set", key)
+				return fmt.Errorf("properties: %s: not set", cfg.Name)
 			}
 
 			if err := cfg.ValidateConfig(effectiveVisibility); err != nil {
-				return fmt.Errorf("properties: %s: %w", key, err)
+				return fmt.Errorf("properties: %s: %w", cfg.Name, err)
 			}
 		}
 	}
@@ -185,7 +190,7 @@ func (fc *FieldConfig) ValidateConfig(fieldVisiblity string) error {
 	return nil
 }
 
-func isValidFieldVisiblity(v string) bool {
+func isValidFieldVisibility(v string) bool {
 	switch v {
 	case FieldVisibilityAuthenticated,
 		FieldVisibilitySelf,

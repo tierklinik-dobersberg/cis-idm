@@ -22,7 +22,6 @@ import (
 	"github.com/tierklinik-dobersberg/apis/pkg/log"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/app"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/common"
-	"github.com/tierklinik-dobersberg/cis-idm/internal/config"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/mailer"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/middleware"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/repo"
@@ -403,7 +402,7 @@ func (svc *Service) UpdateUser(ctx context.Context, req *connect.Request[idmv1.U
 	for _, p := range paths {
 		switch p {
 		case "username":
-			if !svc.Config.FeatureEnabled(config.FeatureAllowUsernameChange) {
+			if !svc.Config.AllowUsernameChange {
 				return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("username changes are not allowed"))
 			}
 

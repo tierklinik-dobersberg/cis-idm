@@ -9,7 +9,6 @@ import (
 	idmv1 "github.com/tierklinik-dobersberg/apis/gen/go/tkd/idm/v1"
 	"github.com/tierklinik-dobersberg/apis/gen/go/tkd/idm/v1/idmv1connect"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/app"
-	"github.com/tierklinik-dobersberg/cis-idm/internal/config"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/conv"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/middleware"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/repo"
@@ -47,7 +46,7 @@ func (svc *Service) UpdateProfile(ctx context.Context, req *connect.Request[idmv
 	for _, p := range paths {
 		switch p {
 		case "username":
-			if !svc.Config.FeatureEnabled(config.FeatureAllowUsernameChange) {
+			if !svc.Config.AllowUsernameChange {
 				return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("username changes are not allowed"))
 			}
 

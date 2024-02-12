@@ -17,17 +17,15 @@ func NewConfigHandler(cfg Config) http.Handler {
 		enc.SetIndent("", "  ")
 
 		if err := enc.Encode(map[string]any{
-			"domain":      cfg.Server.Domain,
-			"loginURL":    cfg.UserInterface.LoginRedirectURL,
-			"siteName":    cfg.UserInterface.SiteName,
-			"siteNameUrl": cfg.UserInterface.SiteNameURL,
-			"logoURL":     cfg.UserInterface.LogoURL,
-
-			// FIXME(ppacher): deprecated, remove in UI and here and switch to registration modes
-			"registrationRequiresToken": cfg.RegistrationMode == RegistrationModeToken,
-
-			"registration": cfg.RegistrationMode,
-			"features":     cfg.featureMap,
+			"domain":         cfg.Server.Domain,
+			"loginURL":       cfg.UserInterface.LoginRedirectURL,
+			"siteName":       cfg.UserInterface.SiteName,
+			"siteNameUrl":    cfg.UserInterface.SiteNameURL,
+			"logoURL":        cfg.UserInterface.LogoURL,
+			"registration":   cfg.RegistrationMode,
+			"userAddresses":  !cfg.DisableUserAddresses,
+			"phoneNumbers":   !cfg.DisablePhoneNumbers,
+			"userNameChange": cfg.AllowUsernameChange,
 		}); err != nil {
 			http.Error(w, "failed to encode config", http.StatusInternalServerError)
 
