@@ -17,15 +17,11 @@ func NewConfigHandler(cfg Config) http.Handler {
 		enc.SetIndent("", "  ")
 
 		if err := enc.Encode(map[string]any{
-			"domain":      cfg.Server.Domain,
-			"loginURL":    cfg.UserInterface.LoginRedirectURL,
-			"siteName":    cfg.UserInterface.SiteName,
-			"siteNameUrl": cfg.UserInterface.SiteNameURL,
-			"logoURL":     cfg.UserInterface.LogoURL,
-
-			// FIXME(ppacher): deprecated, remove in UI and here and switch to registration modes
-			"registrationRequiresToken": cfg.RegistrationMode == RegistrationModeToken,
-
+			"domain":       cfg.Server.Domain,
+			"loginURL":     cfg.UserInterface.LoginRedirectURL,
+			"siteName":     cfg.UserInterface.SiteName,
+			"siteNameUrl":  cfg.UserInterface.SiteNameURL,
+			"logoURL":      cfg.UserInterface.LogoURL,
 			"registration": cfg.RegistrationMode,
 			"features":     cfg.featureMap,
 		}); err != nil {

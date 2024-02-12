@@ -259,7 +259,7 @@ type Config struct {
 	// global variable for a list of available features. This defaults to "all"
 	FeatureSet []Feature `json:"features" hcl:"features,optional"`
 
-	// RegistrationRequiresToken defines whether or not users are allowed to sign
+	// RegistrationMode defines whether or not users are allowed to sign
 	// up without a registration token.
 	RegistrationMode RegistrationMode `json:"registration" hcl:"registration,optional"`
 

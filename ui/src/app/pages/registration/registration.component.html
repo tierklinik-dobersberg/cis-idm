@@ -9,7 +9,7 @@
           Account.
         </span>
 
-        <ng-container *ngIf="config.registrationRequiresToken">
+        <ng-container *ngIf="config.registration === 'token'">
           <span class="text-base">Für die Registrierung benötigst du einen Sicherheits-Schlüssel:</span>
 
           <input required placeholder="Token"

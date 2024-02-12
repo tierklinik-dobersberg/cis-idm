@@ -16,11 +16,11 @@ export interface RemoteConfig {
     loginURL: string;
     siteName: string;
     siteNameUrl: string;
-    registrationRequiresToken: boolean;
     features: {
         [key in FeatureFlags]: boolean
     };
     logoURL: string;
+    registration: 'public' | 'token' | 'disabled'
 }
 
 @Injectable({providedIn: 'root'})
