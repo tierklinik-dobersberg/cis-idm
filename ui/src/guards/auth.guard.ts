@@ -11,8 +11,6 @@ export const authGuard = (route: ActivatedRouteSnapshot) => {
     .pipe(
       switchMap(() => profileService.profile),
       map(value => {
-        console.log(route.routeConfig?.path)
-
         return value === null ? router.navigate(['/login'], {
           queryParamsHandling: 'merge',
         }) : true
@@ -30,14 +28,14 @@ export const notLoggedInGuard = (route: ActivatedRouteSnapshot) => {
       map(value => {
         // if there requested route is /login and a force=yyy query parameter
         // is set than let the user open the login page instead of redirecting
-        // to /profile.
+        // to /welcome.
         if (route.routeConfig?.path === 'login') {
           if (route.queryParamMap.get("force")) {
             return true;
           }
         }
 
-        return value !== null ? router.navigate(['/profile']) : true
+        return value !== null ? router.navigate(['/welcome']) : true
       })
     )
 }
