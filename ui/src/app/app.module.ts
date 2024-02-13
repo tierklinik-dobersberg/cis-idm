@@ -9,10 +9,12 @@ import {
   NOTIFY_SERVICE,
   SELF_SERVICE,
   TRANSPORT,
+  USER_SERVICE,
   authServiceFactory,
   notifyServiceFactory,
   selfServiceFactory,
   transportFactory,
+  userServiceFactory,
 } from './clients';
 
 import { HttpClient, HttpClientModule } from '@angular/common/http';
@@ -86,6 +88,11 @@ const loadConfigFactory = (client: HttpClient) => {
       useFactory: notifyServiceFactory,
       deps: [TRANSPORT],
     },
+    {
+      provide: USER_SERVICE,
+      useFactory: userServiceFactory,
+      deps: [TRANSPORT]
+    }
   ],
   bootstrap: [AppComponent],
 })

@@ -2,17 +2,19 @@ import { InjectionToken } from "@angular/core";
 import { ActivatedRoute, Router } from "@angular/router";
 import { Code, ConnectError, Interceptor, PromiseClient, Transport, createPromiseClient } from "@bufbuild/connect";
 import { createConnectTransport } from "@bufbuild/connect-web";
-import { AuthService, SelfServiceService } from "@tierklinik-dobersberg/apis";
+import { AuthService, SelfServiceService, UserService } from "@tierklinik-dobersberg/apis";
 import { NotifyService } from '@tierklinik-dobersberg/apis/gen/es/tkd/idm/v1/notify_service_connect';
 
 export const TRANSPORT = new InjectionToken<Transport>('TRANSPORT');
 export const AUTH_SERVICE = new InjectionToken<AuthServiceClient>('AUTH_SERVICE');
+export const USER_SERVICE = new InjectionToken<UserServiceClient>('USER_SERVICE');
 export const SELF_SERVICE = new InjectionToken<SelfServiceClient>('SELF_SERVICE');
 export const NOTIFY_SERVICE = new InjectionToken<NotifyServiceClient>('NOTIFY_SERVICE');
 
 export type AuthServiceClient = PromiseClient<typeof AuthService>;
 export type SelfServiceClient = PromiseClient<typeof SelfServiceService>;
 export type NotifyServiceClient = PromiseClient<typeof NotifyService>;
+export type UserServiceClient = PromiseClient<typeof UserService>;
 
 const retryRefreshToken: (transport: Transport, activatedRoute: ActivatedRoute, router: Router) => Interceptor = (transport, activatedRoute, router) => {
   let pendingRefresh: Promise<void> | null = null;
@@ -113,4 +115,8 @@ export function selfServiceFactory(transport: Transport): SelfServiceClient {
 
 export function notifyServiceFactory(transport: Transport): NotifyServiceClient {
   return createPromiseClient(NotifyService, transport);
+}
+
+export function userServiceFactory(transport: Transport): UserServiceClient {
+  return createPromiseClient(UserService, transport);
 }
