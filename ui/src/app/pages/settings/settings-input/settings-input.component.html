@@ -1,0 +1,31 @@
+<ng-container [ngSwitch]="config.type">
+
+  <!-- String Input -->
+  <ng-template ngSwitchCase="string">
+    <ng-template [ngIf]="!config.possible_value?.length" [ngIfElse]="possibleValues">
+      <input class="tkd-input" type="text" [ngModel]="value" (ngModelChange)="updateValue($event)" (blur)="_onBlur()" [disabled]="disabled || !config.writeable">
+    </ng-template>
+
+    <ng-template #possibleValues>
+      <select tkd-select [ngModel]="value" (ngModelChange)="updateValue($event)" (blur)="_onBlur()" [disabled]="disabled || !config.writeable">
+        <option *ngFor="let val of config.possible_value" [attr.value]="val.value">{{ val.display_name || val.value}}</option>
+      </select>
+    </ng-template>
+  </ng-template>
+
+  <ng-template ngSwitchCase="date">
+    <tkd-datepicker [ngModel]="value" (ngModelChange)="updateValue($event)" (blur)="_onBlur()" [disabled]="disabled || !config.writeable"></tkd-datepicker>
+  </ng-template>
+
+  <!-- Number Input -->
+  <ng-template ngSwitchCase="number">
+    <input class="tkd-input" type="number" [ngModel]="value" (ngModelChange)="updateValue($event)" (blur)="_onBlur()"  [disabled]="disabled || !config.writeable">
+  </ng-template>
+
+  <!-- Boolean Input -->
+  <ng-template ngSwitchCase="bool">
+    <input type="checkbox"
+      tkd-switch [ngModel]="value"  (ngModelChange)="updateValue($event)" (blur)="_onBlur()"  [disabled]="disabled || !config.writeable" />
+  </ng-template>
+
+</ng-container>

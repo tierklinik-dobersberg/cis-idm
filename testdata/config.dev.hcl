@@ -54,3 +54,127 @@ policies {
     }
 }
 
+field "object" "notification" {
+    visibility = "self"
+    writeable = true
+    display_name = "Benachrichtigungen"
+
+    property "object" "roster" {
+        display_name = "Dienstplan"
+
+        property "bool" "sms" {
+            display_name = "SMS"
+        }
+
+        property "bool" "mail" {
+            display_name = "E-Mail"
+        }
+    }
+
+    property "string" "offtime" {
+        display_name = "Urlaubsanträge"
+
+        value "sms" {
+            display_name = "SMS"
+        }
+
+        value "mail" {
+            display_name = "E-Mail"
+        }
+
+        value "both" {
+            display_name = "SMS + E-Mail"
+        }
+    }
+}
+
+field "string" "string" {
+    visibility = "self"
+    writeable = true
+    description = "A custom description"
+    display_name = "String Value"
+}
+
+field "date" "date" {
+    visibility = "self"
+    writeable = true
+    description = "A custom description"
+    display_name = "Date Value"
+}
+
+field "number" "number" {
+    visibility = "self"
+    writeable = true
+    description = "A custom description"
+    display_name = "Number Value"
+}
+
+field "bool" "bool" {
+    visibility = "self"
+    writeable = true
+    description = "A custom description"
+    display_name = "Boolean Value"
+}
+
+field "object" "object" {
+    visibility = "self"
+    writeable = true
+    description = "A custom description"
+    display_name = "Object Value"
+
+    property "string" "string" {
+        description = "A string property"
+        display_name = "String Property"
+    }
+
+    property "bool" "bool" {
+        visibility = "self"
+        writeable = true
+        description = "A custom description"
+        display_name = "Boolean Value"
+    }
+
+    property "object" "object" {
+        visibility = "self"
+        writeable = true
+        description = "A custom description"
+        display_name = "Sub Object Value"
+
+        property "string" "string" {
+            description = "A string property"
+            display_name = "String Property"
+        }
+
+        property "bool" "bool" {
+            writeable = true
+            description = "A custom description"
+            display_name = "Boolean Value"
+        }
+    
+        property "object" "object" {
+            writeable = false
+            description = "A custom description"
+            display_name = "Sub-Sub Object Value"
+
+            property "string" "string" {
+                description = "A string property"
+                display_name = "String Property"
+            }
+
+            property "bool" "bool" {
+                writeable = false
+                description = "A custom description"
+                display_name = "Boolean Value"
+            }
+        }
+    }
+}
+
+field "list" "list" {
+    visibility = "self"
+    writeable = true
+    description = "A custom description"
+    display_name = "List Value"
+
+    element_type "string" "" {}
+}

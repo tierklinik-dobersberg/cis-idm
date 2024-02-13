@@ -1,0 +1,91 @@
+<div class="flex flex-col gap-8 items-center" *ngIf="(profile$ | async) as profile">
+
+  <div class="flex flex-col items-stretch w-screen max-w-2xl gap-4">
+    <div class="w-full tkd-card">
+      <header class="flex !flex-row w-full items-center">
+        <h1 class="flex-grow">Einstellungen</h1>
+      </header>
+
+      <content>
+        <section *ngFor="let field of (config.customUserFields | simpleFields)">
+          <ng-container *ngTemplateOutlet="simpleField; context: {
+            field: field,
+            data: profile.user!.extra,
+            path: [field] | fieldPath
+          }">
+          </ng-container>
+        </section>
+      </content>
+    </div>
+  </div>
+
+  <div class="flex flex-col items-stretch w-screen max-w-2xl gap-4"
+    *ngFor="let field of (config.customUserFields | complexFields)">
+    <div class="w-full tkd-card">
+      <header class="flex !flex-row w-full items-center">
+        <div class="flex flex-col flex-grow gap-2 justify-center">
+          <h3 *ngIf="field.description">{{ field.description }}</h3>
+          <h1>
+            {{ field.display_name || field.name }}
+          </h1>
+        </div>
+      </header>
+
+      <content *ngIf="field.type === 'object'" class="pr-4">
+        <ng-container *ngTemplateOutlet="objectField; context:{
+          field: field,
+          data: profile.user!.extra,
+          path: [field] | fieldPath
+        }"></ng-container>
+      </content>
+
+    </div>
+  </div>
+
+</div>
+
+<ng-template #simpleField let-field="field" let-data="data" let-path="path">
+  <div class="flex flex-row justify-between items-center">
+    <div class="flex flex-col items-start justify-start">
+      <span>{{ field.display_name || field.name }}</span>
+      <span class="text-slate-500 text-xs" *ngIf="field.description">{{ field.description }}</span>
+    </div>
+    <tkd-settings-input [ngModel]="data | fieldValue: field" (ngModelChange)="updateValue($event, path)"
+      [config]="field"></tkd-settings-input>
+  </div>
+</ng-template>
+
+<ng-template #objectField let-field="field" let-data="data" let-path="path">
+  <!-- Simple fields -->
+  <section *ngFor="let property of (field.property | simpleFields)">
+    <ng-container *ngTemplateOutlet="simpleField; context: {
+            field: property,
+            data: data | fieldValue: field,
+            path: [path, property] | fieldPath
+          }">
+    </ng-container>
+  </section>
+
+  <div *ngFor="let property of (field.property | complexFields)" class="ml-4 my-4 border border-slate-200">
+    <ng-container [ngSwitch]="property.type">
+      <ng-template ngSwitchCase="object">
+        <h2 class="p-2 font-light text-xs bg-slate-100 flex flex-col">
+          <span class="uppercase font-normal">{{ property.display_name || property.name }}</span>
+          <span *ngIf="property.description">{{ property.description }}</span>
+        </h2>
+
+        <ng-container *ngTemplateOutlet="objectField; context:{
+                field: property,
+                data: data | fieldValue: property,
+                path: [path, property] | fieldPath
+              }"></ng-container>
+      </ng-template>
+
+      <ng-template ngSwitchCase="list">
+
+      </ng-template>
+
+    </ng-container>
+  </div>
+
+</ng-template>
