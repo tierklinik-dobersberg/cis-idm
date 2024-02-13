@@ -17,6 +17,7 @@ import { trigger, transition, style, animate } from '@angular/animations';
 import { Router, RouterModule } from '@angular/router';
 import { EMail, PhoneNumber } from '@tierklinik-dobersberg/apis';
 import { SELF_SERVICE } from 'src/app/clients';
+import { ConfigService } from 'src/app/config.service';
 
 @Component({
   standalone: true,
@@ -66,6 +67,8 @@ import { SELF_SERVICE } from 'src/app/clients';
 })
 export class WelcomePageComponent implements OnInit {
   readonly profile = inject(ProfileService).profile;
+  readonly config = inject(ConfigService).config;
+
   private readonly selfService = inject(SELF_SERVICE);
   private readonly profileService = inject(ProfileService);
   private readonly destroyRef = inject(DestroyRef);

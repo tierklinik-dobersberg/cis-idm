@@ -33,6 +33,7 @@
         <div class="flex flex-row gap-3 items-stretch justify-center">
           <button routerLink="/profile" tkd-button="tertiary">Profil bearbeiten</button>
           <button routerLink="/security" tkd-button="tertiary">Sicherheits-Einstellungen</button>
+          <button routerLink="/settings" *ngIf="config.customUserFields?.length" tkd-button="tertiary">Einstellungen</button>
         </div>
       </section>
     </content>
