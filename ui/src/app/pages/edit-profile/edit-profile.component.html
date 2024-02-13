@@ -97,21 +97,15 @@
                 class="text-xs text-gray-500 uppercase peer dark:text-emerald-200 dark:text-opacity-70"
                 >Geburtsdatum</label
               >
-              <div
-                class="relative"
-                data-te-datepicker-init
-                data-te-format="yyyy-mm-dd"
-                #datepicker
-              >
-                <input
-                  class="w-full tkd-input"
+                <tkd-datepicker
+                  disableFuture="true"
+                  class="w-full"
                   type="text"
                   name="birthday"
                   [formControl]="birthday"
                   placeholder="Geburtsdatum"
                   autocomplete="bday"
                 />
-              </div>
             </div>
           </li>
         </ul>

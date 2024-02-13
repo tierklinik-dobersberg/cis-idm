@@ -1,14 +1,10 @@
 import { CommonModule } from '@angular/common';
 import {
-  AfterViewInit,
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
-  DestroyRef,
-  ElementRef,
   OnInit,
-  ViewChild,
-  inject,
+  inject
 } from '@angular/core';
 import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
@@ -16,12 +12,10 @@ import { PartialMessage } from '@bufbuild/protobuf';
 import { UpdateProfileRequest } from '@tierklinik-dobersberg/apis';
 import { take } from 'rxjs';
 import { SELF_SERVICE } from 'src/app/clients';
+import { TkdButtonDirective } from 'src/app/components/button';
+import { TkdDatepickerComponent } from 'src/app/components/datepicker';
 import { ConfigService } from 'src/app/config.service';
 import { ProfileService } from 'src/services/profile.service';
-import { Datepicker } from 'tw-elements';
-import { LayoutService } from '@tierklinik-dobersberg/angular/layout';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { TkdButtonDirective } from 'src/app/components/button';
 
 @Component({
   selector: 'app-edit-profile',
@@ -32,18 +26,17 @@ import { TkdButtonDirective } from 'src/app/components/button';
     ReactiveFormsModule,
     RouterModule,
     TkdButtonDirective,
+    TkdDatepickerComponent,
   ],
   templateUrl: './edit-profile.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class EditProfileComponent implements OnInit, AfterViewInit {
-  profileService = inject(ProfileService);
-  selfService = inject(SELF_SERVICE);
-  cdr = inject(ChangeDetectorRef);
-  router = inject(Router);
+export class EditProfileComponent implements OnInit {
+  private readonly profileService = inject(ProfileService);
+  private readonly selfService = inject(SELF_SERVICE);
+  private readonly cdr = inject(ChangeDetectorRef);
+  private readonly router = inject(Router);
   config = inject(ConfigService).config;
-  layout = inject(LayoutService);
-  destroyRef = inject(DestroyRef);
 
   firstName = new FormControl('');
   lastName = new FormControl('');
@@ -61,67 +54,6 @@ export class EditProfileComponent implements OnInit, AfterViewInit {
 
       this.cdr.markForCheck();
     });
-  }
-
-  @ViewChild('datepicker', { read: ElementRef, static: true })
-  datepickerEl!: ElementRef<HTMLInputElement>;
-
-  ngAfterViewInit(): void {
-    let dt = Datepicker.getOrCreateInstance(this.datepickerEl.nativeElement);
-
-    this.layout.change
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => {
-        dt.close();
-        dt.update({
-          inline: this.layout.md,
-          disableFuture: true,
-          confirmDateOnSelect: true,
-          startDay: 1,
-          monthsFull: [
-            'Jänner',
-            'Feburar',
-            'März',
-            'April',
-            'Mai',
-            'Juni',
-            'Juli',
-            'August',
-            'September',
-            'Oktober',
-            'November',
-            'Dezember',
-          ],
-          monthsShort: [
-            'Jän',
-            'Feb',
-            'Mär',
-            'Apr',
-            'Mai',
-            'Jun',
-            'Jul',
-            'Aug',
-            'Sep',
-            'Okt',
-            'Nov',
-            'Dez',
-          ],
-          weekdaysFull: [
-            'Sonntag',
-            'Montag',
-            'Dienstag',
-            'Mittwoch',
-            'Donnerstag',
-            'Freitag',
-            'Samstag',
-          ],
-          weekdaysNarrow: ['S', 'M', 'D', 'M', 'D', 'F', 'S'],
-          weekdaysShort: ['Son', 'Mon', 'Die', 'Mit', 'Don', 'Fre', 'Sam'],
-          title: 'Geburtstag auswählen',
-        });
-      });
-
-    this.destroyRef.onDestroy(() => dt.dispose());
   }
 
   async saveProfile() {
