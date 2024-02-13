@@ -166,7 +166,7 @@ export class LoginComponent implements OnInit {
           return
         }
 
-        await this.router.navigate(['/profile'])
+        await this.router.navigate(['/welcome'])
       } else if (this.autofillSupported) {
         this.autofillSupported = false;
       }
@@ -236,7 +236,7 @@ export class LoginComponent implements OnInit {
       return
     }
 
-    await this.router.navigate(['/profile']);
+    await this.router.navigate(['/welcome']);
   }
 
   loginUsingWebAuthn() {
