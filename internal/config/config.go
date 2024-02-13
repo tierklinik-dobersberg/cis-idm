@@ -394,7 +394,7 @@ func (file *Config) applyDefaults() error {
 	// validate the user extra data.
 	if len(file.ExtraDataConfig) > 0 {
 		for key, cfg := range file.ExtraDataConfig {
-			if err := cfg.ValidateConfig(FieldVisibilityPublic); err != nil {
+			if err := cfg.ValidateConfig(FieldVisibilityPublic, false); err != nil {
 				return fmt.Errorf("field[%d]: %w", key, err)
 			}
 		}

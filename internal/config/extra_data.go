@@ -11,6 +11,8 @@ const (
 	FieldTypeString = "string"
 	FieldTypeNumber = "number"
 	FieldTypeBool   = "bool"
+	FieldTypeDate   = "date"
+	FieldTypeTime   = "time"
 	FieldTypeObject = "object"
 	FieldTypeList   = "list"
 	FieldTypeAny    = "any"
@@ -23,16 +25,22 @@ const (
 	FieldVisibilityAuthenticated = "authenticated"
 )
 
+type PossibleValue struct {
+	Value       string `json:"value" hcl:"value,label"`
+	DisplayName string `json:"display_name" hcl:"display_name,optional"`
+}
+
 // FieldConfig describes how user-extra data looks like.
 type FieldConfig struct {
-	Type        string         `json:"type" hcl:"type,label"`
-	Name        string         `json:"name" hcl:"name,label"`
-	Visibility  string         `json:"visibility" hcl:"visibility,optional"`
-	Writeable   *bool          `json:"writeable" hcl:"writeable,optional"`
-	Description string         `json:"description" hcl:"description,optional"`
-	DisplayName string         `json:"display_name" hcl:"display_name,optional"`
-	Properties  []*FieldConfig `json:"property" hcl:"property,block"`
-	ElementType *FieldConfig   `json:"element_type" hcl:"element_type,block"`
+	Type           string          `json:"type" hcl:"type,label"`
+	Name           string          `json:"name" hcl:"name,label"`
+	Visibility     string          `json:"visibility" hcl:"visibility,optional"`
+	Writeable      *bool           `json:"writeable" hcl:"writeable,optional"`
+	Description    string          `json:"description" hcl:"description,optional"`
+	DisplayName    string          `json:"display_name" hcl:"display_name,optional"`
+	Properties     []*FieldConfig  `json:"property" hcl:"property,block"`
+	ElementType    *FieldConfig    `json:"element_type" hcl:"element_type,block"`
+	PossibleValues []PossibleValue `json:"possible_value" hcl:"value,block"`
 }
 
 func (fc FieldConfig) Validate(data *structpb.Value) error {
@@ -51,9 +59,21 @@ func (fc FieldConfig) Validate(data *structpb.Value) error {
 			return fmt.Errorf("invalid type: expected %q but got %T", "number", data.Kind)
 		}
 
-	case FieldTypeString:
-		if _, ok := data.Kind.(*structpb.Value_StringValue); !ok {
+	case FieldTypeString, FieldTypeDate, FieldTypeTime:
+		if value, ok := data.Kind.(*structpb.Value_StringValue); !ok {
 			return fmt.Errorf("invalid type: expected %q but got %T", "string", data.Kind)
+		} else if len(fc.PossibleValues) > 0 {
+			isValid := false
+			for _, v := range fc.PossibleValues {
+				if value.StringValue == v.Value {
+					isValid = true
+					break
+				}
+			}
+
+			if !isValid {
+				return fmt.Errorf("invalid value: the specified value is not allowed")
+			}
 		}
 
 	case FieldTypeObject:
@@ -138,7 +158,7 @@ func (fc *FieldConfig) ApplyVisibility(current string, value *structpb.Value) *s
 	return value
 }
 
-func (fc *FieldConfig) ValidateConfig(fieldVisibility string) error {
+func (fc *FieldConfig) ValidateConfig(fieldVisibility string, writeable bool) error {
 	// add some sense defaults
 	if fc.Type == "" {
 		fc.Type = FieldTypeString
@@ -156,9 +176,18 @@ func (fc *FieldConfig) ValidateConfig(fieldVisibility string) error {
 		return fmt.Errorf("invalid field visibility %q", fc.Visibility)
 	}
 
+	if fc.Writeable == nil {
+		fc.Writeable = &writeable
+	}
+
 	effectiveVisibility := getEffectiveVisibility(fieldVisibility, fc.Visibility)
 	if effectiveVisibility != fc.Visibility {
 		return fmt.Errorf("parent object has stronger visibility %q, %q does not take effect", fieldVisibility, fc.Visibility)
+	}
+
+	// Possible values are only supported for strings
+	if len(fc.PossibleValues) > 0 && fc.Type != FieldTypeString {
+		return fmt.Errorf("value blocks are only supported for 'string' types")
 	}
 
 	switch fc.Type {
@@ -167,7 +196,7 @@ func (fc *FieldConfig) ValidateConfig(fieldVisibility string) error {
 			return fmt.Errorf("elementType: not set")
 		}
 
-		if err := fc.ElementType.ValidateConfig(effectiveVisibility); err != nil {
+		if err := fc.ElementType.ValidateConfig(effectiveVisibility, *fc.Writeable); err != nil {
 			return fmt.Errorf("elementType: %w", err)
 		}
 
@@ -181,7 +210,7 @@ func (fc *FieldConfig) ValidateConfig(fieldVisibility string) error {
 				return fmt.Errorf("properties: %s: not set", cfg.Name)
 			}
 
-			if err := cfg.ValidateConfig(effectiveVisibility); err != nil {
+			if err := cfg.ValidateConfig(effectiveVisibility, *fc.Writeable); err != nil {
 				return fmt.Errorf("properties: %s: %w", cfg.Name, err)
 			}
 		}
@@ -226,7 +255,10 @@ func isValidFieldType(v string) bool {
 		FieldTypeList,
 		FieldTypeNumber,
 		FieldTypeObject,
-		FieldTypeString:
+		FieldTypeString,
+		FieldTypeAny,
+		FieldTypeTime,
+		FieldTypeDate:
 		return true
 	default:
 		return false
