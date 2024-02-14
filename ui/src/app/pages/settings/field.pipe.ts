@@ -10,12 +10,17 @@ const simpleTypes = ['string', 'number', 'bool', 'date', 'time'];
   standalone: true
 })
 export class SimpleFieldsPipe implements PipeTransform {
-  transform(list: FieldConfig[] | null): FieldConfig[] {
+  transform(list: FieldConfig[] | null): (FieldConfig[] | null) {
     if (list === null) {
-      return []
+      return null
     }
 
-    return list.filter(c => simpleTypes.includes(c.type) && c.visibility !== 'private')
+    const res = list.filter(c => simpleTypes.includes(c.type) && c.visibility !== 'private')
+    if (res.length === 0) {
+      return null
+    }
+
+    return res
   }
 }
 

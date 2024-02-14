@@ -1,13 +1,13 @@
 <div class="flex flex-col gap-8 items-center" *ngIf="(profile$ | async) as profile">
 
-  <div class="flex flex-col items-stretch w-screen max-w-2xl gap-4">
+  <div class="flex flex-col items-stretch w-screen max-w-2xl gap-4" *ngIf="(config.customUserFields | simpleFields) as fields">
     <div class="w-full tkd-card">
       <header class="flex !flex-row w-full items-center">
         <h1 class="flex-grow">Einstellungen</h1>
       </header>
 
       <content>
-        <section *ngFor="let field of (config.customUserFields | simpleFields)">
+        <section *ngFor="let field of fields">
           <ng-container *ngTemplateOutlet="simpleField; context: {
             field: field,
             data: profile.user!.extra,
