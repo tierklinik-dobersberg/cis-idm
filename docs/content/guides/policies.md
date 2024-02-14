@@ -37,9 +37,9 @@ policies {
         content = <<EOT
         package cisidm.forward_auth
 
-        import future.keywords.in
+        import rego.v1
 
-        allow {
+        allow if {
             # input.subject is only set when the request is authenticated
             input.subject
             input.subject.roles
@@ -102,7 +102,7 @@ app_user_role if {
     role = "app-user"
 }
 
-user_role_ids contains id {
+user_role_ids contains id if {
     some role in input.subject.roles
     id := role.ID
 }

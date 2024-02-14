@@ -9,6 +9,13 @@ next:
 Welcome to the Getting-Started Guide for `cisidm`. On this page we will walk
 through a simple docker-compose based setup to get you started.
 
+::: tip Introduction
+
+If you just want to find out what `cisidm` is and what it was designed for head
+over to the [Introduction](./intro.md)
+
+:::
+
 ## Overview
 
 The easiest way to get started using `cisidm` is to deploy it using
