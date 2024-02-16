@@ -1,0 +1,130 @@
+version: "3"
+
+# Volume definitions for our databases
+volumes:
+  dexdb:
+  idmdb:
+  postgresdb:
+
+services:
+  # We use traefik as our reverse proxy. It will get configured by docker container
+  # labels.
+  traefik:
+    image: "traefik:v2.10"
+    restart: unless-stopped
+    network_mode: host
+    command:
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.http.address=:80"
+
+    ports:
+    # HTTP port, this example does not support HTTPS since it would make testing
+    # much harder.
+    - target: 80
+      published: 80
+      protocol: tcp
+      mode: host
+
+    # Traefik needs access to the docker daemon so it can watch for containers
+    # and auto-configure itself based on container labels.
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+
+  # Rallly needs a postgres database so we provide one here
+  postgres:
+    image: postgres:latest
+    restart: always
+    network_mode: host
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: rallly
+    volumes:
+      - postgresdb:/var/lib/postgresql/data
+
+  # Service definition for dex
+  dex:
+    image: dexidp/dex:latest
+    network_mode: host
+    depends_on:
+      - cisidm
+    volumes:
+      - ./dex.yml:/etc/dex/config.docker.yaml
+      - dexdb:/var/dex
+    labels:
+      - "traefik.enable=true"
+
+      # Access to dex itself must not be protected by cisidm as connected
+      # OIDC clients need to be able to access them.
+      - "traefik.http.routers.dex.rule=Host(`oidc.example.intern`)"
+      - "traefik.http.routers.dex.entrypoints=http"
+      # The dex-container does not have an "EXPOSE" port configuration so we
+      # manually need to tell traefik which port dex is using.
+      - "traefik.http.services.dex.loadbalancer.server.port=5556"
+
+      # But we need to enable the forward-auth middleware (configured by the cisidm
+      # container) for the dex callback URI.
+      - "traefik.http.routers.dexcallback.rule=Host(`oidc.example.intern`) && PathPrefix(`/callback/`)"
+      - "traefik.http.routers.dexcallback.middlewares=auth"
+      - "traefik.http.routers.dexcallback.entrypoints=http"
+
+  # Configuration of rallly as an example OIDC client.
+  rallly:
+    image: lukevella/rallly:latest
+    network_mode: host
+    restart: always
+    hostname: rallly.example.intern
+    ports:
+      - 3000:3000
+    depends_on:
+      - postgres
+    environment:
+      - DATABASE_URL=postgres://postgres:password@127.0.0.1:5432/rallly
+      - SECRET_PASSWORD=a-random-string-with-32-chars--1
+      - NEXT_PUBLIC_BASE_URL=http://rallly.example.intern
+      - NOREPLY_MAIL=noreply@example.intern
+      - SUPPORT_MAIL=noreply@example.intern
+      - SMTP_HOST=smtp.example.intern
+      - SMTP_PORT=465
+      - SMTP_SECURE=true
+      - SMTP_USER=noreply@example.intern
+      - SMTP_PWD=password
+      - OIDC_NAME=Example Inc
+
+      # Dex is running on the same domain as idm but under the /dex
+      # path
+      - OIDC_DISCOVERY_URL=http://oidc.example.intern/.well-known/openid-configuration
+
+      # The following values must match those from dex.yml staticClients
+      - OIDC_CLIENT_ID=rallly
+      - OIDC_CLIENT_SECRET=some-secure-random-string
+    labels:
+      # There's no need to protect access to rallly with the forward-auth
+      # middleware since authentication is already handeled via OIDC
+      - "traefik.enable=true"
+      - "traefik.http.routers.rallly.rule=Host(`rallly.example.intern`)"
+      - "traefik.http.routers.rallly.entrypoints=http"
+      - "traefik.http.services.rallly.loadbalancer.server.port=3000"
+
+  # Our cisidm container
+  cisidm:
+    build:
+      context: ../../
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./idm.hcl:/etc/config.hcl:ro
+      - idmdb:/var/idm
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.idm.rule=Host(`account.example.intern`)"
+      - "traefik.http.routers.idm.entrypoints=http"
+      - "traefik.http.services.cisidm.loadbalancer.server.port=8080"
+
+      # Configure the forward auth middleware for traefik and also set a list
+      # of headers that cisidm will add to upstream requests.
+      - "traefik.http.middlewares.auth.forwardauth.address=http://127.0.0.1:8080/validate"
+      - "traefik.http.middlewares.auth.forwardauth.authResponseHeaders=X-Remote-User,X-Remote-User-ID,X-Remote-Mail,X-Remote-Mail-Verified,X-Remote-Avatar-URL,X-Remote-Role,X-Remote-User-Display-Name"
+    environment:
+      CONFIG_FILE: "/etc/config.hcl"

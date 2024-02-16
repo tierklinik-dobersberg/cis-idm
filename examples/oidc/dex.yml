@@ -1,0 +1,56 @@
+# The issuer for OIDC access and refresh tokens
+issuer: http://oidc.example.intern
+
+# Where dexIdp should store it's data, we use sqlite3 for simplicity here
+storage:
+  type: sqlite3
+  config:
+    file: /var/dex/dex.db
+
+# Where dexidp should listen for incoming requests
+web:
+  http: "0.0.0.0:5556"
+
+# Token expiries
+expiry:
+  deviceRequests: 5m
+  signingKeys: 6h
+  idTokens: 24h
+  authRequests: 24h
+
+# Configuration for oauth2
+oauth2:
+  # A list of response-types dexidp should support,
+  # it's best to keep this list as it is.
+  responseTypes:
+    - code
+    - token
+    - id_token
+
+  # For self-hosted environments you will likely always "approve" OIDC clients
+  # to use your login data so we can instruct dex to assume approval and skip 
+  # the consent screen altogether
+  skipApprovalScreen: true
+  alwaysShowLoginScreen: false
+
+# A list of upstream identity connectors for dex. We use the authproxy
+# connector for cisidm. That is, any request to the dex OIDC callback
+# will be authenticated by cisidm and dex will use the user-information added
+# to the request headers.
+connectors:
+  - type: authproxy
+    id: cisidm
+    name: CIS-IDM
+    config:
+      emailHeader: X-Remote-Mail
+      groupHeader: X-Remote-Role
+      userHeader: X-Remote-User
+      userIDHeader: X-Remote-User-ID
+
+# A list of static OIDC clients. We just add an example entry for rallly here.
+staticClients:
+  - id: rallly
+    redirectURIs:
+      - 'http://rallly.example.intern/api/auth/callback/oidc'
+    name: Rallly
+    secret: some-secure-random-string
