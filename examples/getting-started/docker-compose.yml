@@ -1,0 +1,53 @@
+version: "3"
+
+volumes:
+  db:
+
+services:
+  # Traefik is our reverse proxy that will be configured to authenticate requests
+  # to upstream services using the forwardauth middleware.
+  # See the cisidm container definition for more details
+  traefik:
+    image: "traefik:v2.10"
+    restart: unless-stopped
+    command:
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.http.address=:80"
+
+    ports:
+      - target: 80
+        published: 80
+        protocol: tcp
+        mode: host
+
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+
+  # Our cisidm container
+  cisidm:
+    image: ghcr.io/tierklinik-dobersberg/cis-idm:latest
+    build:
+      context: ../../
+    restart: unless-stopped
+    volumes:
+      - ./idm.hcl:/etc/idm.hcl
+      - db:/data
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.idm.rule=Host(`account.example.intern`)"
+      - "traefik.http.routers.idm.entrypoints=http"
+      - "traefik.http.middlewares.auth.forwardauth.address=http://cisidm:8080/validate"
+      - "traefik.http.middlewares.auth.forwardauth.authResponseHeaders=X-Remote-User,X-Remote-User-ID,X-Remote-Mail,X-Remote-Mail-Verified,X-Remote-Avatar-URL,X-Remote-Role,X-Remote-User-Display-Name"
+
+    environment:
+      CONFIG_FILE: "/etc/idm.hcl"
+
+  echoserver:
+    image: gcr.io/google_containers/echoserver:1.4
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.echo.rule=Host(`app.example.intern`)"
+      - "traefik.http.routers.echo.entrypoints=http"
+      - "traefik.http.routers.echo.middlewares=auth"
+      - "traefik.http.services.echo.loadbalancer.server.port=8080"
