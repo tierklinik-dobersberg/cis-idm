@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="generator" content="VuePress 2.0.0-rc.0">
+    <style>
+      :root {
+        --c-bg: #fff;
+      }
+      html.dark {
+        --c-bg: #22272e;
+      }
+      html, body {
+        background-color: var(--c-bg);
+      }
+    </style>
+    <script>
+      const userMode = localStorage.getItem('vuepress-color-scheme');
+			const systemDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+			if (userMode === 'dark' || (userMode !== 'light' && systemDarkMode)) {
+				document.documentElement.classList.toggle('dark', true);
+			}
+    </script>
+    <title>Policies | CIS-IDM</title><meta name="description" content="">
+    <link rel="preload" href="/cis-idm/assets/style-JhZ2x9wS.css" as="style"><link rel="stylesheet" href="/cis-idm/assets/style-JhZ2x9wS.css">
+    <link rel="modulepreload" href="/cis-idm/assets/app-wNEdNvye.js"><link rel="modulepreload" href="/cis-idm/assets/policies.html-O45dNaja.js"><link rel="modulepreload" href="/cis-idm/assets/policies.html-kdhS3p-L.js">
+    <link rel="prefetch" href="/cis-idm/assets/index.html-1PY23UDh.js" as="script"><link rel="prefetch" href="/cis-idm/assets/index.html-gyE57g4k.js" as="script"><link rel="prefetch" href="/cis-idm/assets/cli-reference.html-1OMJhehu.js" as="script"><link rel="prefetch" href="/cis-idm/assets/config-reference.html-yzMl6uqO.js" as="script"><link rel="prefetch" href="/cis-idm/assets/extra-user-fields.html-c-oV9N_W.js" as="script"><link rel="prefetch" href="/cis-idm/assets/getting-started.html-8Qb6LlY1.js" as="script"><link rel="prefetch" href="/cis-idm/assets/intro.html-pVfQ3YeP.js" as="script"><link rel="prefetch" href="/cis-idm/assets/setup-email.html-BD0FwnXT.js" as="script"><link rel="prefetch" href="/cis-idm/assets/setup-oidc.html-6E8l0Kj4.js" as="script"><link rel="prefetch" href="/cis-idm/assets/setup-sms.html-lcwtPMRF.js" as="script"><link rel="prefetch" href="/cis-idm/assets/setup-webauthn.html-nla5Xpvj.js" as="script"><link rel="prefetch" href="/cis-idm/assets/setup-webpush.html-mphZ0XKl.js" as="script"><link rel="prefetch" href="/cis-idm/assets/user-role-management.html-RfBUjMC4.js" as="script"><link rel="prefetch" href="/cis-idm/assets/index.html-0_V-4EfR.js" as="script"><link rel="prefetch" href="/cis-idm/assets/404.html-6Yl8cQE3.js" as="script"><link rel="prefetch" href="/cis-idm/assets/index.html-B6XBS-e8.js" as="script"><link rel="prefetch" href="/cis-idm/assets/index.html-SWoCqzjk.js" as="script"><link rel="prefetch" href="/cis-idm/assets/cli-reference.html-k222i8FO.js" as="script"><link rel="prefetch" href="/cis-idm/assets/config-reference.html-eZYkSZ8M.js" as="script"><link rel="prefetch" href="/cis-idm/assets/extra-user-fields.html-uCtawStC.js" as="script"><link rel="prefetch" href="/cis-idm/assets/getting-started.html-Ia3jKGHy.js" as="script"><link rel="prefetch" href="/cis-idm/assets/intro.html-pWFtZI8a.js" as="script"><link rel="prefetch" href="/cis-idm/assets/setup-email.html-y9lFI09S.js" as="script"><link rel="prefetch" href="/cis-idm/assets/setup-oidc.html-f1zaMCpF.js" as="script"><link rel="prefetch" href="/cis-idm/assets/setup-sms.html-EtCoaW0r.js" as="script"><link rel="prefetch" href="/cis-idm/assets/setup-webauthn.html-LySnJqBm.js" as="script"><link rel="prefetch" href="/cis-idm/assets/setup-webpush.html-8L_q4Fqq.js" as="script"><link rel="prefetch" href="/cis-idm/assets/user-role-management.html-53yFia9n.js" as="script"><link rel="prefetch" href="/cis-idm/assets/index.html-BRGSEhxZ.js" as="script"><link rel="prefetch" href="/cis-idm/assets/404.html-U4H3jTsU.js" as="script">
+  </head>
+  <body>
+    <div id="app"><!--[--><div class="theme-container"><!--[--><header class="navbar"><div class="toggle-sidebar-button" title="toggle sidebar" aria-expanded="false" role="button" tabindex="0"><div class="icon" aria-hidden="true"><span></span><span></span><span></span></div></div><span><a href="/cis-idm/" class=""><!----><span class="site-name">CIS-IDM</span></a></span><div class="navbar-items-wrapper" style=""><!--[--><!--]--><nav class="navbar-items can-hide"><!--[--><div class="navbar-item"><a href="/cis-idm/guides/" class="router-link-active" aria-label="Documentation"><!--[--><!--]--> Documentation <!--[--><!--]--></a></div><div class="navbar-item"><a class="external-link" href="https://github.com/tierklinik-dobersberg/cis-idm/issues" rel="noopener noreferrer" target="_blank" aria-label="Report an issue"><!--[--><!--]--> Report an issue <span><svg class="external-link-icon" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false" x="0px" y="0px" viewBox="0 0 100 100" width="15" height="15"><path fill="currentColor" d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z"></path><polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg><span class="external-link-icon-sr-only">open in new window</span></span><!--[--><!--]--></a></div><div class="navbar-item"><a class="external-link" href="https://github.com/tierklinik-dobersberg/cis-idm" rel="noopener noreferrer" target="_blank" aria-label="GitHub"><!--[--><!--]--> GitHub <span><svg class="external-link-icon" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false" x="0px" y="0px" viewBox="0 0 100 100" width="15" height="15"><path fill="currentColor" d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z"></path><polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg><span class="external-link-icon-sr-only">open in new window</span></span><!--[--><!--]--></a></div><!--]--></nav><!--[--><!--]--><button class="toggle-color-mode-button" title="toggle color mode"><svg style="" class="icon" focusable="false" viewBox="0 0 32 32"><path d="M16 12.005a4 4 0 1 1-4 4a4.005 4.005 0 0 1 4-4m0-2a6 6 0 1 0 6 6a6 6 0 0 0-6-6z" fill="currentColor"></path><path d="M5.394 6.813l1.414-1.415l3.506 3.506L8.9 10.318z" fill="currentColor"></path><path d="M2 15.005h5v2H2z" fill="currentColor"></path><path d="M5.394 25.197L8.9 21.691l1.414 1.415l-3.506 3.505z" fill="currentColor"></path><path d="M15 25.005h2v5h-2z" fill="currentColor"></path><path d="M21.687 23.106l1.414-1.415l3.506 3.506l-1.414 1.414z" fill="currentColor"></path><path d="M25 15.005h5v2h-5z" fill="currentColor"></path><path d="M21.687 8.904l3.506-3.506l1.414 1.415l-3.506 3.505z" fill="currentColor"></path><path d="M15 2.005h2v5h-2z" fill="currentColor"></path></svg><svg style="display:none;" class="icon" focusable="false" viewBox="0 0 32 32"><path d="M13.502 5.414a15.075 15.075 0 0 0 11.594 18.194a11.113 11.113 0 0 1-7.975 3.39c-.138 0-.278.005-.418 0a11.094 11.094 0 0 1-3.2-21.584M14.98 3a1.002 1.002 0 0 0-.175.016a13.096 13.096 0 0 0 1.825 25.981c.164.006.328 0 .49 0a13.072 13.072 0 0 0 10.703-5.555a1.01 1.01 0 0 0-.783-1.565A13.08 13.08 0 0 1 15.89 4.38A1.015 1.015 0 0 0 14.98 3z" fill="currentColor"></path></svg></button><!----></div></header><!--]--><div class="sidebar-mask"></div><!--[--><aside class="sidebar"><nav class="navbar-items"><!--[--><div class="navbar-item"><a href="/cis-idm/guides/" class="router-link-active" aria-label="Documentation"><!--[--><!--]--> Documentation <!--[--><!--]--></a></div><div class="navbar-item"><a class="external-link" href="https://github.com/tierklinik-dobersberg/cis-idm/issues" rel="noopener noreferrer" target="_blank" aria-label="Report an issue"><!--[--><!--]--> Report an issue <span><svg class="external-link-icon" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false" x="0px" y="0px" viewBox="0 0 100 100" width="15" height="15"><path fill="currentColor" d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z"></path><polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg><span class="external-link-icon-sr-only">open in new window</span></span><!--[--><!--]--></a></div><div class="navbar-item"><a class="external-link" href="https://github.com/tierklinik-dobersberg/cis-idm" rel="noopener noreferrer" target="_blank" aria-label="GitHub"><!--[--><!--]--> GitHub <span><svg class="external-link-icon" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false" x="0px" y="0px" viewBox="0 0 100 100" width="15" height="15"><path fill="currentColor" d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z"></path><polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg><span class="external-link-icon-sr-only">open in new window</span></span><!--[--><!--]--></a></div><!--]--></nav><!--[--><!--]--><ul class="sidebar-items"><!--[--><li><a href="/cis-idm/guides/intro.md" class="sidebar-item sidebar-heading" aria-label="Introduction"><!--[--><!--]--> Introduction <!--[--><!--]--></a><!----></li><li><p tabindex="0" class="sidebar-item sidebar-heading active">How Tos <!----></p><ul style="" class="sidebar-item-children"><!--[--><li><a href="/cis-idm/guides/getting-started.md" class="sidebar-item" aria-label="Getting Started"><!--[--><!--]--> Getting Started <!--[--><!--]--></a><!----></li><li><a href="/cis-idm/guides/user-role-management.md" class="sidebar-item" aria-label="User and Role Management"><!--[--><!--]--> User and Role Management <!--[--><!--]--></a><!----></li><li><a href="/cis-idm/guides/extra-user-fields.md" class="sidebar-item" aria-label="Additional User Fields"><!--[--><!--]--> Additional User Fields <!--[--><!--]--></a><!----></li><li><a href="/cis-idm/guides/policies.md" class="sidebar-item active" aria-label="Policies"><!--[--><!--]--> Policies <!--[--><!--]--></a><!----></li><li><a href="/cis-idm/guides/cli-reference.md" class="sidebar-item" aria-label="CLI Reference"><!--[--><!--]--> CLI Reference <!--[--><!--]--></a><!----></li><li><a href="/cis-idm/guides/config-reference.md" class="sidebar-item" aria-label="Configuration File Reference"><!--[--><!--]--> Configuration File Reference <!--[--><!--]--></a><!----></li><!--]--></ul></li><li><a href="/cis-idm/guides/README.md" class="sidebar-item sidebar-heading" aria-label="Setup"><!--[--><!--]--> Setup <!--[--><!--]--></a><ul style="" class="sidebar-item-children"><!--[--><li><a href="/cis-idm/guides/setup-webauthn.md" class="sidebar-item" aria-label="WebAuthN"><!--[--><!--]--> WebAuthN <!--[--><!--]--></a><!----></li><li><a href="/cis-idm/guides/setup-email.md" class="sidebar-item" aria-label="E-Mail"><!--[--><!--]--> E-Mail <!--[--><!--]--></a><!----></li><li><a href="/cis-idm/guides/setup-sms.md" class="sidebar-item" aria-label="SMS (Twilio)"><!--[--><!--]--> SMS (Twilio) <!--[--><!--]--></a><!----></li><li><a href="/cis-idm/guides/setup-webpush.md" class="sidebar-item" aria-label="WebPush Notifications"><!--[--><!--]--> WebPush Notifications <!--[--><!--]--></a><!----></li><li><a href="/cis-idm/guides/setup-oidc.md" class="sidebar-item" aria-label="OpenID Connect (OIDC)"><!--[--><!--]--> OpenID Connect (OIDC) <!--[--><!--]--></a><!----></li><!--]--></ul></li><li><p tabindex="0" class="sidebar-item sidebar-heading collapsible">Developer Documentation <span class="right arrow"></span></p><ul style="display:none;" class="sidebar-item-children"><!--[--><li><p tabindex="0" class="sidebar-item">Setup <!----></p><!----></li><li><p tabindex="0" class="sidebar-item">Architecture <!----></p><!----></li><li><p tabindex="0" class="sidebar-item collapsible">Connect RPCs and APIs <span class="right arrow"></span></p><ul style="display:none;" class="sidebar-item-children"><!--[--><li><p tabindex="0" class="sidebar-item">with Go <!----></p><!----></li><li><p tabindex="0" class="sidebar-item">with Javascript/Typescript <!----></p><!----></li><li><p tabindex="0" class="sidebar-item">with CURL <!----></p><!----></li><!--]--></ul></li><!--]--></ul></li><!--]--></ul><!--[--><!--]--></aside><!--]--><!--[--><main class="page"><!--[--><!--]--><div class="theme-default-content"><!--[--><!--]--><div><h1 id="policies" tabindex="-1"><a class="header-anchor" href="#policies" aria-hidden="true">#</a> Policies</h1><p>Authorization in <code>cisidm</code> is implemented using <a href="https://www.openpolicyagent.org/docs/latest/policy-language/" target="_blank" rel="noopener noreferrer">Rego Policies<span><svg class="external-link-icon" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false" x="0px" y="0px" viewBox="0 0 100 100" width="15" height="15"><path fill="currentColor" d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z"></path><polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg><span class="external-link-icon-sr-only">open in new window</span></span></a> from the <a href="https://www.openpolicyagent.org/" target="_blank" rel="noopener noreferrer">Open-Policy-Agent<span><svg class="external-link-icon" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false" x="0px" y="0px" viewBox="0 0 100 100" width="15" height="15"><path fill="currentColor" d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z"></path><polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg><span class="external-link-icon-sr-only">open in new window</span></span></a> project.</p><div class="custom-container tip"><p class="custom-container-title">Note</p><p>For the time being, only policies for forward-authentication can be specified. In the future, <code>cisidm</code> will support dynamic policy creation using the API and also provide endpoints to query policy decision for services that directly integrate with <code>cisidm</code>.</p></div><br><hr><p><strong>Contents</strong></p><nav class="table-of-contents"><ul><li><a aria-current="page" href="/cis-idm/guides/policies.html#configuration" class="router-link-active router-link-exact-active">Configuration</a></li><li><a aria-current="page" href="/cis-idm/guides/policies.html#policy-structure" class="router-link-active router-link-exact-active">Policy Structure</a></li><li><a aria-current="page" href="/cis-idm/guides/policies.html#policy-results" class="router-link-active router-link-exact-active">Policy Results</a></li><li><a aria-current="page" href="/cis-idm/guides/policies.html#input-document" class="router-link-active router-link-exact-active">Input Document</a></li></ul></nav><hr><h2 id="configuration" tabindex="-1"><a class="header-anchor" href="#configuration" aria-hidden="true">#</a> Configuration</h2><p>Policies can either be loaded from a directory or may be specified inline in the configuration file:</p><div class="language-hcl line-numbers-mode" data-ext="hcl"><pre class="language-hcl"><code>
+<span class="token keyword">policies</span> <span class="token punctuation">{</span>
+    <span class="token comment"># Load all .rego files from the following directories:</span>
+    <span class="token property">directories</span> <span class="token punctuation">=</span> <span class="token punctuation">[</span>
+        <span class="token string">&quot;./policies&quot;</span>
+    <span class="token punctuation">]</span>
+
+    <span class="token comment"># Inline specification of a policy name &quot;superuser&quot;</span>
+    policy <span class="token string">&quot;superuser&quot;</span> <span class="token punctuation">{</span>
+        <span class="token property">content</span> <span class="token punctuation">=</span> <span class="token heredoc string">&lt;&lt;EOT
+        package cisidm.forward_auth
+
+        import rego.v1
+
+        allow if {
+            # input.subject is only set when the request is authenticated
+            input.subject
+            input.subject.roles
+
+            # The user must have the idm_superuser role to be granted access
+            # regardless of the requested resource.
+            some role in input.subject.roles
+            role.ID = &quot;idm_superuser&quot;
+        }
+
+        EOT</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+</code></pre><div class="line-numbers" aria-hidden="true"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><h2 id="policy-structure" tabindex="-1"><a class="header-anchor" href="#policy-structure" aria-hidden="true">#</a> Policy Structure</h2><p>Each policy starts with a <code>package</code> declaration. For forward-authentication policies, <code>cisidm</code> queries <code>data.cisidm.forward_auth</code> by default. Though, if you want to use a different policy package name, you can set <code>forward_auth_query</code> in your policy configuration block.</p><p>Here&#39;s a simple example that permits requests to the <code>/protected</code> resource on <code>app.example.com</code> only if the request is authenticated and the user has the <code>app-user</code> role assigned. If the user has the <code>idm_superuser</code> role assigned, all requests regardless of the requested host/resource path are allowed.</p><p>You can test the following rule on the OPA Rego playground: <a href="https://play.openpolicyagent.org/p/eEPkMSqjrh" target="_blank" rel="noopener noreferrer">https://play.openpolicyagent.org/p/eEPkMSqjrh<span><svg class="external-link-icon" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false" x="0px" y="0px" viewBox="0 0 100 100" width="15" height="15"><path fill="currentColor" d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z"></path><polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg><span class="external-link-icon-sr-only">open in new window</span></span></a></p><div class="language-rego line-numbers-mode" data-ext="rego"><pre class="language-rego"><code><span class="token keyword">package</span> cisidm<span class="token punctuation">.</span>forward_auth
+
+<span class="token keyword">import</span> rego<span class="token punctuation">.</span>v1
+
+<span class="token comment"># Allow the request if all conditions inside the allow rule evaluate to true</span>
+allow if <span class="token punctuation">{</span>
+    input<span class="token punctuation">.</span>path <span class="token operator">=</span> <span class="token string">&quot;/protected&quot;</span>
+    input<span class="token punctuation">.</span>host <span class="token operator">=</span> <span class="token string">&quot;app.example.com&quot;</span>
+
+    app_user_role
+<span class="token punctuation">}</span>
+
+allow if <span class="token punctuation">{</span>
+    user_is_superuser
+<span class="token punctuation">}</span>
+
+user_is_superuser if <span class="token punctuation">{</span>
+    <span class="token keyword">some</span> role in user_role_ids
+    id <span class="token operator">=</span> <span class="token string">&quot;idm_superuser&quot;</span>
+<span class="token punctuation">}</span>
+
+<span class="token comment"># A rule that checks if the user has at least one role with ID &quot;app-user&quot;</span>
+<span class="token comment"># assigned</span>
+app_user_role if <span class="token punctuation">{</span>
+    input<span class="token punctuation">.</span>subject
+    input<span class="token punctuation">.</span>subject<span class="token punctuation">.</span>roles
+
+    <span class="token keyword">some</span> role in user_role_ids
+    role <span class="token operator">=</span> <span class="token string">&quot;app-user&quot;</span>
+<span class="token punctuation">}</span>
+
+user_role_ids contains id if <span class="token punctuation">{</span>
+    <span class="token keyword">some</span> role in input<span class="token punctuation">.</span>subject<span class="token punctuation">.</span>roles
+    id <span class="token operator">:=</span> role<span class="token punctuation">.</span>ID
+<span class="token punctuation">}</span>
+
+</code></pre><div class="line-numbers" aria-hidden="true"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>Whenever the forward auth endpoint (<code>/validate</code>) is queried by the reverse proxy, <code>cisidm</code> will evaluate the <code>forward_auth_query</code> (wich defaults to <code>data.cisidm.forward_auth</code> as stated above) to get a decision if the request should be allowed or not.</p><p>For evaluation of policies, <code>cisidm</code> constructs an input document which can be accessed using the <code>input</code> variable. See <a href="#input-document">Input Document</a> at the end of the section for a complete document reference.</p><p>As another example, consider the following policy which allows access to <code>helpdesk.example.com</code> only if the <code>job</code> attribute of the authenticated user is set to <code>&quot;Support&quot;</code>. This is a simple implementation of Attribute-Based-Access-Control</p><div class="language-rego line-numbers-mode" data-ext="rego"><pre class="language-rego"><code><span class="token keyword">package</span> cisidm<span class="token punctuation">.</span>forward_auth
+
+<span class="token keyword">import</span> rego<span class="token punctuation">.</span>v1
+
+allow if <span class="token punctuation">{</span>
+    input<span class="token punctuation">.</span>host <span class="token operator">=</span> <span class="token string">&quot;helpdesk.example.com&quot;</span> <span class="token comment"># Evaluate this rule only for requests</span>
+                                        <span class="token comment"># to helpdesk.example.com</span>
+
+    input<span class="token punctuation">.</span>subject                       <span class="token comment"># request must be authenticated</span>
+    input<span class="token punctuation">.</span>subject<span class="token punctuation">.</span>fields                <span class="token comment"># Ensure the user has custom fields</span>
+                                        <span class="token comment"># populated</span>
+
+    <span class="token comment"># Ensure the user&#39;s job is Support</span>
+    input<span class="token punctuation">.</span>subject<span class="token punctuation">.</span>fields<span class="token punctuation">[</span><span class="token string">&quot;job&quot;</span><span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token string">&quot;Support&quot;</span>
+<span class="token punctuation">}</span>
+</code></pre><div class="line-numbers" aria-hidden="true"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><div class="custom-container tip"><p class="custom-container-title">Examples</p><p>Refer to our <a href="/cis-idm/guides/policy-examples/" class="">Policy Examples</a> for more sophisticated examples includes RBAC, ABAC and even some complex permission examples.</p></div><h2 id="policy-results" tabindex="-1"><a class="header-anchor" href="#policy-results" aria-hidden="true">#</a> Policy Results</h2><p>After policy evaluation, <code>cisidm</code> checks for the following properties:</p><ul><li><code>allow</code>: Whether or not the request should be allowed</li><li><code>status_code</code>: When the request is denied and <code>status_code</code> is set to a non-zero value, <code>cisidm</code> immediately replies with the specified code and <code>response_body</code> instead of trying to figure out an appropriate return code.</li><li><code>headers</code>: A map of HTTP headers (<code>map[string][]string</code>) that should be added to the response. If the request is allowed, those headers can be forwarded to the upstream service.<br> If the request is denied, those headers are forwarded to the user-agent the performed the initial request. Note that forwarding of custom headers might require configuration on your reverse proxy.</li></ul><p>Below is an example that denies access to <code>/private</code> even if the user is authenticated, still allowing the <code>idm_superuser</code> to access:</p><p>Playground: <a href="https://play.openpolicyagent.org/p/ituLyXKA3K" target="_blank" rel="noopener noreferrer">https://play.openpolicyagent.org/p/ituLyXKA3K<span><svg class="external-link-icon" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false" x="0px" y="0px" viewBox="0 0 100 100" width="15" height="15"><path fill="currentColor" d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z"></path><polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg><span class="external-link-icon-sr-only">open in new window</span></span></a></p><div class="language-rego line-numbers-mode" data-ext="rego"><pre class="language-rego"><code><span class="token keyword">package</span> cisidm<span class="token punctuation">.</span>forward_auth
+
+<span class="token keyword">import</span> rego<span class="token punctuation">.</span>v1
+
+<span class="token comment"># Deny access if the resource is protected</span>
+allow <span class="token operator">:=</span> <span class="token boolean">false</span> if <span class="token punctuation">{</span>
+    input<span class="token punctuation">.</span>path <span class="token operator">=</span> <span class="token string">&quot;/private&quot;</span>
+<span class="token punctuation">}</span>
+
+<span class="token comment"># Always allow access to superusers</span>
+allow if <span class="token punctuation">{</span>
+    is_superuser
+<span class="token punctuation">}</span>
+
+<span class="token comment"># The HTTP response headers if the resource is protected</span>
+headers <span class="token operator">:=</span> <span class="token punctuation">{</span>
+    <span class="token property">&quot;Content-Type&quot;</span><span class="token operator">:</span> <span class="token punctuation">[</span><span class="token string">&quot;application/json&quot;</span><span class="token punctuation">]</span>
+<span class="token punctuation">}</span> if is_protected_resource
+
+<span class="token comment"># The response body if the resource is protected</span>
+response_body <span class="token operator">:=</span> <span class="token function"><span class="token namespace">json</span><span class="token punctuation">.</span>encode</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+    <span class="token property">&quot;error&quot;</span><span class="token operator">:</span> <span class="token string">&quot;sorry, you&#39;re not allowed to perform this operation&quot;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span> if is_protected_resource
+
+<span class="token comment"># Return status code 403 if the resource is protected</span>
+status_code <span class="token operator">:=</span> <span class="token number">403</span> if is_protected_resource
+
+<span class="token comment"># Helper-Rule that evaluates to true if the request is not allowed and</span>
+<span class="token comment"># path matches /private</span>
+is_protected_resource if <span class="token punctuation">{</span>
+    input<span class="token punctuation">.</span>path <span class="token operator">=</span> <span class="token string">&quot;/private&quot;</span>
+    <span class="token keyword">not</span> allow
+<span class="token punctuation">}</span>
+
+<span class="token comment"># HelperRule that evaluates to true if the request is authenticated and the user</span>
+<span class="token comment"># is part of the idm_superuser role</span>
+is_superuser if <span class="token punctuation">{</span>
+    input<span class="token punctuation">.</span>subject
+    input<span class="token punctuation">.</span>subject<span class="token punctuation">.</span>roles
+
+    <span class="token keyword">some</span> role in input<span class="token punctuation">.</span>subject<span class="token punctuation">.</span>roles
+    role<span class="token punctuation">.</span>ID <span class="token operator">=</span> <span class="token string">&quot;idm_superuser&quot;</span>
+<span class="token punctuation">}</span>
+</code></pre><div class="line-numbers" aria-hidden="true"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><h2 id="input-document" tabindex="-1"><a class="header-anchor" href="#input-document" aria-hidden="true">#</a> Input Document</h2><p>The following input document is constructed by <code>cisidm</code> when evaluating forward- authentication policies and can be accessed in policies using the <code>input</code> variable:</p><div class="language-hcl line-numbers-mode" data-ext="hcl"><pre class="language-hcl"><code><span class="token property">input</span> <span class="token punctuation">=</span> <span class="token punctuation">{</span>
+    <span class="token comment"># The following data is directly copied from the user request that was</span>
+    <span class="token comment"># forwarded by the reverse proxy:</span>
+
+    <span class="token comment"># The requested resource path.</span>
+    <span class="token comment"># example: /protected/index.html</span>
+    <span class="token property">path</span> <span class="token punctuation">=</span> <span class="token string">&quot;&lt;requested-resource-path&gt;&quot;</span>
+
+    <span class="token comment"># The host name of the request.</span>
+    <span class="token comment"># example: app.example.com</span>
+    <span class="token property">host</span> <span class="token punctuation">=</span> <span class="token string">&quot;&lt;requested-hostname&gt;&quot;</span>
+
+    <span class="token comment"># The request method.</span>
+    <span class="token comment"># example: GET, PUT, ...</span>
+    <span class="token property">method</span> <span class="token punctuation">=</span> <span class="token string">&quot;&lt;request-method&gt;&quot;</span>
+
+    <span class="token comment"># All request headers as a map</span>
+    <span class="token property">headers</span> <span class="token punctuation">=</span> <span class="token punctuation">{</span>
+        <span class="token property">&quot;Content-Type&quot;</span> <span class="token punctuation">=</span> <span class="token punctuation">[</span><span class="token string">&quot;application/json&quot;</span><span class="token punctuation">]</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token comment"># Any query parameters of the request</span>
+    <span class="token property">query</span> <span class="token punctuation">=</span> <span class="token punctuation">{</span><span class="token punctuation">}</span>
+    
+    <span class="token comment"># The IP address of the client. Note that the reverse proxy must set the</span>
+    <span class="token comment"># X-Forwarded-For header and the IP address of the reverse proxy must be</span>
+    <span class="token comment"># in the trusted_networks setting. Otherwise the IP address of the reverse</span>
+    <span class="token comment"># proxy will be set for this field.</span>
+    <span class="token property">client_ip</span> <span class="token punctuation">=</span> <span class="token string">&quot;&lt;client-ip-address&gt;&quot;</span>
+
+    <span class="token comment"># When the request contains a valid access token than cisidm will also resolve</span>
+    <span class="token comment"># the requesting user and populate the subject field as follows:</span>
+    <span class="token property">subject</span> <span class="token punctuation">=</span> <span class="token punctuation">{</span>
+        <span class="token comment"># The unique ID of the user</span>
+        <span class="token property">id</span> <span class="token punctuation">=</span> <span class="token string">&quot;&lt;unique-user-id&gt;&quot;</span>
+
+        <span class="token comment"># The username of the authenticated user.</span>
+        <span class="token comment"># SECURITY: only use this field if the username-change feature is disabled!</span>
+        <span class="token property">username</span> <span class="token punctuation">=</span> <span class="token string">&quot;&lt;username&gt;&quot;</span>
+
+        <span class="token comment"># A list of assigned roles for the authenticated user.</span>
+        <span class="token comment"># If the access token is a user API token, than only token roles are</span>
+        <span class="token comment"># reported.</span>
+        <span class="token property">roles</span> <span class="token punctuation">=</span> <span class="token punctuation">[</span>
+            <span class="token punctuation">{</span>
+                <span class="token property">ID</span> <span class="token punctuation">=</span> <span class="token string">&quot;&lt;role-id&gt;&quot;</span>,
+                <span class="token property">Name</span> <span class="token punctuation">=</span> <span class="token string">&quot;&lt;role-name&gt;&quot;</span>,
+                <span class="token property">Description</span> <span class="token punctuation">=</span> <span class="token string">&quot;&lt;role-description&gt;&quot;</span>
+            <span class="token punctuation">}</span>
+        <span class="token punctuation">]</span>
+
+        <span class="token comment"># A list of resolved permissions from all assigned roles.</span>
+        <span class="token comment"># If the access token is a user API token, than all permissions from the</span>
+        <span class="token comment"># roles assigned to the token are set.</span>
+        <span class="token property">permissions</span> <span class="token punctuation">=</span> <span class="token punctuation">[</span>
+            <span class="token string">&quot;&lt;list-of-all-role-permissions&gt;&quot;</span>
+        <span class="token punctuation">]</span>
+
+        <span class="token comment"># Any custom user fields. Usable for attribute-based-access-control (ABAC)</span>
+        <span class="token property">fields</span> <span class="token punctuation">=</span> <span class="token punctuation">{</span>
+            <span class="token comment"># Custom user fields</span>
+        <span class="token punctuation">}</span>
+
+        <span class="token comment"># The user&#39;s primary email address, if any</span>
+        <span class="token property">email</span> <span class="token punctuation">=</span> <span class="token string">&quot;&lt;primary-user-mail&gt;&quot;</span>
+
+        <span class="token comment"># The user&#39;s configured display name, if any</span>
+        <span class="token property">display_name</span> <span class="token punctuation">=</span> <span class="token string">&quot;&lt;user-display-name&gt;&quot;</span>
+
+        <span class="token comment"># The access token kind. This may be one of the following values:</span>
+        <span class="token comment">#  - password: Token was obtained using password-authentication only</span>
+        <span class="token comment">#  - mfa: Token was obtained by using two or multi-factor authentication</span>
+        <span class="token comment">#  - webauthn: Token was obtained using Webauthn or Passkey</span>
+        <span class="token comment">#  - api: A user generate API token.</span>
+        <span class="token property">token_kind</span> <span class="token punctuation">=</span> <span class="token string">&quot;&lt;token-kind&gt;&quot;</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre><div class="line-numbers" aria-hidden="true"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><p>The definition of the input object passed to forward_auth queries can be found <a href="https://github.com/tierklinik-dobersberg/cis-idm/blob/main/internal/services/auth/types.go" target="_blank" rel="noopener noreferrer">here<span><svg class="external-link-icon" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false" x="0px" y="0px" viewBox="0 0 100 100" width="15" height="15"><path fill="currentColor" d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z"></path><polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg><span class="external-link-icon-sr-only">open in new window</span></span></a></p></div><!--[--><!--]--></div><footer class="page-meta"><div class="meta-item edit-link"><a class="external-link meta-item-label" href="https://github.com/tierklinik-dobersberg/cis-idm/edit/main/docs/content/guides/policies.md" rel="noopener noreferrer" target="_blank" aria-label="Edit this page"><!--[--><!--]--> Edit this page <span><svg class="external-link-icon" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false" x="0px" y="0px" viewBox="0 0 100 100" width="15" height="15"><path fill="currentColor" d="M18.8,85.1h56l0,0c2.2,0,4-1.8,4-4v-32h-8v28h-48v-48h28v-8h-32l0,0c-2.2,0-4,1.8-4,4v56C14.8,83.3,16.6,85.1,18.8,85.1z"></path><polygon fill="currentColor" points="45.7,48.7 51.3,54.3 77.2,28.5 77.2,37.2 85.2,37.2 85.2,14.9 62.8,14.9 62.8,22.9 71.5,22.9"></polygon></svg><span class="external-link-icon-sr-only">open in new window</span></span><!--[--><!--]--></a></div><div class="meta-item last-updated"><span class="meta-item-label">Last Updated: </span><!----></div><div class="meta-item contributors"><span class="meta-item-label">Contributors: </span><span class="meta-item-info"><!--[--><!--[--><span class="contributor" title="email: patrick.pacher@gmail.com">Patrick Pacher</span><!----><!--]--><!--]--></span></div></footer><nav class="page-nav"><p class="inner"><!----><span class="next"><a href="/cis-idm/guides/cli-reference.md" class="" aria-label="CLI Reference"><!--[--><!--]--> CLI Reference <!--[--><!--]--></a></span></p></nav><!--[--><!--]--></main><!--]--></div><!----><!--]--></div>
+    <script type="module" src="/cis-idm/assets/app-wNEdNvye.js" defer></script>
+  </body>
+</html>

@@ -1,0 +1,1 @@
+const e=JSON.parse('{"key":"v-fd2709a2","path":"/guides/setup-sms.html","title":"SMS (Twilio) Setup","lang":"en-US","frontmatter":{},"headers":[],"git":{"updatedTime":1705220314000,"contributors":[{"name":"Patrick Pacher","email":"patrick.pacher@gmail.com","commits":1}]},"filePathRelative":"guides/setup-sms.md"}');export{e as data};

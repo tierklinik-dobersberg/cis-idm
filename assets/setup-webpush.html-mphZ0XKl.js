@@ -1,0 +1,1 @@
+const e=JSON.parse('{"key":"v-317a8dba","path":"/guides/setup-webpush.html","title":"WebPush  Setup","lang":"en-US","frontmatter":{},"headers":[],"git":{"updatedTime":1708065205000,"contributors":[{"name":"Patrick Pacher","email":"patrick.pacher@gmail.com","commits":3}]},"filePathRelative":"guides/setup-webpush.md"}');export{e as data};
