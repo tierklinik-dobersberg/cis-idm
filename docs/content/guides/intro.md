@@ -9,6 +9,14 @@ If you just want to check out the list of features provided by `cisidm`, head ov
 
 :::
 
+<br>
+<hr>
+
+**Contents**
+
+[[toc]]
+
+<hr>
 
 ## Use Cases
 
@@ -18,15 +26,18 @@ If you just want to check out the list of features provided by `cisidm`, head ov
 
 `cisidm` can be used to provide proxy authentication to your services just like
 [Authelia](https://www.authelia.com/) or [Authentik](https://goauthentik.io/)
-when used with a supported reverse proxy like [Traefik](https://doc.traefik.io/traefik/).
+when used with a supported reverse proxy like
+[Traefik](https://doc.traefik.io/traefik/).
 
-In this mode your reverse proxy will be configured to authenticate requests
-to your upstream services by quering the `/validate` endpoint of `cisidm`. If
-the request is allowed, `cisidm` will add additional headers to the request so
-your upstream services can authenticate users by just looking at the request headers.
+In this mode your reverse proxy will be configured to authenticate requests to
+your upstream services by quering the `/validate` endpoint of `cisidm`. If the
+request is allowed, `cisidm` will add additional headers to the request so your
+upstream services can authenticate users by just looking at the request headers.
 
-Authorization is implemented using [Rego Policies](https://www.openpolicyagent.org/docs/latest/policy-language/)
-from the Open-Policy-Agent project. Checkout our [Policies Guide](./policies.md) for more examples.
+Authorization is implemented using [Rego
+Policies](https://www.openpolicyagent.org/docs/latest/policy-language/) from the
+Open-Policy-Agent project. Checkout our [Policies Guide](./policies.md) for more
+examples.
 
 
 ### Custom Application / Service Development
@@ -36,13 +47,15 @@ micro-service so you don't need to roll your own.
 
 For this, `cisidm` provides an extensive API based on the awesome `Connect-RPC`
 system which brings compatability with Browser HTTP and GRPC. For extended
-use-cases, `cisidm` can also be configured to store and manage custom user metadata
-that may even be visible and writeable by your users. Check the [Additional User Fields Guide](./extra-user-fields.md)
-for more information and examples.
+use-cases, `cisidm` can also be configured to store and manage custom user
+metadata that may even be visible and writeable by your users. Check the
+[Additional User Fields Guide](./extra-user-fields.md) for more information and
+examples.
 
 ## Features
 
-The following is a likely incomplete list of features currently implemented by `cisidm`:
+The following is a likely incomplete list of features currently implemented by
+`cisidm`:
 
 - **Authentication**
   - Password-based login
@@ -75,13 +88,16 @@ The following is a likely incomplete list of features currently implemented by `
   - Uses Open-Policy-Agent policies (rego) for authorization
   - Supports RBAC, ABAC, PBAC, AWS-IAM style policies ...
 - **API / Integration Support**
-  - Defined using [`protobuf`](https://github.com/tierklinik-dobersberg/apis/tree/main/proto/tkd/idm/v1) with clients already available for `Go` and `Typescript`/`Javascript`
+  - Defined using
+    [`protobuf`](https://github.com/tierklinik-dobersberg/apis/tree/main/proto/tkd/idm/v1)
+    with clients already available for `Go` and `Typescript`/`Javascript`
   - Every `cisidm` API can be consumed using `Connect-RPC`, `Browser HTTP` and `GRPC`
   - Users-API (manage cisidm users)
   - Role-Management API
   - SelfService API
   - Authentication API
-  - Notification API with support for SMS, E-Mail (with HTML E-Mail templates) and WebPush (using VAPID)
+  - Notification API with support for SMS, E-Mail (with HTML E-Mail templates)
+    and WebPush (using VAPID)
 
 
 ## Comparisons

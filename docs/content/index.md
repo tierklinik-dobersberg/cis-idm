@@ -1,13 +1,17 @@
 ---
 home: true
-tagline: Simple self-hosted identity management server.
+tagline: Simple self-hosted identity management and authorization server.
+footer: Open-Source and licensed under MIT, Copyright © 2024 Patrick Pacher
+
+heroText: Easy Identity Management
 
 actions:
-  - text: Get Started
-    link: /guides/getting-started
-    type: primary
   - text: Introduction
     link: /guides/intro.md
+    type: primary
+
+  - text: Get Started
+    link: /guides/getting-started
     type: secondary
 
 features:
@@ -31,6 +35,9 @@ features:
 
   - title: CLI Management Utility
     details: User and role configuration using a simple CLI tool
+
+  - title: Open-ID Connect
+    details: Supports OIDC by integrating DexIdP
 
   - title: Easy Deployment
     details: Easily deploy using docker.
