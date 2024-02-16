@@ -19,6 +19,15 @@ integrate with `cisidm`.
 
 :::
 
+<br>
+<hr>
+
+**Contents**
+
+[[toc]]
+
+<hr>
+
 ## Configuration
 
 Policies can either be loaded from a directory or may be specified inline in the

@@ -13,14 +13,24 @@ provides support for custom user fields. Those fields are stored in the database
 as a **JSON blob**.
 
 Custom fields may either be used by services that directly integrate with
-`cisidm` using the API or may also be used in [Policies](./policies.md) to implement
-Attribute-Based-Access-Control (ABAC).
+`cisidm` using the API or may also be used in [Policies](./policies.md) to
+implement Attribute-Based-Access-Control (ABAC).
 
 To add custom user fields, you need configured them in the configuration file.
 
 ::: tip Examples
 Head over to [Use-Cases and Examples](#use-cases-and-examples) for some ideas.
 :::
+
+<br>
+<hr>
+
+**Contents**
+
+[[toc]]
+
+<hr>
+
 
 ## Field Types
 
@@ -56,9 +66,9 @@ the field.
 
 ::: tip Inheritance
 
-If `visibilty` or `writeable` is not defined for `object` properties than the value of the parent field is inherited.
-If top-level fields do not specify a visibility it always defaults to `self`.
-Fields are writeable by default.
+If `visibilty` or `writeable` is not defined for `object` properties than the
+value of the parent field is inherited. If top-level fields do not specify a
+visibility it always defaults to `self`. Fields are writeable by default.
 
 :::
 
@@ -126,9 +136,9 @@ Below are a few examples on how to configure custom fields. Refer to the
 
 ### Notification Settings
 
-When integrating your apps directly with `cisidm`s API you may want to allow your
-users to update their notification preferences without needing to store those
-settings directly in your application.
+When integrating your apps directly with `cisidm`s API you may want to allow
+your users to update their notification preferences without needing to store
+those settings directly in your application.
 
 ![Settings](../assets/notification_settings.png)
 
@@ -185,8 +195,8 @@ field "object" "notificationSettings" {
 }
 ```
 
-Your application than just needs to check the `extra` property of the user profile.
-For example, using `idmctl`:
+Your application than just needs to check the `extra` property of the user
+profile. For example, using `idmctl`:
 
 ```bash
 $ idmctl users get-extra alice "notificationSettings.newsletter"
@@ -196,10 +206,65 @@ $ idmctl users get-extra alice "notificationSettings"
 { "newsletter": "never", "comments": "email" }
 ```
 
+When using `Go`, an example might look like the following:
+
+```go
+package newsletter
+
+// A JSON-Path under which the newsletter settings are stored.
+const newsletterSettingsKey = "notificationSettings.newsletter"
+
+var (
+    notify idmv1.NotifyServiceClient
+    users idmv1.UserServiceClient
+)
+
+func init() {
+    // adjust client init to your liking ...
+    // this just uses constant URLs
+    notify := idmv1connect.NewNotifyServiceClient("https://account.example.com")
+    users := idmv1connect.NewUserServiceClient("https://account.example.com")
+}
+
+func SendNotification(ctx context.Context, userId string, message string) error {
+    // get user preferences
+    res, err := users.GetUserExtraKey(ctx, connect.NewRequest(idmv1.GetUserExtraKeyRequest{
+        userId: userId,
+        path: newsletterSettingsKey,
+    }))
+
+    // Handle any request error
+    if err != nil {
+        return err
+    }
+
+    // Make sure the property value is actually a string.
+    val, ok := res.Msg.Value.(*structpb.StringValue)
+    if !ok {
+        return errors.New("invalid customer user property value, expected string, got %T", res.Msg.Value)
+    }
+
+    // Decide what to do based on the string value
+    switch val.StringValue {
+        case "never":
+            return nil
+
+        case "sms":
+            // Send an SMS
+
+        case "email":
+            // Send an Email
+
+        case "", "both": // we consider an unset-value as "both"
+            // Send E-Mail and SMS
+    }
+}
+```
+
 ### External Service Integration
 
-Imagine your app having support to send messages to your users on Discord or Reddit
-but those integrations must be enabled by each user on it's own:
+Imagine your app having support to send messages to your users on Discord or
+Reddit but those integrations must be enabled by each user on it's own:
 
 ![Integration Example](../assets/integration_example.png)
 
@@ -274,7 +339,8 @@ field "string" "department" {
   </CodeGroupItem>
 </CodeGroup>
 
-Then one can use those fields in rego policies (See our [Policies Guide](./policies)):
+Then one can use those fields in rego policies (See our [Policies
+Guide](./policies)):
 
 <CodeGroup>
   <CodeGroupItem title="policy.rego">

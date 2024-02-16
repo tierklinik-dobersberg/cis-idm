@@ -1,7 +1,8 @@
 # E-Mail Setup
 
-To enalbe email verification and support for password-reset links, account invitations etc
-it's require to configure an outgoing E-Mail (SMTP) server in your `cisidm` configuration:
+To enalbe email verification and support for password-reset links, account
+invitations etc it's require to configure an outgoing E-Mail (SMTP) server in
+your `cisidm` configuration:
 
 ```hcl
 
