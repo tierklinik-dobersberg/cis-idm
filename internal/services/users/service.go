@@ -87,7 +87,7 @@ func (svc *Service) ListUsers(ctx context.Context, req *connect.Request[idmv1.Li
 		}
 
 		if len(req.Msg.FilterByRoles) > 0 {
-			if !data.SliceOverlapsFunc(req.Msg.FilterByRoles, profileProto.Roles, func(role *idmv1.Role) string {
+			if !data.ElemInBothSlicesFunc(req.Msg.FilterByRoles, profileProto.Roles, func(role *idmv1.Role) string {
 				return role.Id
 			}) {
 				continue
@@ -99,6 +99,17 @@ func (svc *Service) ListUsers(ctx context.Context, req *connect.Request[idmv1.Li
 
 	// make sure we only include fields that are requested
 	if fieldMaskPaths := req.Msg.GetFieldMask().GetPaths(); len(fieldMaskPaths) > 0 {
+		// compatibility: unfortunatley the field in ListUsersResponse is called
+		// users instead of profiles (which would be better for consistency).
+		// It seems this is a common error cause since users expect the field to be
+		// called "profiles".
+		// Make sure we accept both versions for the field mask.
+		for idx, path := range fieldMaskPaths {
+			if strings.HasPrefix(path, "profiles") {
+				fieldMaskPaths[idx] = strings.Replace(path, "profiles", "users", 1)
+			}
+		}
+
 		if req.Msg.ExcludeFields {
 			fmutils.Prune(res, fieldMaskPaths)
 		} else {

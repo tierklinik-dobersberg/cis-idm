@@ -86,9 +86,13 @@ func (svc *Service) loadUsers(ctx context.Context, userIds []string) (map[string
 func (svc *Service) SendNotification(ctx context.Context, req *connect.Request[idmv1.SendNotificationRequest]) (*connect.Response[idmv1.SendNotificationResponse], error) {
 	log.L(ctx).Infof("received SendNotification request")
 
-	senderUser, err := svc.getSenderUser(ctx, req.Msg.SenderUserId)
-	if err != nil {
-		return nil, err
+	var senderUser *idmv1.Profile
+	if req.Msg.SenderUserId != "" {
+		var err error
+		senderUser, err = svc.getSenderUser(ctx, req.Msg.SenderUserId)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	targetUsers, err := svc.loadUsers(ctx, req.Msg.TargetUsers)

@@ -45,17 +45,26 @@ type Overwrite struct {
 	refreshTTL time.Duration
 }
 
-func (ov *Overwrite) Validate() error {
+func (ov *Overwrite) Validate(defaultAccessTTL, defaultRefreshTTL time.Duration) error {
 	var err error
 
-	ov.accessTTL, err = time.ParseDuration(ov.AccessTokenTTL)
-	if err != nil {
-		return fmt.Errorf("access_token_ttl: %w", err)
+	if ov.AccessTokenTTL != "" {
+		ov.accessTTL, err = time.ParseDuration(ov.AccessTokenTTL)
+		if err != nil {
+			return fmt.Errorf("access_token_ttl: %w", err)
+		}
+	} else {
+		ov.accessTTL = defaultAccessTTL
 	}
 
-	ov.refreshTTL, err = time.ParseDuration(ov.RefreshTokenTTL)
-	if err != nil {
-		return fmt.Errorf("refresh_token_ttl: %w", err)
+	if ov.RefreshTokenTTL != "" {
+
+		ov.refreshTTL, err = time.ParseDuration(ov.RefreshTokenTTL)
+		if err != nil {
+			return fmt.Errorf("refresh_token_ttl: %w", err)
+		}
+	} else {
+		ov.refreshTTL = defaultRefreshTTL
 	}
 
 	return nil
@@ -232,7 +241,7 @@ type Config struct {
 	Roles []Role `json:"roles" hcl:"role,block"`
 
 	// Overwrites may hold configuration overwrites per user or role.
-	Overwrites []Overwrite `json:"overwrite" hcl:"overwrite,block"`
+	Overwrites []*Overwrite `json:"overwrite" hcl:"overwrite,block"`
 
 	// EnableDynamicRoles controles whether or not roles can be created/updated/deleted
 	// via the tkd.idm.v1.RoleService API.
@@ -313,16 +322,6 @@ func LoadFile(path string) (*Config, error) {
 		return nil, fmt.Errorf("unsupported file format %q", filepath.Ext(path))
 	}
 
-	/*
-		dec := json.NewDecoder(bytes.NewReader(content))
-		dec.DisallowUnknownFields()
-
-		var f Config
-		if err := dec.Decode(&f); err != nil {
-			return nil, err
-		}
-	*/
-
 	var f Config
 	var ctx hcl.EvalContext
 
@@ -331,7 +330,7 @@ func LoadFile(path string) (*Config, error) {
 	}
 
 	if err := f.applyDefaults(); err != nil {
-		return &f, nil
+		return &f, err
 	}
 
 	if f.PermissionTrees {
@@ -401,7 +400,7 @@ func (file *Config) applyDefaults() error {
 	}
 
 	for idx, ov := range file.Overwrites {
-		if err := ov.Validate(); err != nil {
+		if err := ov.Validate(file.JWT.accessTokenTTL, file.JWT.refreshTokenTTL); err != nil {
 			return fmt.Errorf("overwrite[%d]: %w", idx, err)
 		}
 	}
