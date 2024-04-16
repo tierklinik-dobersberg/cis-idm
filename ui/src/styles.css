@@ -27,9 +27,13 @@ a {
 
 @layer components {
     .tkd-input {
-        @apply px-2 py-1.5 text-sm  rounded-md border  outline-none  hover:border-blue-400 focus:ring-1 focus:border-blue-400;
+        @apply px-2 py-1.5 text-sm  rounded-md border  outline-none  focus:ring-1;
         @apply text-gray-800 bg-gray-50 border-gray-200;
         @apply dark:text-white dark:border-gray-600 dark:bg-slate-700;
+
+    }
+    .tkd-input.ng-dirty.ng-invalid {
+      @apply border-red-300;
     }
 
     .tkd-card {

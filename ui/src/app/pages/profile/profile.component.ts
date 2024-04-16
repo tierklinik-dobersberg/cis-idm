@@ -2,6 +2,7 @@ import { CommonModule } from "@angular/common";
 import { Component, inject } from "@angular/core";
 import { RouterModule } from "@angular/router";
 import { Profile } from '@tierklinik-dobersberg/apis/gen/es/tkd/idm/v1/user_pb';
+import { L10nTranslateAsyncPipe } from "angular-l10n";
 import { Observable } from 'rxjs';
 import { TkdAvatarComponent } from "src/app/components/avatar";
 import { TkdButtonDirective } from "src/app/components/button";
@@ -21,6 +22,7 @@ import { ProfileService } from 'src/services/profile.service';
     RouterModule,
     TkdAvatarComponent,
     TkdButtonDirective,
+    L10nTranslateAsyncPipe
   ]
 })
 export class ProfileComponent {

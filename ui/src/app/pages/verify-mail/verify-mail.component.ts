@@ -13,7 +13,6 @@ import { ProfileService } from 'src/services/profile.service';
     RouterModule,
   ],
   templateUrl: './verify-mail.component.html',
-  styleUrls: ['./verify-mail.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class VerifyMailComponent {

@@ -1,29 +1,39 @@
 <div class="tkd-card">
   <header class="flex !flex-row w-full items-center">
-    <a routerLink="/profile">
+    <a tkd-backlink>
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
         class="w-6 h-6">
         <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
       </svg>
     </a>
 
-    <h1 class="flex-grow">{{ isNew ? 'Telefonnummer hinzufügen' : 'Telefonnummer bearbeiten'}}</h1>
+    <h1 class="flex-grow">{{ (isNew ? 'phone.addNew' : 'phone.edit') | translateAsync}}</h1>
   </header>
+
   <content>
+    <!-- Phone Form -->
     <section>
-      <form (ngSubmit)="save()">
+      <form (ngSubmit)="save()" [formGroup]="form">
         <div class="flex flex-col gap-4">
           <div class="flex flex-col gap-0.5 w-full">
-            <span class="text-xs text-gray-500 uppercase dark:text-emerald-200 dark:text-opacity-70">Telefonnummer</span>
-            <input class="w-full tkd-input" type="text" name="displayName" [formControl]="number" placeholder="+43 1234 1234">
+            <span class="text-xs text-gray-500 uppercase dark:text-emerald-200 dark:text-opacity-70" [ngClass]="{
+              'text-red-600': number.invalid && number.dirty
+            }">
+              {{ 'phone.inputs.phone.label' | translateAsync }}
+            </span>
+            <input class="w-full tkd-input" type="text" name="phone" formControlName="number" [attr.placeholder]="'phone.inputs.phone.placeholder' | translateAsync" autocomplete="mobile">
           </div>
 
-          <button *ngIf="isNew" type="submit" class="tkd-btn">Speichern</button>
-          <button *ngIf="!isNew" type="button" class="tkd-btn" (click)="markAsPrimary()">Als primäre Telefonnummer setzen</button>
-          <button *ngIf="!isNew" type="button" class="tkd-btn tkd-danger" (click)="deleteAddress()">Löschen</button>
+          <div class="flex flex-row gap-4 self-end items-center">
+            <button *ngIf="isNew" type="submit" tkd-button="primary">{{ 'common.save' | translateAsync }}</button>
+            <button *ngIf="!isNew && !primary.value" type="button" tkd-button (click)="markAsPrimary()">{{ 'phone.markAsPrimary' | translateAsync }}</button>
+            <button *ngIf="!isNew" type="button" tkd-button (click)="deleteAddress()">{{ 'common.delete' | translateAsync }}</button>
+          </div>
         </div>
       </form>
     </section>
+
+    <!-- Not-yet verified -->
     <section *ngIf="!isNew && !verified" class="flex !flex-row gap-4 !items-center">
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
         class="w-8 h-8 text-yellow-500 dark:text-yellow-300">
@@ -31,11 +41,12 @@
           d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
       </svg>
       <span class="flex-grow text-yellow-500 dark:text-yellow-300">
-        Diese Telefonnummer wurde noch nicht verifiziert
-        und kann daher noch nicht verwendet werden.
+        {{ 'phone.notYetVerified' | translateAsync }}
       </span>
-      <button [routerLink]="['/profile/verify-phone', id]" class="tkd-btn-outline whitespace-nowrap">Jetzt verifizieren</button>
+      <button [routerLink]="['/profile/verify-phone', id]" class="tkd-btn-outline whitespace-nowrap">{{ 'phone.verifyNow' | translateAsync }}</button>
     </section>
+
+    <!-- Save error -->
     <section *ngIf="saveAddrError" class="flex !flex-row gap-4 !items-center">
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
         class="w-8 h-8 text-red-500 dark:text-red-300">
@@ -43,7 +54,7 @@
           d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
       </svg>
       <span class="text-red-500 dark:text-red-300">
-        Telefonnummer konnte nicht gespeichert werden: <br />
+        {{ 'phone.saveError' | translateAsync }} <br />
         {{ saveAddrError }}
       </span>
     </section>

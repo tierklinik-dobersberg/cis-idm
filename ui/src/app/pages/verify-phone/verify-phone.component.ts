@@ -18,7 +18,6 @@ import { ProfileService } from 'src/services/profile.service';
     RouterModule,
   ],
   templateUrl: './verify-phone.component.html',
-  styleUrls: ['./verify-phone.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class VerifyPhoneComponent implements OnInit {

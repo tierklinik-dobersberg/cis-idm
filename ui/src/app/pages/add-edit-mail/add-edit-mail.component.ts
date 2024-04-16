@@ -1,11 +1,14 @@
-import { CommonModule } from '@angular/common';
+import { CommonModule, Location } from '@angular/common';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { ConnectError } from '@bufbuild/connect';
+import { L10N_LOCALE, L10nTranslateAsyncPipe, L10nTranslatePipe } from 'angular-l10n';
 import { combineLatest } from 'rxjs';
 import { SELF_SERVICE } from 'src/app/clients';
+import { TkdBacklinkDirective } from 'src/app/components/backlink';
+import { TkdButtonDirective } from 'src/app/components/button';
 import { ProfileService } from 'src/services/profile.service';
 
 @Component({
@@ -14,8 +17,10 @@ import { ProfileService } from 'src/services/profile.service';
   imports: [
     CommonModule,
     FormsModule,
-    RouterModule,
     ReactiveFormsModule,
+    TkdButtonDirective,
+    TkdBacklinkDirective,
+    L10nTranslateAsyncPipe
   ],
   templateUrl: './add-edit-mail.component.html',
   styleUrls: ['./add-edit-mail.component.css'],
@@ -24,20 +29,32 @@ import { ProfileService } from 'src/services/profile.service';
 export class AddEditMailComponent implements OnInit {
   isNew = true;
 
-  profileService = inject(ProfileService);
-  selfService = inject(SELF_SERVICE);
-  activeRoute = inject(ActivatedRoute)
-  destroyRef = inject(DestroyRef);
-  router = inject(Router);
-  cdr = inject(ChangeDetectorRef);
+  private readonly profileService = inject(ProfileService);
+  private readonly selfService = inject(SELF_SERVICE);
+  private readonly activeRoute = inject(ActivatedRoute)
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly location = inject(Location);
+  private readonly cdr = inject(ChangeDetectorRef);
+
   validationSent = false;
 
   id: string | null = null;
   saveAddrError: string | null = null;
 
-  address = new FormControl('');
-  primary = new FormControl(false);
-  verified = false;
+  form = new FormGroup({
+    address: new FormControl('', {
+      validators: [
+        Validators.required,
+        Validators.email,
+      ]
+    }),
+    primary: new FormControl(false),
+    verified: new FormControl(false)
+  })
+
+  get address() { return this.form.get('address')! }
+  get primary() { return this.form.get('primary')! }
+  get verified() { return this.form.get('verified')! }
 
   ngOnInit(): void {
     combineLatest([
@@ -51,16 +68,16 @@ export class AddEditMailComponent implements OnInit {
         this.id = params.get("id");
         this.isNew = !this.id;
         this.saveAddrError = null;
-        this.verified = false;
+
         if (!!this.id) {
           const address = (profile?.emailAddresses || []).find(addr => addr.id === this.id);
 
           if (!address) {
-            this.router.navigate(['../'])
+            this.location.back()
           } else {
             this.address.setValue(address.address);
             this.primary.setValue(address.primary);
-            this.verified = address.verified;
+            this.verified.setValue(address.verified);
 
             this.cdr.markForCheck();
           }
@@ -72,7 +89,7 @@ export class AddEditMailComponent implements OnInit {
     try {
       await this.selfService.addEmailAddress({ email: this.address.value! })
       await this.profileService.loadProfile();
-      this.router.navigate(['../'])
+      this.location.back()
 
     } catch (err) {
       this.saveAddrError = ConnectError.from(err).rawMessage;
@@ -87,7 +104,7 @@ export class AddEditMailComponent implements OnInit {
 
     await this.selfService.deleteEmailAddress({ id: this.id! })
     await this.profileService.loadProfile();
-    this.router.navigate(['../'])
+    this.location.back()
   }
 
   async validateEmail() {
@@ -114,7 +131,7 @@ export class AddEditMailComponent implements OnInit {
     try {
       await this.selfService.markEmailAsPrimary({ id: this.id! })
       await this.profileService.loadProfile();
-      this.router.navigate(['../'])
+      this.location.back()
     } catch (err) {
       this.saveAddrError = ConnectError.from(err).rawMessage;
       this.cdr.markForCheck();

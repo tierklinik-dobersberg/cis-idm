@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { HttpClient, HttpClientModule } from '@angular/common/http';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit, TrackByFunction, inject } from '@angular/core';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { ConnectError } from '@bufbuild/connect';
 import { startRegistration } from '@simplewebauthn/browser';
 import { EnrollTOTPResponseStep1, RegisteredPasskey } from '@tierklinik-dobersberg/apis';
@@ -21,6 +21,7 @@ import { ProfileService } from 'src/services/profile.service';
     ReactiveFormsModule,
     HttpClientModule,
     TkdButtonDirective,
+    RouterLink
   ],
   templateUrl: './security-overview.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush

@@ -2,9 +2,9 @@
   <div class="tkd-card">
     <header class="flex !flex-row !justify-start items-center">
       <div class="flex flex-col flex-grow gap-2 justify-center">
-        <h3>Willkommen zurück!</h3>
+        <h3>{{ 'profile.welcomeBack'  | translateAsync  }}</h3>
         <h1>
-          Hallo
+          {{ 'profile.hello' | translateAsync }}
           <span class="font-medium">{{
             profile.user?.displayName || profile.user?.username
           }}</span>
@@ -20,13 +20,12 @@
     <content>
       <section>
         <span>
-          Willkommen in deinem {{ config.siteName }} Account. Hier kannst du
-          deine Persönlichen Daten ändern, Kontaktdaten und Adressen verwalten.
+          {{ 'profile.description' | translateAsync:{siteName: config.siteName} }}
         </span>
       </section>
       <section>
         <h2 class="flex flex-row justify-between items-center">
-          Persönliche Daten
+          {{ 'profile.personalData' |  translateAsync }}
           <a routerLink="./edit">
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -49,7 +48,7 @@
             <div class="flex flex-col gap-0.5">
               <span
                 class="text-xs text-gray-500 uppercase dark:text-emerald-200 dark:text-opacity-70"
-                >Benutzername</span
+                >{{ 'profile.inputs.username.label' | translateAsync }}</span
               >
               <span>{{ profile.user?.username || "N/A" }}</span>
             </div>
@@ -59,7 +58,7 @@
             <div class="flex flex-col gap-0.5">
               <span
                 class="text-xs text-gray-500 uppercase dark:text-emerald-200 dark:text-opacity-70"
-                >Name</span
+                >{{ 'profile.name' | translateAsync }} </span
               >
               <span>{{
                 profile.user?.firstName || profile.user?.lastName
@@ -73,7 +72,7 @@
             <div class="flex flex-col gap-0.5">
               <span
                 class="text-xs text-gray-500 uppercase dark:text-emerald-200 dark:text-opacity-70"
-                >Anzeige Name</span
+                >{{ 'profile.inputs.displayName.label' | translateAsync }}</span
               >
               <span>{{ profile.user?.displayName || "N/A" }}</span>
             </div>
@@ -83,7 +82,7 @@
             <div class="flex flex-col gap-0.5">
               <span
                 class="text-xs text-gray-500 uppercase dark:text-emerald-200 dark:text-opacity-70"
-                >Geburtsdatum</span
+                >{{ 'profile.inputs.birthday.label' | translateAsync }}</span
               >
               <span>{{ profile.user?.birthday || "N/A" }}</span>
             </div>
@@ -95,8 +94,8 @@
 
   <div class="tkd-card" *ngIf="config.userAddresses">
     <header>
-      <h3>Wo wohnst oder arbeitest du?</h3>
-      <h1>Adressen</h1>
+      <h3>{{ 'profile.addresses.description' | translateAsync }}</h3>
+      <h1>{{ 'profile.addresses.title' | translateAsync }}</h1>
     </header>
     <content>
       <section>
@@ -167,12 +166,12 @@
                 d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"
               />
             </svg>
-            Es wurden noch keine Adressen hinterlegt.
+            {{ 'profile.addresses.empty' | translateAsync }}
           </span>
         </div>
 
         <button tkd-button="tertiary" routerLink="./edit-address">
-          Adresse hinzufügen
+          {{ 'profile.addresses.add' | translateAsync }}
         </button>
       </section>
     </content>
@@ -180,13 +179,13 @@
 
   <div class="tkd-card">
     <header>
-      <h3>Wie bist du zu erreichen?</h3>
-      <h1>Kontaktdaten</h1>
+      <h3>{{ 'profile.contact.description' | translateAsync }}</h3>
+      <h1>{{ 'profile.contact.title' | translateAsync }}</h1>
     </header>
     <content>
       <section *ngIf="config.phoneNumbers">
         <h2 class="flex flex-row justify-between items-center">
-          Telefonnummer
+          {{ 'profile.phone.title' | translateAsync }}
         </h2>
 
         <ul class="space-y-4 list-none">
@@ -271,17 +270,17 @@
                 d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"
               />
             </svg>
-            Es wurden noch keine Telefonnummern hinterlegt.
+            {{ 'profile.phone.empty' | translateAsync }}
           </span>
         </div>
         <button tkd-button="tertiary" routerLink="./edit-phone">
-          Telefonnummer hinzufügen
+          {{ 'profile.phone.add' | translateAsync }}
         </button>
       </section>
 
       <section>
         <h2 class="flex flex-row justify-between items-center">
-          E-Mail Addressen
+          {{ 'profile.mail.title' | translateAsync }}
         </h2>
 
         <ul class="space-y-4 list-none">
@@ -366,11 +365,11 @@
                 d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"
               />
             </svg>
-            Es wurden noch keine E-Mail Adressen hinterlegt.
+            {{ 'profile.mail.empty' | translateAsync }}
           </span>
         </div>
         <button tkd-button="tertiary" routerLink="./edit-mail">
-          E-Mail Adresse hinzufügen
+          {{ 'profile.mail.add' | translateAsync }}
         </button>
       </section>
     </content>

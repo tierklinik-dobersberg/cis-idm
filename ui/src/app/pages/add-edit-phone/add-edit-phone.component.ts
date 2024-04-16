@@ -1,11 +1,14 @@
-import { CommonModule } from '@angular/common';
+import { CommonModule, Location } from '@angular/common';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { ConnectError } from '@bufbuild/connect';
+import { L10nTranslateAsyncPipe } from 'angular-l10n';
 import { combineLatest } from 'rxjs';
 import { SELF_SERVICE } from 'src/app/clients';
+import { TkdBacklinkDirective } from 'src/app/components/backlink';
+import { TkdButtonDirective } from 'src/app/components/button';
 import { ProfileService } from 'src/services/profile.service';
 
 @Component({
@@ -16,6 +19,9 @@ import { ProfileService } from 'src/services/profile.service';
     FormsModule,
     ReactiveFormsModule,
     RouterModule,
+    TkdButtonDirective,
+    TkdBacklinkDirective,
+    L10nTranslateAsyncPipe
   ],
   templateUrl: './add-edit-phone.component.html',
   styleUrls: ['./add-edit-phone.component.css'],
@@ -24,19 +30,30 @@ import { ProfileService } from 'src/services/profile.service';
 export class AddEditPhoneComponent {
   isNew = true;
 
-  profileService = inject(ProfileService);
-  selfService = inject(SELF_SERVICE);
-  activeRoute = inject(ActivatedRoute)
-  destroyRef = inject(DestroyRef);
-  router = inject(Router);
-  cdr = inject(ChangeDetectorRef);
+  private readonly profileService = inject(ProfileService);
+  private readonly selfService = inject(SELF_SERVICE);
+  private readonly activeRoute = inject(ActivatedRoute)
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly location = inject(Location);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   id: string | null = null;
   saveAddrError: string | null = null;
 
-  number = new FormControl('');
-  primary = new FormControl(false);
-  verified = false;
+  form = new FormGroup({
+    number: new FormControl('', {
+      validators: [
+        Validators.required,
+        Validators.pattern(/^[0-9 \+-]+$/)
+      ]
+    }),
+    primary: new FormControl(false),
+    verified: new FormControl(false),
+  })
+
+  get number() { return this.form.get('number')! }
+  get primary() { return this.form.get('primary')! }
+  get verified() { return this.form.get('verified')! }
 
   ngOnInit(): void {
     combineLatest([
@@ -50,17 +67,18 @@ export class AddEditPhoneComponent {
         this.id = params.get("id");
         this.isNew = !this.id;
         this.saveAddrError = null;
-        this.verified = false;
+
+        this.form.reset();
 
         if (!!this.id) {
           const phoneNumber = (profile?.phoneNumbers || []).find(addr => addr.id === this.id);
 
           if (!phoneNumber) {
-            this.router.navigate(['../'])
+            this.location.back()
           } else {
             this.number.setValue(phoneNumber.number);
             this.primary.setValue(phoneNumber.primary);
-            this.verified = phoneNumber.verified;
+            this.verified.setValue(phoneNumber.verified)
 
             this.cdr.markForCheck();
           }
@@ -72,7 +90,7 @@ export class AddEditPhoneComponent {
     try {
       await this.selfService.addPhoneNumber({ number: this.number.value! })
       await this.profileService.loadProfile();
-      this.router.navigate(['../'])
+      this.location.back()
 
     } catch (err) {
       this.saveAddrError = ConnectError.from(err).rawMessage;
@@ -87,7 +105,7 @@ export class AddEditPhoneComponent {
 
     await this.selfService.deletePhoneNumber({ id: this.id! })
     await this.profileService.loadProfile();
-    this.router.navigate(['../'])
+    this.location.back()
   }
 
   async markAsPrimary() {
@@ -98,7 +116,7 @@ export class AddEditPhoneComponent {
     try {
       await this.selfService.markPhoneNumberAsPrimary({ id: this.id! })
       await this.profileService.loadProfile();
-      this.router.navigate(['../'])
+      this.location.back()
     } catch (err) {
       this.saveAddrError = ConnectError.from(err).rawMessage;
       this.cdr.markForCheck();

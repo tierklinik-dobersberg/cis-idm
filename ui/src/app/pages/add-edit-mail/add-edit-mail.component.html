@@ -1,29 +1,42 @@
 <div class="tkd-card">
   <header class="flex !flex-row w-full items-center">
-    <a routerLink="/profile">
+    <a tkd-backlink>
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
         class="w-6 h-6">
         <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
       </svg>
     </a>
 
-    <h1 class="flex-grow">{{ isNew ? 'E-Mail Adresse hinzufügen' : 'E-Mail Adresse bearbeiten'}}</h1>
+    <h1 class="flex-grow">{{ (isNew ? 'mail.addNew' : 'mail.edit') | translateAsync}}</h1>
   </header>
+
+
   <content>
+    <!-- E-Mail Form -->
     <section>
-      <form (ngSubmit)="save()">
+      <form (ngSubmit)="save()" [formGroup]="form">
         <div class="flex flex-col gap-4">
+          <!-- E-Mail input-->
           <div class="flex flex-col gap-0.5 w-full">
-            <span class="text-xs text-gray-500 uppercase dark:text-emerald-200 dark:text-opacity-70">E-Mail</span>
-            <input class="w-full tkd-input" type="text" name="displayName" [formControl]="address" placeholder="E-Mail">
+            <span class="text-xs text-gray-500 uppercase dark:text-emerald-200 dark:text-opacity-70" [ngClass]="{
+              'text-red-600': address.invalid && address.dirty
+            }">
+              {{ 'mail.inputs.mail.label' | translateAsync }}
+            </span>
+            <input class="w-full tkd-input" type="text" name="displayName" formControlName="address" [attr.placeholder]="'mail.inputs.mail.placeholder' | translateAsync" autocomplete="email">
           </div>
 
-          <button *ngIf="isNew" type="submit" class="tkd-btn">Speichern</button>
-          <button *ngIf="!isNew" type="button" class="tkd-btn" (click)="markAsPrimary()">Als primäre E-Mail setzen</button>
-          <button *ngIf="!isNew" type="button" class="tkd-btn tkd-danger" (click)="deleteAddress()">Löschen</button>
+          <!-- Button List -->
+          <div class="flex flex-row gap-4 self-end items-center">
+            <button *ngIf="isNew" type="submit" tkd-button="primary" [disabled]="form.invalid">{{ 'common.save' | translateAsync }}</button>
+            <button *ngIf="!isNew && !primary.value && form.valid" type="button" tkd-button="secondary" (click)="markAsPrimary()">{{ 'mail.markAsPrimary' | translateAsync}}</button>
+            <button *ngIf="!isNew" type="button" tkd-button="secondary" (click)="deleteAddress()">{{ 'common.delete' | translateAsync }}</button>
+          </div>
         </div>
       </form>
     </section>
+
+    <!-- Not-yet-validated -->
     <section *ngIf="!isNew && !verified && !validationSent" class="flex !flex-row gap-4 !items-center">
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
         class="w-8 h-8 text-yellow-500 dark:text-yellow-300">
@@ -31,18 +44,19 @@
           d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
       </svg>
       <span class="flex-grow text-yellow-500 dark:text-yellow-300">
-        Diese E-Mail Adresse wurde noch nicht verifiziert
-        und kann daher noch nicht verwendet werden.
+        {{ 'mail.notYetVerified' | translateAsync }}
       </span>
-      <button class="tkd-btn-outline whitespace-nowrap" (click)="validateEmail()">Jetzt verifizieren</button>
+      <button class="tkd-btn-outline whitespace-nowrap" (click)="validateEmail()">{{ 'mail.verifyNow' | translateAsync }}</button>
     </section>
 
+    <!-- Validation Sent -->
     <section *ngIf="validationSent" class="flex !flex-row gap-4 !items-center">
       <span class="flex-grow text-yellow-500 dark:text-yellow-300">
-        Wir haben einen Bestätigungslink an deine E-Mail Adresse geschickt. Bitte kontrolliere deinen Posteingang.
+        {{ 'mail.verificationSent' | translateAsync }}
       </span>
     </section>
 
+    <!-- Save Error -->
     <section *ngIf="saveAddrError" class="flex !flex-row gap-4 !items-center">
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
         class="w-8 h-8 text-red-500 dark:text-red-300">
@@ -50,10 +64,11 @@
           d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
       </svg>
       <span class="text-red-500 dark:text-red-300">
-        EMail konnte nicht gespeichert werden: <br />
+        {{ 'mail.saveError' | translateAsync}} <br />
         {{ saveAddrError }}
       </span>
     </section>
   </content>
 </div>
+
 

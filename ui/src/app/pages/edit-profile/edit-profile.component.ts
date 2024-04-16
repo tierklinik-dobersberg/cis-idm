@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+import { CommonModule, Location } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
@@ -6,12 +6,14 @@ import {
   OnInit,
   inject
 } from '@angular/core';
-import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { PartialMessage } from '@bufbuild/protobuf';
 import { UpdateProfileRequest } from '@tierklinik-dobersberg/apis';
+import { L10nTranslateAsyncPipe } from 'angular-l10n';
 import { take } from 'rxjs';
 import { SELF_SERVICE } from 'src/app/clients';
+import { TkdBacklinkDirective } from 'src/app/components/backlink';
 import { TkdButtonDirective } from 'src/app/components/button';
 import { TkdDatepickerComponent } from 'src/app/components/datepicker';
 import { ConfigService } from 'src/app/config.service';
@@ -24,9 +26,10 @@ import { ProfileService } from 'src/services/profile.service';
     CommonModule,
     FormsModule,
     ReactiveFormsModule,
-    RouterModule,
     TkdButtonDirective,
     TkdDatepickerComponent,
+    TkdBacklinkDirective,
+    L10nTranslateAsyncPipe
   ],
   templateUrl: './edit-profile.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -35,17 +38,29 @@ export class EditProfileComponent implements OnInit {
   private readonly profileService = inject(ProfileService);
   private readonly selfService = inject(SELF_SERVICE);
   private readonly cdr = inject(ChangeDetectorRef);
-  private readonly router = inject(Router);
+  private readonly location = inject(Location);
   config = inject(ConfigService).config;
 
-  firstName = new FormControl('');
-  lastName = new FormControl('');
-  displayName = new FormControl('');
-  birthday = new FormControl('');
-  username = new FormControl('');
+  form = new FormGroup({
+    firstName: new FormControl(''),
+    lastName: new FormControl(''),
+    displayName: new FormControl(''),
+    birthday: new FormControl(''),
+    username: new FormControl('', {
+      validators: Validators.required
+    }),
+  })
+
+  get firstName() { return this.form.get('firstName')! }
+  get lastName() { return this.form.get('lastName')! }
+  get displayName() { return this.form.get('displayName')! }
+  get birthday() { return this.form.get('birthday')! }
+  get username() { return this.form.get('username')! }
 
   ngOnInit(): void {
     this.profileService.profile.pipe(take(1)).subscribe((profile) => {
+      this.form.reset()
+
       this.firstName.setValue(profile?.user?.firstName || '');
       this.lastName.setValue(profile?.user?.lastName || '');
       this.displayName.setValue(profile?.user?.displayName || '');
@@ -86,7 +101,7 @@ export class EditProfileComponent implements OnInit {
     }
 
     if (fieldSet.length === 0) {
-      this.router.navigate(['../']);
+      this.location.back()
       return;
     }
 
@@ -98,6 +113,6 @@ export class EditProfileComponent implements OnInit {
     });
 
     await this.profileService.loadProfile();
-    await this.router.navigate(['../']);
+    await this.location.back()
   }
 }

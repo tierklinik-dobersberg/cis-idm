@@ -25,6 +25,7 @@
     "@simplewebauthn/browser": "^7.2.0",
     "@tierklinik-dobersberg/angular": "^0.0.11",
     "@tierklinik-dobersberg/apis": "^0.0.11",
+    "angular-l10n": "^16.0.0",
     "blueimp-load-image": "^5.16.0",
     "countries-list": "^2.6.1",
     "cropperjs": "^1.5.13",

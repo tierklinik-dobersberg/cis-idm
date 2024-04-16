@@ -1,10 +1,13 @@
-import { CommonModule } from '@angular/common';
+import { CommonModule, Location } from '@angular/common';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, Input, OnDestroy, OnInit, inject } from '@angular/core';
 import { Router, RouterModule } from '@angular/router';
 import { ConnectError } from '@bufbuild/connect';
+import { L10nTranslateAsyncPipe } from 'angular-l10n';
 import Cropper from 'cropperjs';
 import { filter, take } from 'rxjs';
 import { SELF_SERVICE } from 'src/app/clients';
+import { TkdBacklinkDirective } from 'src/app/components/backlink';
+import { TkdButtonDirective } from 'src/app/components/button';
 import { ProfileService } from 'src/services/profile.service';
 
 // Unfortunately there are no typings for blueimp-load-image
@@ -22,7 +25,9 @@ export interface ImageCropperResult {
   standalone: true,
   imports: [
     CommonModule,
-    RouterModule,
+    TkdButtonDirective,
+    TkdBacklinkDirective,
+    L10nTranslateAsyncPipe
   ],
   templateUrl: './edit-avatar.component.html',
   styleUrls: ['./edit-avatar.component.css'],
@@ -30,10 +35,11 @@ export interface ImageCropperResult {
 })
 export class EditAvatarComponent implements OnInit, OnDestroy {
   imageUrl: string = '';
-  profileService = inject(ProfileService);
-  selfService = inject(SELF_SERVICE);
-  cdr = inject(ChangeDetectorRef);
-  router = inject(Router);
+
+  private readonly profileService = inject(ProfileService);
+  private readonly selfService = inject(SELF_SERVICE);
+  private readonly cdr = inject(ChangeDetectorRef);
+  private readonly location = inject(Location);
 
   @Input() cropbox?: Cropper.CropBoxData;
   @Input() loadImageErrorText?: string;
@@ -135,7 +141,7 @@ export class EditAvatarComponent implements OnInit, OnDestroy {
 
       await this.profileService.loadProfile();
 
-      this.router.navigate(['/profile']);
+      this.location.back();
 
     } catch(err) {
       this.loadError = ConnectError.from(err).rawMessage;

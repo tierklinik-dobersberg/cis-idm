@@ -1,12 +1,15 @@
-import { CommonModule } from '@angular/common';
+import { CommonModule, Location } from '@angular/common';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { FormControl, FormGroup, FormsModule, ReactiveFormsModule, RequiredValidator, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { ConnectError } from '@bufbuild/connect';
 import { Address } from '@tierklinik-dobersberg/apis';
+import { L10N_LOCALE, L10nTranslateAsyncPipe, L10nTranslatePipe } from 'angular-l10n';
 import { combineLatest } from 'rxjs';
 import { SELF_SERVICE } from 'src/app/clients';
+import { TkdBacklinkDirective } from 'src/app/components/backlink';
+import { TkdButtonDirective } from 'src/app/components/button';
 import { ProfileService } from 'src/services/profile.service';
 
 @Component({
@@ -16,7 +19,9 @@ import { ProfileService } from 'src/services/profile.service';
     CommonModule,
     FormsModule,
     ReactiveFormsModule,
-    RouterModule,
+    TkdButtonDirective,
+    TkdBacklinkDirective,
+    L10nTranslateAsyncPipe
   ],
   templateUrl: './add-edit-address.component.html',
   styleUrls: ['./add-edit-address.component.css'],
@@ -25,21 +30,33 @@ import { ProfileService } from 'src/services/profile.service';
 export class AddEditAddressComponent implements OnInit {
   isNew = true;
 
-  profileService = inject(ProfileService);
-  selfService = inject(SELF_SERVICE);
-  activeRoute = inject(ActivatedRoute)
-  destroyRef = inject(DestroyRef);
-  router = inject(Router);
-  cdr = inject(ChangeDetectorRef);
+  private readonly profileService = inject(ProfileService);
+  private readonly selfService = inject(SELF_SERVICE);
+  private readonly activeRoute = inject(ActivatedRoute)
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly location = inject(Location);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   saveAddrError: string | null = null;
 
   id: string | null = null;
-  cityCode = new FormControl('');
-  cityName = new FormControl('');
-  countryName = new FormControl('');
-  street = new FormControl('');
-  extra = new FormControl('');
+
+  form = new FormGroup({
+    cityCode: new FormControl('', {
+      validators: Validators.required,
+    }),
+
+    cityName: new FormControl('', {
+      validators: Validators.required
+    }),
+
+    street: new FormControl('', {
+      validators: Validators.required
+    }),
+
+    extra: new FormControl('')
+  })
+
 
   ngOnInit(): void {
     combineLatest([
@@ -57,10 +74,11 @@ export class AddEditAddressComponent implements OnInit {
           const address = (profile?.addresses || []).find(addr => addr.id === this.id);
 
           if (!address) {
-            this.router.navigate(['../'])
+            this.location.back()
           } else {
             this.cityCode.setValue(address.cityCode);
             this.cityName.setValue(address.cityName);
+
             this.street.setValue(address.street);
             this.extra.setValue(address.extra);
 
@@ -70,13 +88,13 @@ export class AddEditAddressComponent implements OnInit {
       })
   }
 
+  get cityCode() { return this.form.get('cityCode')! }
+  get cityName() { return this.form.get('cityName')! }
+  get street() { return this.form.get('street')! }
+  get extra() { return this.form.get('extra')! }
+
   async save() {
-    const addr: Partial<Address> = {
-      cityCode: this.cityCode.value!,
-      cityName: this.cityName.value!,
-      street: this.street.value!,
-      extra: this.extra.value!,
-    };
+    const addr = this.form.value as Partial<Address>;
 
     try {
 
@@ -87,12 +105,15 @@ export class AddEditAddressComponent implements OnInit {
         if (this.cityCode.dirty) {
           paths.push("city_code");
         }
+
         if (this.cityName.dirty) {
           paths.push("city_name")
         }
+
         if (this.street.dirty) {
           paths.push("street")
         }
+
         if (this.extra.dirty) {
           paths.push("extra")
         }
@@ -105,7 +126,7 @@ export class AddEditAddressComponent implements OnInit {
       }
 
       await this.profileService.loadProfile();
-      this.router.navigate(['../'])
+      this.location.back()
 
     } catch (err) {
       this.saveAddrError = ConnectError.from(err).rawMessage;
@@ -120,7 +141,7 @@ export class AddEditAddressComponent implements OnInit {
 
     await this.selfService.deleteAddress({ id: this.id! })
     await this.profileService.loadProfile();
-    this.router.navigate(['../'])
+    this.location.back()
   }
 }
 

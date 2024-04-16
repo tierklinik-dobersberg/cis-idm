@@ -17,7 +17,6 @@ import { ConfigService } from 'src/app/config.service';
     RouterModule,
   ],
   templateUrl: './reset-password.component.html',
-  styleUrls: ['./reset-password.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ResetPasswordComponent implements OnInit {

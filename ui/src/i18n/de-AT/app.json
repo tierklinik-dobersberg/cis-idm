@@ -1,0 +1,150 @@
+{
+  "address": {
+    "addNew": "Adresse hinzufügen",
+    "edit": "Adresse bearbeiten",
+    "inputs": {
+      "cityCode": {
+        "label": "PLZ",
+        "placeholder": "PLZ"
+      },
+      "cityName": {
+        "label": "Ort",
+        "placeholder": "Ort"
+      },
+      "street": {
+        "label": "Straße",
+        "placeholder": "Straße"
+      },
+      "extra": {
+        "label": "Zusatz",
+        "placeholder": "Zusatz"
+      }
+    },
+    "saveError": "Addresse konnte nicht gespeichert werden:"
+  },
+
+  "mail": {
+    "addNew": "E-Mail Adresse hinzufügen",
+    "edit": "E-Mail Adresse bearbeiten",
+    "inputs": {
+      "mail": {
+        "label": "E-Mail",
+        "placeholder": "E-Mail"
+      }
+    },
+    "markAsPrimary": "Als primäre E-Mail setzen",
+    "verifyNow": "Jetzt verifizieren",
+    "notYetVerified": "Diese E-Mail Adresse wurde noch nicht verifiziert und kann daher noch nicht verwendet werden.",
+    "verificationSent": "Wir haben einen Bestätigungslink an deine E-Mail Adresse geschickt. Bitte kontrolliere deinen Posteingang.",
+    "saveError": "E-Mail konnte nicht gespeichert werden: "
+  },
+
+  "phone": {
+    "addNew": "Telefonnnummer hinzufügen",
+    "edit": "Telefonnummer bearbeiten",
+    "inputs": {
+      "phone": {
+        "label": "Telefonnnummer",
+        "placeholder": "+43 1234 1234"
+      }
+    },
+    "markAsPrimary": "Als primäre Telefonnummer verwenden",
+    "notYetVerified": "Diese Telefonnummer wurde nocht nicht verifiziert und kann daher noch nicht verwendet werden",
+    "verifyNow": "Jetzt verifizieren",
+    "saveError": "Telefonnummer konnte nicht gespeichert werden:"
+  },
+
+  "changePassword": {
+    "title": "Passwort ändern",
+    "description": "Hier kannst du dein Passwort ändern",
+    "currentPasswordRequired": "Aus Sicherheitsgründen musst du auch dein aktuelles Passwort eingeben.",
+    "inputs": {
+      "current": {
+        "label": "Aktuelles Passwort"
+      },
+      "new": {
+        "label": "Neues Passwort"
+      },
+      "newRepeat": {
+        "label": "Neues Passwort wiederholen"
+      }
+    },
+    "changePasswordButton": "Passwort ändern",
+    "saveError": "Passwort konnte nicht geändert werden: "
+  },
+
+  "avatar": {
+    "title": "Avatar bearbeiten",
+    "chooseImage": "Neues Bild auswählen"
+  },
+
+  "editProfile": {
+    "title": "Profil bearbeiten"
+  },
+
+  "profile": {
+    "welcomeBack": "Willkommen zurück!",
+    "hello": "Hallo",
+    "description": "Willkommen in deinem {{ siteName }} Konto. Hier kannst du deine Persönlichen Daten ändern, Kontaktdaten und Adressen verwalten.",
+    "personalData": "Persönliche Daten",
+    "addresses": {
+      "title": "Adressen",
+      "description": "Wo wohnst oder arbeitest du?",
+      "add": "Adresse hinzufügen",
+      "empty": "Es wurden noch keine Adressen hinterlegt"
+    },
+    "contact": {
+      "description": "Wie bist du zu erreichen?",
+      "title": "Kontaktdaten"
+    },
+    "phone": {
+      "title": "Kontaktdaten",
+      "add": "Telefonnummer hinzufügen",
+      "empty": "Es wurden noch keine Telefonnummern hinterlegt"
+    },
+    "mail": {
+      "title": "E-Mail Adressen",
+      "add": "E-Mail hinzufügen",
+      "empty": "Es wurden noch keine E-Mail Adressen hinterlegt"
+    },
+    "name": "Name",
+    "inputs": {
+      "username": {
+        "label": "Benutzername",
+        "placeholder": "Benutzername"
+      },
+      "firstName": {
+        "label": "Vorname",
+        "placeholder": "Vorname"
+      },
+      "lastName": {
+        "label": "Nachname",
+        "placeholder": "Nachname"
+      },
+      "displayName": {
+        "label": "Anzeige Name",
+        "placeholder": "Anzeige Name"
+      },
+      "birthday": {
+        "label": "Geburtsdatum",
+        "placeholder": "Geburtsdatum"
+      }
+    }
+  },
+
+  "registration": {
+    "title": "Registrierung",
+    "description": "Erstelle einen neuen {{ siteName }} Account",
+    "tokenRequired": "Für die Registrierung benötigst du einen Sicherheits-Schlüssel:",
+    "chooseUserAndPassword": "Bitte wähle einen neuen Benutzernamen und ein Passwort: ",
+    "failed": "Registrierung fehlgeschlagen: ",
+    "usePasswordNotWebauthN": "Passwort anstatt der sicheren Passkeys verwenden.",
+    "useWebauthN": "Sichere Passkeys anstelle eines Passworts verwenden."
+  },
+
+  "common": {
+    "save": "Speichern",
+    "delete": "Löschen",
+    "requiredFields": "Felder müssen ausgefüllt werden."
+  }
+}

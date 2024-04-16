@@ -27,7 +27,7 @@ export class TkdButtonDirective implements OnChanges {
   private readonly cdr = inject(ChangeDetectorRef);
 
   @Input('tkd-button')
-  tkdButtonType: TkdButtonType = 'tertiary';
+  tkdButtonType: TkdButtonType | '' = 'secondary';
 
   @Input('tkdSize')
   tkdSize: TkdButtonSize = 'default';
@@ -46,7 +46,7 @@ export class TkdButtonDirective implements OnChanges {
       commonClasses
     ];
 
-    classes.push(buttonMap[this.tkdButtonType])
+    classes.push(buttonMap[this.tkdButtonType|| 'secondary'])
     classes.push(sizeMap[this.tkdSize]);
 
     this.classList = classes.join(' ');

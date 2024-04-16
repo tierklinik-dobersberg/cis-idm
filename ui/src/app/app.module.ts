@@ -29,6 +29,8 @@ import { TkdImageComponent } from './components/image';
 import { TkdAvatarComponent } from './components/avatar';
 import { TkdMenuModule } from './components/menu';
 import { TkdSideNavComponent } from './components/navigation';
+import { provideL10nIntl, provideL10nTranslation } from 'angular-l10n';
+import { TranslationLoader, l10nConfig } from './l10n-config';
 
 const loadConfigFactory = (client: HttpClient) => {
   return () =>
@@ -92,7 +94,14 @@ const loadConfigFactory = (client: HttpClient) => {
       provide: USER_SERVICE,
       useFactory: userServiceFactory,
       deps: [TRANSPORT]
-    }
+    },
+    provideL10nTranslation(
+      l10nConfig,
+      {
+        translationLoader: TranslationLoader
+      }
+    ),
+    provideL10nIntl(),
   ],
   bootstrap: [AppComponent],
 })

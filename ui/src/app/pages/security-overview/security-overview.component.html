@@ -14,6 +14,7 @@
       <section *ngIf="enrollmentStep === null && !disableTotpMode">
         <button tkd-button="secondary" *ngIf="hasPublicKeyCreds" (click)="registerWebAuthN()">Neues Gerät / Passkey
           registrieren</button>
+        <button tkd-button="secondary" routerLink="/profile/change-password">Passwort ändern</button>
         <button tkd-button="secondary" *ngIf="profile.totpEnabled" (click)="disableTotp()">TOTP 2FA
           Deaktivieren</button>
         <button tkd-button="secondary" *ngIf="!profile.totpEnabled" (click)="enableTotp()">TOTP 2FA Aktivieren</button>

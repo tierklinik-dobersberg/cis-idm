@@ -5,6 +5,7 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ConnectError } from '@bufbuild/connect';
 import { browserSupportsWebAuthn, startRegistration } from '@simplewebauthn/browser';
+import { L10nTranslateAsyncPipe } from 'angular-l10n';
 import { firstValueFrom } from 'rxjs';
 import { AUTH_SERVICE } from 'src/app/clients';
 import { ConfigService } from 'src/app/config.service';
@@ -17,10 +18,10 @@ import { ProfileService } from 'src/services/profile.service';
     CommonModule,
     FormsModule,
     ReactiveFormsModule,
+    L10nTranslateAsyncPipe,
     HttpClientModule
   ],
   templateUrl: './registration.component.html',
-  styleUrls: ['./registration.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class RegistrationComponent {

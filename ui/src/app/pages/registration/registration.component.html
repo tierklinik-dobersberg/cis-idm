@@ -3,21 +3,24 @@
     <content>
       <section>
 
-        <h1 class="w-full mt-2 text-2xl font-medium">Registrierung</h1>
-        <span class="mb-4 -mt-4 text-sm font-light">Erstelle einen neuen
-          <a [attr.href]="config.siteNameUrl">{{ config.siteName }}</a>
-          Account.
+        <h1 class="w-full mt-2 text-2xl font-medium">
+          {{ 'registration.title' | translateAsync }}
+        </h1>
+        <span class="mb-4 -mt-4 text-sm font-light">
+          {{ 'registration.description' | translateAsync:{siteName: config.siteName} }}
         </span>
 
         <ng-container *ngIf="config.registration === 'token'">
-          <span class="text-base">Für die Registrierung benötigst du einen Sicherheits-Schlüssel:</span>
+          <span class="text-base">
+            {{ 'registration.tokenRequired' | translateAsync }}
+          </span>
 
           <input required placeholder="Token"
             class="tkd-input"
             type="text" name="token" [(ngModel)]="token">
         </ng-container>
 
-        <span class="text-base">Bitte wähle einen neuen Benutzernamen und ein neues Passwort:</span>
+        <span class="text-base">{{ 'registration.chooseUseAndPassword' | translateAsync }}</span>
 
         <input required placeholder="Username" autocomplete="username webauthn"
           class="tkd-input"
@@ -38,7 +41,7 @@
         </ng-container>
 
         <span *ngIf="errorMessage" class="w-full overflow-hidden text-sm font-medium text-red-300 break-before-all">
-          Registrierung fehlgeschlagen: <br />
+          {{ 'registration.failed' | translateAsync }} <br />
           <pre class="text-xs font-normal">{{ errorMessage }}</pre>
         </span>
 
@@ -46,10 +49,10 @@
           {{ usePassword ? 'Registrieren': 'Mit diesem Gerät registrieren' }}
         </button>
         <a class="text-sm" *ngIf="!usePassword" (click)="usePassword = true">
-          Passwort anstatt der sicheren WebAuthN Passkeys verwenden.
+          {{ 'registration.usePasswordNotWebauthN' | translateAsync }}
         </a>
         <a class="text-sm" *ngIf="usePassword" (click)="usePassword = false">
-          Sicherere WebAuthN Passkeys anstelle eines Passworts verwenden.
+          {{ 'registration.useWebauthN' | translateAsync }}
         </a>
 
       </section>

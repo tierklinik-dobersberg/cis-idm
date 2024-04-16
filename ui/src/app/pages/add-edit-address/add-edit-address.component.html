@@ -1,44 +1,83 @@
 <div class="tkd-card">
   <header class="flex !flex-row w-full items-center">
-    <a routerLink="/profile">
+    <a tkd-backlink>
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
         class="w-6 h-6">
         <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
       </svg>
     </a>
 
-    <h1 class="flex-grow">{{ isNew ? 'Adresse hinzufügen' : 'Adresse bearbeiten'}}</h1>
+    <h1 class="flex-grow">{{ (isNew ? 'address.addNew' : 'address.edit') | translateAsync }}</h1>
   </header>
+
   <content>
     <section>
-      <form (ngSubmit)="save()">
+      <form [formGroup]="form" (ngSubmit)="save()">
         <div class="flex flex-col gap-4">
           <div class="flex flex-row gap-4">
+            <!-- City Code -->
             <div class="flex flex-col gap-0.5 w-36">
-              <span class="text-xs text-gray-500 uppercase dark:text-emerald-200 dark:text-opacity-70">PLZ</span>
-              <input class="w-full tkd-input" type="text" name="displayName" [formControl]="cityCode" placeholder="PLZ">
+              <span class="text-xs text-gray-500 uppercase dark:text-emerald-200 dark:text-opacity-70" [ngClass]="{
+                'text-red-600': cityCode.invalid && cityCode.dirty
+              }">
+                {{ 'address.inputs.cityCode.label' | translateAsync }} *
+              </span>
+              <input class="w-full tkd-input" type="text" name="cityCode" formControlName="cityCode"
+                [attr.placeholder]="'address.inputs.cityCode.placeholder' | translateAsync">
             </div>
+
+            <!-- City Name -->
             <div class="flex flex-col flex-grow gap-0.5 w-full">
-              <span class="text-xs text-gray-500 uppercase dark:text-emerald-200 dark:text-opacity-70">Ort</span>
-              <input class="w-full tkd-input" type="text" name="displayName" [formControl]="cityName" placeholder="Ort">
+              <span class="text-xs text-gray-500 uppercase dark:text-emerald-200 dark:text-opacity-70" [ngClass]="{
+                'text-red-600': cityName.invalid && cityName.dirty
+              }">
+                {{ 'address.inputs.cityName.label' | translateAsync }} *
+              </span>
+              <input class="w-full tkd-input" type="text" name="cityName" formControlName="cityName"
+                [attr.placeholder]="'address.inputs.cityName.placeholder' | translateAsync">
             </div>
           </div>
 
+          <!-- Street -->
           <div class="flex flex-col gap-0.5 w-full">
-            <span class="text-xs text-gray-500 uppercase dark:text-emerald-200 dark:text-opacity-70">Straße</span>
-            <input class="w-full tkd-input" type="text" name="displayName" [formControl]="street" placeholder="Straße">
+            <span class="text-xs text-gray-500 uppercase dark:text-emerald-200 dark:text-opacity-70" [ngClass]="{
+                'text-red-600': street.invalid && street.dirty
+              }">
+              {{ 'address.inputs.street.label' | translateAsync }} *
+            </span>
+            <input class="w-full tkd-input" type="text" name="street" formControlName="street"
+              [attr.placeholder]="'address.inputs.street.placeholder' | translateAsync">
           </div>
 
+          <!-- Extra -->
           <div class="flex flex-col gap-0.5 w-full">
-            <span class="text-xs text-gray-500 uppercase dark:text-emerald-200 dark:text-opacity-70">Zusatz</span>
-            <input class="w-full tkd-input" type="text" name="displayName" [formControl]="extra" placeholder="Zusatz">
+            <span class="text-xs text-gray-500 uppercase dark:text-emerald-200 dark:text-opacity-70">
+              {{ 'address.inputs.extra.label' | translateAsync }}
+            </span>
+            <input class="w-full tkd-input" type="text" name="extra" formControlName="extra"
+              [attr.placeholder]="'address.inputs.extra.placeholder' | translateAsync">
           </div>
 
-          <button type="submit" class="tkd-btn">Speichern</button>
-          <button *ngIf="!isNew" type="button" class="tkd-btn tkd-danger" (click)="deleteAddress()">Löschen</button>
+          <!-- Buttons -->
+          <div class="flex flex-row justify-between items-center self-end gap-4">
+            <button type="submit" tkd-button="primary" [disabled]="form.invalid">
+              {{ 'common.save' | translateAsync }}
+            </button>
+
+            <button *ngIf="!isNew" type="button" tkd-button="secondary" (click)="deleteAddress()">
+              {{ 'common.delete' | translateAsync }}
+            </button>
+          </div>
         </div>
       </form>
     </section>
+
+    <!-- Required Field help text -->
+    <section>
+      <span class="text-sm">* {{ 'common.requiredFields' | translateAsync }}</span>
+    </section>
+
+    <!-- Save errors -->
     <section *ngIf="saveAddrError" class="flex !flex-row gap-4 !items-center">
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
         class="w-8 h-8 text-red-500 dark:text-red-300">
@@ -46,9 +85,10 @@
           d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
       </svg>
       <span class="text-red-500 dark:text-red-300">
-        Adresse konnte nicht gespeichert werden: <br />
+        {{ 'address.saveError' | translateAsync }} <br />
         {{ saveAddrError }}
       </span>
     </section>
+
   </content>
 </div>
