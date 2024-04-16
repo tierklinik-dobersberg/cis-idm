@@ -1,0 +1,1 @@
+const e=JSON.parse('{"key":"v-743ead2a","path":"/guides/policy-examples/","title":"Policy Examples","lang":"en-US","frontmatter":{},"headers":[],"git":{"updatedTime":1705220314000,"contributors":[{"name":"Patrick Pacher","email":"patrick.pacher@gmail.com","commits":1}]},"filePathRelative":"guides/policy-examples/README.md"}');export{e as data};

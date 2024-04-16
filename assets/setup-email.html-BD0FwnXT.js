@@ -1,0 +1,1 @@
+const e=JSON.parse('{"key":"v-6267970c","path":"/guides/setup-email.html","title":"E-Mail Setup","lang":"en-US","frontmatter":{},"headers":[],"git":{"updatedTime":1708065205000,"contributors":[{"name":"Patrick Pacher","email":"patrick.pacher@gmail.com","commits":2}]},"filePathRelative":"guides/setup-email.md"}');export{e as data};
