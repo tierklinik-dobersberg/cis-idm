@@ -170,7 +170,7 @@ func (svc *Service) SendNotification(ctx context.Context, req *connect.Request[i
 
 				t := textTemplate.New("")
 
-				fm := textTemplate.FuncMap(tmpl.PrepareFunctionMap())
+				fm := textTemplate.FuncMap(tmpl.PrepareFunctionMap(svc.Datastore))
 				tmpl.AddToMap(fm, sprig.TxtFuncMap())
 
 				t.Funcs(fm)

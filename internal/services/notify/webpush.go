@@ -61,7 +61,7 @@ func (svc *Service) sendWebPushNotification(
 		if tmplCtx != nil {
 			t := textTemplate.New("")
 
-			fm := textTemplate.FuncMap(tmpl.PrepareFunctionMap())
+			fm := textTemplate.FuncMap(tmpl.PrepareFunctionMap(svc.Datastore))
 			tmpl.AddToMap(fm, sprig.TxtFuncMap())
 
 			t.Funcs(fm)

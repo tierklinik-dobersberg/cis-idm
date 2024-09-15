@@ -70,7 +70,7 @@ func (svc *Service) sendMail(
 	} else {
 		t := htmlTemplate.New("")
 
-		fm := htmlTemplate.FuncMap(tmpl.PrepareFunctionMap())
+		fm := htmlTemplate.FuncMap(tmpl.PrepareFunctionMap(svc.Datastore))
 		tmpl.AddToMap(fm, sprig.HtmlFuncMap())
 
 		t.Funcs(fm)
