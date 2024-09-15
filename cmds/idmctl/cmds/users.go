@@ -41,6 +41,12 @@ func GetUsersCommand(root *cli.Root) *cobra.Command {
 			}
 			req.ExcludeFields = excludeFields
 
+			// if we should filter by user id we must make sure
+			// it's part of the response
+			if !excludeFields && len(args) > 0 && len(fm) > 0 {
+				req.FieldMask.Paths = append(req.FieldMask.Paths, "users.user.id")
+			}
+
 			if len(filterByRoles) > 0 {
 				for _, roleNameOrId := range filterByRoles {
 					role, err := root.ResolveRole(roleNameOrId)

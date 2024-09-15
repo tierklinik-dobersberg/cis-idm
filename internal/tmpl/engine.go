@@ -2,10 +2,12 @@ package tmpl
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	htmlTemplate "html/template"
 	"io"
 	"io/fs"
+	"log/slog"
 	"mime"
 	"net/http"
 	"path/filepath"
@@ -17,6 +19,7 @@ import (
 	"github.com/sirupsen/logrus"
 	idmv1 "github.com/tierklinik-dobersberg/apis/gen/go/tkd/idm/v1"
 	"github.com/tierklinik-dobersberg/apis/pkg/overlayfs"
+	"github.com/tierklinik-dobersberg/cis-idm/internal/common"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/config"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/repo"
 	"github.com/vincent-petithory/dataurl"
@@ -46,14 +49,15 @@ type Engine struct {
 	Mail TemplateEngine
 }
 
-func New(fileSystems ...fs.FS) (*Engine, error) {
+func New(repo *repo.Queries, fileSystems ...fs.FS) (*Engine, error) {
 	mergedFS := overlayfs.NewFS(append(fileSystems, builtin)...)
 
-	sms, err := NewTextEngine(mergedFS, KindSMS)
+	sms, err := NewTextEngine(mergedFS, KindSMS, repo)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create sms template engine: %w", err)
 	}
-	mail, err := NewHTMLEngine(mergedFS, KindMail)
+
+	mail, err := NewHTMLEngine(mergedFS, KindMail, repo)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create mail template engine: %w", err)
 	}
@@ -68,9 +72,9 @@ type TemplateEngine interface {
 	ExecuteTemplate(wr io.Writer, name string, data any) error
 }
 
-func NewTextEngine(fs fs.FS, kind Kind) (TemplateEngine, error) {
+func NewTextEngine(fs fs.FS, kind Kind, repo *repo.Queries) (TemplateEngine, error) {
 	t := textTemplate.New("")
-	fm := textTemplate.FuncMap(PrepareFunctionMap())
+	fm := textTemplate.FuncMap(PrepareFunctionMap(repo))
 
 	t.Funcs(fm)
 
@@ -82,9 +86,9 @@ func NewTextEngine(fs fs.FS, kind Kind) (TemplateEngine, error) {
 	return t, nil
 }
 
-func NewHTMLEngine(fs fs.FS, kind Kind) (TemplateEngine, error) {
+func NewHTMLEngine(fs fs.FS, kind Kind, repo *repo.Queries) (TemplateEngine, error) {
 	t := htmlTemplate.New("")
-	fm := htmlTemplate.FuncMap(PrepareFunctionMap())
+	fm := htmlTemplate.FuncMap(PrepareFunctionMap(repo))
 
 	t.Funcs(fm)
 
@@ -125,81 +129,93 @@ func AddToMap(dst, src map[string]any) {
 	}
 }
 
-func PrepareFunctionMap() map[string]any {
+func PrepareFunctionMap(q *repo.Queries) map[string]any {
+	var customMap = map[string]any{
+		"safeHTML": func(input string) htmlTemplate.HTML {
+			return htmlTemplate.HTML(input)
+		},
+		"primaryEmail": func(input *idmv1.Profile) string {
+			if pm := input.User.PrimaryMail; pm != nil {
+				return pm.Address
+			}
+
+			return ""
+		},
+		"primaryPhone": func(input *idmv1.Profile) string {
+			if pp := input.User.PrimaryPhoneNumber; pp != nil {
+				return pp.Number
+			}
+
+			return ""
+		},
+		"getUser": func(input string) repo.User {
+			user, err := q.GetUserByID(context.Background(), input)
+
+			if err != nil {
+				slog.Error("failed to get user by id", "id", input, "error", err)
+				return repo.User{}
+			}
+
+			common.EnsureDisplayName(&user)
+
+			return user
+		},
+		"displayName": func(input any) string {
+			if profile, ok := input.(*idmv1.Profile); ok {
+				if profile.User.DisplayName != "" {
+					return profile.User.DisplayName
+				}
+
+				return profile.User.Username
+			}
+
+			if model, ok := input.(repo.User); ok {
+				if model.DisplayName != "" {
+					return model.DisplayName
+				}
+
+				return model.Username
+			}
+
+			panic("expected *idmv1.Profile or repo.User")
+		},
+		"userAvatar": func(input any, ctx *RenderContext) htmlTemplate.URL {
+			m, ok := ctx.Get("mail").(*mail.Message)
+			if !ok {
+				return ""
+			}
+
+			var (
+				userID    string
+				avatarURL string
+			)
+
+			if profile, ok := input.(*idmv1.Profile); ok {
+				userID = profile.User.Id
+				avatarURL = profile.User.Avatar
+			} else if model, ok := input.(repo.User); ok {
+				userID = model.ID
+				avatarURL = model.Avatar
+			}
+
+			attachments, ok := ctx.Get("attachments").([]string)
+			if !ok || !slices.Contains(attachments, "cid:"+userID) {
+				attachUserAvatar(m, avatarURL, userID)
+			} else {
+				attachments = append(attachments, "cid:"+userID)
+				ctx.Set("attachments", attachments)
+			}
+
+			return htmlTemplate.URL("cid:" + userID)
+		},
+	}
+
 	m := make(map[string]any)
 
 	AddToMap(m, sprig.GenericFuncMap())
 	AddToMap(m, customMap)
 
 	return m
-}
-
-var customMap = map[string]any{
-	"safeHTML": func(input string) htmlTemplate.HTML {
-		return htmlTemplate.HTML(input)
-	},
-	"primaryEmail": func(input *idmv1.Profile) string {
-		if pm := input.User.PrimaryMail; pm != nil {
-			return pm.Address
-		}
-
-		return ""
-	},
-	"primaryPhone": func(input *idmv1.Profile) string {
-		if pp := input.User.PrimaryPhoneNumber; pp != nil {
-			return pp.Number
-		}
-
-		return ""
-	},
-	"displayName": func(input any) string {
-		if profile, ok := input.(*idmv1.Profile); ok {
-			if profile.User.DisplayName != "" {
-				return profile.User.DisplayName
-			}
-
-			return profile.User.Username
-		}
-
-		if model, ok := input.(repo.User); ok {
-			if model.DisplayName != "" {
-				return model.DisplayName
-			}
-
-			return model.Username
-		}
-
-		panic("expected *idmv1.Profile or repo.User")
-	},
-	"userAvatar": func(input any, ctx *RenderContext) htmlTemplate.URL {
-		m, ok := ctx.Get("mail").(*mail.Message)
-		if !ok {
-			return ""
-		}
-
-		var (
-			userID    string
-			avatarURL string
-		)
-
-		if profile, ok := input.(*idmv1.Profile); ok {
-			userID = profile.User.Id
-			avatarURL = profile.User.Avatar
-		} else if model, ok := input.(repo.User); ok {
-			userID = model.ID
-			avatarURL = model.Avatar
-		}
-
-		attachments, ok := ctx.Get("attachments").([]string)
-		if !ok || !slices.Contains(attachments, "cid:"+userID) {
-			attachUserAvatar(m, avatarURL, userID)
-		} else {
-			attachments = append(attachments, "cid:"+userID)
-			ctx.Set("attachments", attachments)
-		}
-
-		return htmlTemplate.URL("cid:" + userID)
-	},
 }
 
 func attachUserAvatar(m *mail.Message, avatarURL string, userID string) {

@@ -26,7 +26,7 @@ RUN npm run build
 
 # Build the gobinary
 
-FROM golang:1.21 as gobuild
+FROM golang:1.23 as gobuild
 
 RUN update-ca-certificates
 

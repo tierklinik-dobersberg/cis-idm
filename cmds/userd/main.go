@@ -87,7 +87,7 @@ func setupAppProviders(ctx context.Context, cfg config.Config) (*app.Providers, 
 	logrus.Infof("successfully migrated database")
 
 	// Prepare the template engine used for notification templates.
-	tmplEngine, err := tmpl.New()
+	tmplEngine, err := tmpl.New(datastore)
 	if err != nil {
 		return nil, fmt.Errorf("failed to prepare template engine: %w", err)
 	}
