@@ -23,6 +23,7 @@ func GetSendNotificationCommand(root *cli.Root) *cobra.Command {
 		bodyFile    string
 		contextFile string
 		webpushRaw  bool
+		sender      string
 	)
 
 	cmd := &cobra.Command{
@@ -67,7 +68,9 @@ func GetSendNotificationCommand(root *cli.Root) *cobra.Command {
 				}
 			}
 
-			req := &idmv1.SendNotificationRequest{}
+			req := &idmv1.SendNotificationRequest{
+				SenderUserId: root.MustResolveUserToId(sender),
+			}
 
 			if tmplCtx != nil {
 				req.PerUserTemplateContext = make(map[string]*structpb.Struct)
@@ -144,6 +147,7 @@ func GetSendNotificationCommand(root *cli.Root) *cobra.Command {
 		flags.StringVar(&body, "body", "", "The body of the email/sms")
 		flags.StringVar(&bodyFile, "body-file", "", "Path to the file that contains the body for the SMS/mail")
 		flags.BoolVar(&webpushRaw, "web-push-raw", false, "Do not convert body into a notification object")
+		flags.StringVar(&sender, "sender", "", "The username or ID of the sender")
 	}
 
 	return cmd

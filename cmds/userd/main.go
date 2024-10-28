@@ -8,6 +8,9 @@ import (
 
 	"github.com/bufbuild/protovalidate-go"
 	"github.com/sirupsen/logrus"
+	"github.com/tierklinik-dobersberg/apis/pkg/discovery"
+	"github.com/tierklinik-dobersberg/apis/pkg/discovery/consuldiscover"
+	"github.com/tierklinik-dobersberg/apis/pkg/discovery/wellknown"
 	"github.com/tierklinik-dobersberg/apis/pkg/log"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/app"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/bootstrap"
@@ -60,6 +63,21 @@ func main() {
 		cancel()
 
 		logrus.Fatalf("failed to bootstrap: %s", err)
+	}
+
+	// Register at service catalog
+	catalog, err := consuldiscover.NewFromEnv()
+	if err != nil {
+		cancel()
+
+		logrus.Fatalf("failed to get service catalog client: %s", err)
+	}
+
+	if err := discovery.Register(ctx, catalog, discovery.ServiceInstance{
+		Name:    wellknown.IdmV1ServiceScope,
+		Address: cfg.Server.AdminListenAddr,
+	}); err != nil {
+		logrus.Errorf("failed to register service at catalog: %s", err)
 	}
 
 	// finally, start of the HTTP/2 servers...
