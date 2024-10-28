@@ -73,7 +73,7 @@ func main() {
 		logrus.Fatalf("failed to get service catalog client: %s", err)
 	}
 
-	if err := discovery.Register(ctx, catalog, discovery.ServiceInstance{
+	if err := discovery.Register(ctx, catalog, &discovery.ServiceInstance{
 		Name:    wellknown.IdmV1ServiceScope,
 		Address: cfg.Server.AdminListenAddr,
 	}); err != nil {
