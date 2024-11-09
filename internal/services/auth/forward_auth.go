@@ -76,6 +76,7 @@ func NewForwardAuthHandler(providers *app.Providers) http.Handler {
 		reqCopy := r.Clone(ctx)
 		reqCopy.URL = u
 		reqCopy.Method = method
+		reqCopy.Host = u.Host
 
 		// try to authenticate the request.
 		claims, authErr := middleware.AuthenticateRequest(providers.Config, providers.Datastore, reqCopy)
