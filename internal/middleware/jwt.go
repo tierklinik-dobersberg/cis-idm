@@ -127,7 +127,7 @@ func NewJWTMiddleware(cfg config.Config, repo *repo.Queries, next http.Handler, 
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 
-		header := r.Header.Get("Authentication")
+		header := r.Header.Get("Authorization")
 
 		var (
 			token       string
