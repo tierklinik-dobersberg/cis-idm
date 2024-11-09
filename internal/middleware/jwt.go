@@ -81,6 +81,10 @@ func AuthenticateRequest(cfg config.Config, ds *repo.Queries, req *http.Request)
 			},
 		}
 
+		if res.UserApiToken.ExpiresAt.Valid {
+			claims.ExpiresAt = res.UserApiToken.ExpiresAt.Time.Unix()
+		}
+
 		return &claims, nil
 	}
 

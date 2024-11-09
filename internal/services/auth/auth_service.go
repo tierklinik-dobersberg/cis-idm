@@ -29,6 +29,7 @@ import (
 	"github.com/tierklinik-dobersberg/cis-idm/internal/tmpl"
 	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/exp/slices"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type AuthService struct {
@@ -347,8 +348,15 @@ func (svc *AuthService) Introspect(ctx context.Context, req *connect.Request[idm
 		}
 	}
 
+	var validTime *timestamppb.Timestamp
+
+	if claims.ExpiresAt > 0 {
+		validTime = timestamppb.New(time.Unix(claims.ExpiresAt, 0))
+	}
+
 	return connect.NewResponse(&idmv1.IntrospectResponse{
-		Profile: profile,
+		Profile:   profile,
+		ValidTime: validTime,
 	}), nil
 }
 
