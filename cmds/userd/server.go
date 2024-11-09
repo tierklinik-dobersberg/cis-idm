@@ -305,6 +305,14 @@ func setupAdminServer(providers *app.Providers) (*http.Server, error) {
 	)
 	serveMux.Handle(path, handler)
 
+	// Auth Service
+	authService := auth.NewService(providers)
+	path, handler = idmv1connect.NewAuthServiceHandler(
+		authService,
+		interceptors,
+	)
+	serveMux.Handle(path, handler)
+
 	serveMux.Handle("/validate", auth.NewForwardAuthHandler(providers))
 
 	return server.CreateWithOptions(
