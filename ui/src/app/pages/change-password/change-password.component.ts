@@ -5,7 +5,7 @@ import { Router, RouterModule } from '@angular/router';
 import { ConnectError } from '@bufbuild/connect';
 import { Profile } from '@tierklinik-dobersberg/apis';
 import { L10nTranslateAsyncPipe } from 'angular-l10n';
-import { Observable, take } from 'rxjs';
+import { Observable, repeat, take } from 'rxjs';
 import { SELF_SERVICE } from 'src/app/clients';
 import { ProfileService } from 'src/services/profile.service';
 
@@ -54,6 +54,9 @@ export class ChangePasswordComponent implements OnInit {
         repeatValue.setErrors({
           'password-mismatch': 'password-mismatch'
         })
+      } else  {
+        newValue.setErrors(null)
+        repeatValue.setErrors(null)
       }
 
       return null
