@@ -36,6 +36,7 @@ func UserProtoFromUser(ctx context.Context, user repo.User) *idmv1.User {
 		Birthday:    user.Birthday,
 		Avatar:      user.Avatar,
 		Extra:       extra,
+		Deleted:     user.Deleted,
 	}
 
 	return usr

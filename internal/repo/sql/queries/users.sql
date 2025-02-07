@@ -40,10 +40,11 @@ FROM
     users;
 
 -- name: DeleteUser :execrows
-DELETE FROM
+UPDATE
     users
-WHERE
-    id = ?;
+SET
+    deleted = true
+WHERE id = ?;
 
 -- name: CreateUser :one
 INSERT INTO

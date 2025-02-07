@@ -1,3 +1,5 @@
+.bail on
+
 PRAGMA foreign_keys = ON;
 
 ATTACH DATABASE 'file:///tmp/backup.db' AS backup;
@@ -34,16 +36,16 @@ BEGIN TRANSACTION;
     UPDATE backup.roles SET delete_protected = FALSE where delete_protected IS NULL;
 
     -- Start copying
-    INSERT INTO users SELECT * from backup.users;
-    INSERT INTO user_addresses SELECT * from backup.user_addresses;
-    INSERT INTO user_emails SELECT * from backup.user_emails;
-    INSERT INTO user_phone_numbers SELECT * from backup.user_phone_numbers;
-    INSERT INTO mfa_backup_codes SELECT * from backup.mfa_backup_codes;
-    INSERT INTO webauthn_creds SELECT * from backup.webauthn_creds;
-    INSERT INTO webpush_subscriptions SELECT * from backup.webpush_subscriptions;
-    INSERT INTO token_invalidation SELECT * from backup.token_invalidation;
+    INSERT OR ROLLBACK INTO users SELECT * from backup.users;
+    INSERT OR ROLLBACK INTO user_addresses SELECT * from backup.user_addresses;
+    INSERT OR ROLLBACK INTO user_emails SELECT * from backup.user_emails;
+    INSERT OR ROLLBACK INTO user_phone_numbers SELECT * from backup.user_phone_numbers;
+    INSERT OR ROLLBACK INTO mfa_backup_codes SELECT * from backup.mfa_backup_codes;
+    INSERT OR ROLLBACK INTO webauthn_creds SELECT * from backup.webauthn_creds;
+    INSERT OR ROLLBACK INTO webpush_subscriptions SELECT * from backup.webpush_subscriptions;
+    INSERT OR ROLLBACK INTO token_invalidation SELECT * from backup.token_invalidation;
     
-    INSERT INTO roles SELECT *, 'api' from backup.roles;
-    INSERT INTO role_assignments SELECT * from backup.role_assignments;
+    INSERT OR ROLLBACK INTO roles SELECT *, 'api' from backup.roles;
+    INSERT OR ROLLBACK INTO role_assignments SELECT DISTINCT * from backup.role_assignments;
 
 COMMIT;

@@ -54,127 +54,87 @@ policies {
     }
 }
 
-field "object" "notification" {
-    visibility = "self"
-    writeable = true
-    display_name = "Benachrichtigungen"
 
-    property "object" "roster" {
-        display_name = "Dienstplan"
+field "object" "integrations" {
+    display_name = "Integrations"
+    description = "Configure integrations with external services"
 
-        property "bool" "sms" {
-            display_name = "SMS"
+    property "object" "discord" {
+        display_name = "Discord"
+        description = "Link your discord account"
+
+        property "string" "discord" {
+            display_name = "Discord ID"
+            description = "Enter your discord user ID to link your account"
         }
 
-        property "bool" "mail" {
-            display_name = "E-Mail"
+        property "bool" "notify" {
+            display_name = "Notify on Discord"
+            description = "Do you want to be notified on discord"
         }
     }
 
-    property "string" "offtime" {
-        display_name = "Urlaubsanträge"
+    property "object" "reddit" {
+        display_name = "Reddit"
+        description = "Link your Reddit account"
+
+        property "string" "discord" {
+            display_name = "Reddit User-Handle"
+            description = "Enter your Reddit username to link your account"
+        }
+
+        property "bool" "notify" {
+            display_name = "Notify on Reddit"
+            description = "Do you want to be notified on Reddit"
+        }
+    }
+}
+
+field "object" "notificationSettings" {
+    visibility = "self"
+    writeable = true
+    display_name = "Notification Settings"
+    description = "Manage your notification settings and preferences"
+
+    property "string" "newsletter" {
+        display_name = "Newsletter"
+        description = "If and how you want to receive our weekly newsletter"
+
+        value "never" {
+            display_name = "Never"
+        }
+
+        value "email" {
+            display_name = "E-Mail"
+        }
 
         value "sms" {
             display_name = "SMS"
         }
 
-        value "mail" {
+        value "both" {
+            display_name = "E-Mail + SMS"
+        }
+    }
+
+    property "string" "comments" {
+        display_name = "Comments & Replies"
+        description = "If and how you want to receive notifications about comments and replies"
+
+        value "never" {
+            display_name = "Never"
+        }
+
+        value "email" {
             display_name = "E-Mail"
         }
 
+        value "sms" {
+            display_name = "SMS"
+        }
+
         value "both" {
-            display_name = "SMS + E-Mail"
+            display_name = "E-Mail + SMS"
         }
     }
-}
-
-field "string" "string" {
-    visibility = "self"
-    writeable = true
-    description = "A custom description"
-    display_name = "String Value"
-}
-
-field "date" "date" {
-    visibility = "self"
-    writeable = true
-    description = "A custom description"
-    display_name = "Date Value"
-}
-
-field "number" "number" {
-    visibility = "self"
-    writeable = true
-    description = "A custom description"
-    display_name = "Number Value"
-}
-
-field "bool" "bool" {
-    visibility = "self"
-    writeable = true
-    description = "A custom description"
-    display_name = "Boolean Value"
-}
-
-field "object" "object" {
-    visibility = "self"
-    writeable = true
-    description = "A custom description"
-    display_name = "Object Value"
-
-    property "string" "string" {
-        description = "A string property"
-        display_name = "String Property"
-    }
-
-    property "bool" "bool" {
-        visibility = "self"
-        writeable = true
-        description = "A custom description"
-        display_name = "Boolean Value"
-    }
-
-    property "object" "object" {
-        visibility = "self"
-        writeable = true
-        description = "A custom description"
-        display_name = "Sub Object Value"
-
-        property "string" "string" {
-            description = "A string property"
-            display_name = "String Property"
-        }
-
-        property "bool" "bool" {
-            writeable = true
-            description = "A custom description"
-            display_name = "Boolean Value"
-        }
-    
-        property "object" "object" {
-            writeable = false
-            description = "A custom description"
-            display_name = "Sub-Sub Object Value"
-
-            property "string" "string" {
-                description = "A string property"
-                display_name = "String Property"
-            }
-
-            property "bool" "bool" {
-                writeable = false
-                description = "A custom description"
-                display_name = "Boolean Value"
-            }
-        }
-    }
-}
-
-field "list" "list" {
-    visibility = "self"
-    writeable = true
-    description = "A custom description"
-    display_name = "List Value"
-
-    element_type "string" "" {}
 }
