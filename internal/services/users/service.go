@@ -82,7 +82,7 @@ func (svc *Service) ListUsers(ctx context.Context, req *connect.Request[idmv1.Li
 	res := &idmv1.ListUsersResponse{}
 	for _, usr := range users {
 		// skip deleted users if not explicitly requested.
-		if !req.Msg.IncludeDeleted && usr.Deleted {
+		if req.Msg.ExcludeDeleted && usr.Deleted {
 			continue
 		}
 
