@@ -71,6 +71,10 @@ func (svc *AuthService) Login(ctx context.Context, req *connect.Request[idmv1.Lo
 			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("auth type not supported"))
 		}
 
+		if user.Deleted {
+			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("user deleted"))
+		}
+
 		passwordAuth := r.GetPassword()
 		if passwordAuth == nil {
 			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("invalid payload for password auth type"))
@@ -169,6 +173,10 @@ func (svc *AuthService) Login(ctx context.Context, req *connect.Request[idmv1.Lo
 		// continue outside of the switch block and issue access and refresh tokens
 	default:
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("unsupported authentication method"))
+	}
+
+	if user.Deleted {
+		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("user deleted"))
 	}
 
 	roles, err := svc.Datastore.GetRolesForUser(ctx, user.ID)
@@ -278,6 +286,10 @@ func (svc *AuthService) RefreshToken(ctx context.Context, req *connect.Request[i
 	user, err := svc.Datastore.GetUserByID(ctx, claims.Subject)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("invalid refresh token"))
+	}
+
+	if user.Deleted {
+		return nil, connect.NewError(connect.CodeUnauthenticated, fmt.Errorf("your user profile has been deleted"))
 	}
 
 	roles, err := svc.Datastore.GetRolesForUser(ctx, claims.Subject)

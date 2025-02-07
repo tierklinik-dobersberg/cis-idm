@@ -61,6 +61,10 @@ func NewSubjectInput(ctx context.Context, ds Store, permissionResolver permissio
 		return nil, fmt.Errorf("failed to get user %q: %w", userID, err)
 	}
 
+	if user.Deleted {
+		return nil, fmt.Errorf("user profile has been deleted")
+	}
+
 	var roles []repo.Role
 	if tokenKind == jwt.LoginKindAPI {
 		roles, err = ds.GetRolesForToken(ctx, tokenID)
