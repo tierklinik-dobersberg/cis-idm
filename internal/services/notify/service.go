@@ -100,6 +100,16 @@ func (svc *Service) SendNotification(ctx context.Context, req *connect.Request[i
 		return nil, err
 	}
 
+	// filter out any deleted user
+	users := make(map[string]*idmv1.Profile)
+	for key, u := range targetUsers {
+		if u.User.Deleted {
+			continue
+		}
+		users[key] = u
+	}
+	targetUsers = users
+
 	if len(targetUsers) == 0 {
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("no receipients specified"))
 	}
