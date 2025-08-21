@@ -74,7 +74,7 @@ func PrepareTemplate[T tmpl.Context](ctx context.Context, cfg config.Config, eng
 		"Subject": {subj},
 	})
 
-	log.L(ctx).Infof("Sending mail %q to %s, cc=%v and bcc=%v", subj, email.To, email.Cc, email.Bcc)
+	log.L(ctx).Info("sending mail", "subject", subj, "to", email.To, "cc", email.Cc, "bcc", email.Bcc)
 
 	msg.SetBodyWriter("text/html", func(w io.Writer) error {
 		return tmpl.RenderKnownTo(cfg, engine.Mail, template, args, w)
@@ -86,7 +86,7 @@ func PrepareTemplate[T tmpl.Context](ctx context.Context, cfg config.Config, eng
 func SendTemplate[T tmpl.Context](ctx context.Context, cfg config.Config, engine *tmpl.Engine, m Mailer, email Message, template tmpl.Known[T], args T) error {
 	// In dry-run mode, we replace the target address by fixed one
 	if cfg.DryRun != nil && cfg.DryRun.MailTarget != "" {
-		log.L(ctx).Infof("replacing e-mail receipients %v with %s in dry-run mode", email.To, cfg.DryRun.MailTarget)
+		log.L(ctx).Info("replacing e-mail receipients in dry-run mode", "old", email.To, "new", cfg.DryRun.MailTarget)
 
 		c := new(Message)
 		*c = email

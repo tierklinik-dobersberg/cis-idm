@@ -430,7 +430,7 @@ func (svc *AuthService) RegisterUser(ctx context.Context, req *connect.Request[i
 	}
 	defer func() {
 		if err := tx.Rollback(); err != nil && !errors.Is(err, sql.ErrTxDone) {
-			log.L(ctx).Errorf("failed to rollback transaction: %s", err)
+			log.L(ctx).Error("failed to rollback transaction", "error", err)
 		}
 	}()
 
@@ -476,22 +476,22 @@ func (svc *AuthService) RegisterUser(ctx context.Context, req *connect.Request[i
 			IsPrimary: true,
 		}); err != nil {
 		// just log out the error but continue to sign in the user
-		log.L(ctx).WithError(err).Errorf("failed to save email address for user")
+		log.L(ctx).With("error", err).Error("failed to save email address for user")
 	} else {
 		if err := svc.SendMailVerification(ctx, *userModel, mailModel); err != nil {
-			log.L(ctx).WithError(err).Errorf("failed to send verification mail")
+			log.L(ctx).With("error", err).Error("failed to send verification mail")
 		}
 	}
 
 	if err := tx.Commit(); err != nil {
-		log.L(ctx).Errorf("failed to commit transaction: %s", err)
+		log.L(ctx).Error("failed to commit transaction", "error", err)
 
 		return nil, err
 	}
 
 	roles, err := svc.Datastore.GetRolesForUser(ctx, userModel.ID)
 	if err != nil {
-		log.L(ctx).WithError(err).Error("failed to get user role assignments")
+		log.L(ctx).With("error", err).Error("failed to get user role assignments")
 	}
 
 	tokenResponse := &idmv1.AccessTokenResponse{
@@ -577,10 +577,10 @@ func (svc *AuthService) CreateUser(ctx context.Context, tx *sql.Tx, params repo.
 		return nil, err
 	}
 
-	log.L(ctx).WithFields(logrus.Fields{
-		"id":       params.ID,
-		"username": params.Username,
-	}).Infof("created new user")
+	log.L(ctx).With(
+		"id", params.ID,
+		"username", params.Username,
+	).Info("created new user")
 
 	if assignSuperUser {
 		initialRoles = append(initialRoles, "idm_superuser")

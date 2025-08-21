@@ -87,8 +87,8 @@ func NewEngine(ctx context.Context, paths []string, opts ...EngineOption) (*Engi
 	}
 
 	log.L(ctx).
-		WithField("modules", len(compiler.Modules)).
-		Infof("policy engine prepared")
+		With("modules", len(compiler.Modules)).
+		Info("policy engine prepared")
 
 	e := &Engine{
 		compiler: compiler,
@@ -115,7 +115,7 @@ func (engine *Engine) Query(
 	}
 
 	if engine.option.debug {
-		log.L(ctx).Infof("rego-tracer: preparing to query %q in debug mode", query)
+		log.L(ctx).Info("rego-tracer: preparing to query in debug mode", "query", query)
 
 		tracer := new(topdown.BufferTracer)
 
@@ -125,7 +125,7 @@ func (engine *Engine) Query(
 
 		defer func() {
 			for _, evt := range *tracer {
-				log.L(ctx).Infof("rego-tracer: %s", evt.String())
+				log.L(ctx).Info("rego-tracer", "message", evt.String())
 			}
 		}()
 	}
@@ -138,7 +138,7 @@ func (engine *Engine) Query(
 	}
 
 	if engine.option.debug {
-		log.L(ctx).WithField("result", result).Infof("rego-tracer: policy result")
+		log.L(ctx).With("result", result).Info("rego-tracer: policy result")
 	}
 
 	return result, nil

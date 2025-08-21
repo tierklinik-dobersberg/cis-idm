@@ -46,7 +46,6 @@ func (svc *Service) getSenderUser(ctx context.Context, id string) (*idmv1.Profil
 		id = claims.Subject
 	}
 
-	log.L(ctx).Debugf("loading sender user model for user %q", id)
 	senderUserModel, err := svc.Datastore.GetUserByID(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load user object for sender %q: %w", id, err)
@@ -84,8 +83,6 @@ func (svc *Service) loadUsers(ctx context.Context, userIds []string) (map[string
 }
 
 func (svc *Service) SendNotification(ctx context.Context, req *connect.Request[idmv1.SendNotificationRequest]) (*connect.Response[idmv1.SendNotificationResponse], error) {
-	log.L(ctx).Infof("received SendNotification request")
-
 	var senderUser *idmv1.Profile
 	if req.Msg.SenderUserId != "" {
 		var err error
@@ -114,7 +111,7 @@ func (svc *Service) SendNotification(ctx context.Context, req *connect.Request[i
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("no receipients specified"))
 	}
 
-	log.L(ctx).Infof("gathering user information for %d receipients", len(targetUsers))
+	log.L(ctx).Info("gathering user information for receipients", "count", len(targetUsers))
 
 	prepareTmplContext := func(usrID string, ctxPb *structpb.Struct, msg *mail.Message) map[string]any {
 		var m map[string]any
@@ -176,7 +173,7 @@ func (svc *Service) SendNotification(ctx context.Context, req *connect.Request[i
 
 			var err error
 			if tmplCtx != nil {
-				log.L(ctx).Infof("preparing template for user %s to phone number %s", userID, addr)
+				log.L(ctx).Info("preparing template for user", "userId", userID, "phoneNumber", addr)
 
 				t := textTemplate.New("")
 
@@ -207,7 +204,7 @@ func (svc *Service) SendNotification(ctx context.Context, req *connect.Request[i
 				continue
 			}
 
-			log.L(ctx).Infof("sending SMS to %s", addr)
+			log.L(ctx).Info("sending SMS", "phoneNumber", addr)
 			if err = svc.SMSSender.Send(ctx, sms.Message{
 				From: svc.Config.Twilio.From,
 				To:   []string{addr},

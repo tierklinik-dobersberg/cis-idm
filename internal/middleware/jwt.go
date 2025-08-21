@@ -9,7 +9,6 @@ import (
 	"time"
 
 	gojwt "github.com/dgrijalva/jwt-go"
-	"github.com/sirupsen/logrus"
 	"github.com/tierklinik-dobersberg/apis/pkg/log"
 	"github.com/tierklinik-dobersberg/apis/pkg/server"
 	"github.com/tierklinik-dobersberg/cis-idm/internal/config"
@@ -164,14 +163,14 @@ func NewJWTMiddleware(cfg config.Config, repo *repo.Queries, next http.Handler, 
 		r.URL.Scheme = "http"
 
 		l := log.L(ctx).
-			WithField("method", r.Method).
-			WithField("host", r.URL.Host).
-			WithField("path", r.URL.Path).
-			WithField("clientIP", ips)
+			With("method", r.Method).
+			With("host", r.URL.Host).
+			With("path", r.URL.Path).
+			With("clientIP", ips)
 
 		// For debugging
 		if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-			l = l.WithField("xff", xff)
+			l = l.With("xff", xff)
 		}
 
 		if r.TLS != nil {
@@ -194,11 +193,11 @@ func NewJWTMiddleware(cfg config.Config, repo *repo.Queries, next http.Handler, 
 		claims, err := AuthenticateRequest(cfg, repo, r)
 
 		if err != nil {
-			l.Errorf("failed to authenticate request: %s", err)
+			l.Error("failed to authenticate request", "error", err)
 		}
 
 		if claims != nil {
-			l.Debugf("adding claims for user %s (name=%q) to request context", claims.Subject, claims.Name)
+			l.Debug("adding claims for user to request context", "user", claims.Subject, "name", claims.Name)
 
 			var loginKind jwt.LoginKind
 
@@ -207,12 +206,12 @@ func NewJWTMiddleware(cfg config.Config, repo *repo.Queries, next http.Handler, 
 			}
 
 			ctx = ContextWithClaims(ctx, claims)
-			ctx = log.WithLogger(ctx, log.L(ctx).WithFields(logrus.Fields{
-				"jwt:sub":         claims.Subject,
-				"jwt:name":        claims.Name,
-				"jwt:tokenSource": tokenSource,
-				"jwt:kind":        loginKind,
-			}))
+			ctx = log.WithLogger(ctx, log.L(ctx).With(
+				"jwt:sub", claims.Subject,
+				"jwt:name", claims.Name,
+				"jwt:tokenSource", tokenSource,
+				"jwt:kind", loginKind,
+			))
 
 			r = r.WithContext(ctx)
 		} else {

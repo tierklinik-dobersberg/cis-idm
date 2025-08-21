@@ -112,7 +112,7 @@ func (svc *Service) sendWebPushNotification(
 		return deliveries, nil
 	}
 
-	log.L(ctx).Infof("sending web-push notification to %s (username=%q)", user.User.Id, user.User.Username)
+	log.L(ctx).Info("sending web-push notification", "userId", user.User.Id, "username", user.User.Username)
 
 	atLeastOneSuccess := false
 	for _, sub := range subscriptions {
@@ -145,9 +145,9 @@ func (svc *Service) sendWebPushNotification(
 				go func(sub repo.WebpushSubscription) {
 					rows, err := svc.Datastore.DeleteWebPushSubscriptionByID(context.Background(), sub.ID)
 					if err != nil {
-						log.L(context.Background()).Errorf("failed to delete expired web-push subscription %s: %s", sub.ID, err)
+						log.L(context.Background()).Error("failed to delete expired web-push subscription", "userId", sub.ID, "error", err)
 					} else if rows == 0 {
-						log.L(context.Background()).Errorf("failed to delete expired web-push subscription %s: not found", sub.ID)
+						log.L(context.Background()).Error("failed to delete expired web-push subscription", "userId", sub.ID, "error", "not found")
 					}
 				}(sub)
 			} else {

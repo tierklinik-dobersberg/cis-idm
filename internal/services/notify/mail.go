@@ -39,10 +39,10 @@ func (svc *Service) sendMail(
 		}, nil
 	}
 
-	log.L(ctx).Infof("preparing mail for user %s (username=%q) to address %s", user.User.Id, user.User.Username, addr)
+	log.L(ctx).Info("preparing mail", "userId", user.User.Id, "username", user.User.Username, "address", addr)
 
 	if dr := svc.Config.DryRun; dr != nil && dr.MailTarget != "" {
-		log.L(ctx).Infof("replacing receipient address %s with %s in dry-run mode", addr, dr.MailTarget)
+		log.L(ctx).Info("replacing receipient address dry-run mode", "old", addr, "new", dr.MailTarget)
 
 		addr = dr.MailTarget
 	}
@@ -146,7 +146,7 @@ func (svc *Service) sendMail(
 		}
 	}
 
-	log.L(ctx).Infof("sending mails")
+	log.L(ctx).Info("sending mails")
 	if err := svc.Mailer.DialAndSend(m); err != nil {
 		return []*idmv1.DeliveryNotification{
 			{

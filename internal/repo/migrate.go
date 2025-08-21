@@ -28,15 +28,15 @@ func Migrate(ctx context.Context, db *sql.DB) (int, error) {
 
 	records, err := migrate.GetMigrationRecords(db, sqlDialect)
 	if err != nil {
-		log.L(ctx).Errorf("failed to get migration records: %s", err)
+		log.L(ctx).Error("failed to get migration records", "error", err)
 
 		return n, nil
 	}
 
 	if len(records) > 0 {
-		log.L(ctx).Infof("applied database migrations:")
+		log.L(ctx).Info("applied database migrations:")
 		for _, r := range records {
-			log.L(ctx).Infof(" ✓ %s (applied at %s)", r.Id, r.AppliedAt)
+			log.L(ctx).Info(" ✓ "+r.Id, "applied_at", r.AppliedAt)
 		}
 	} else {
 		return 0, fmt.Errorf("failed to get any migration records")

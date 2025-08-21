@@ -41,7 +41,7 @@ func (svc *Service) AddEmailAddressToUser(ctx context.Context, mailModel repo.Us
 }
 
 func (svc *Service) DeleteEmailAddressFromUser(ctx context.Context, userID string, mailID string) ([]repo.UserEmail, error) {
-	log.L(ctx).WithField("email_id", mailID).Infof("deleting email address from user")
+	log.L(ctx).Info("deleting email address from user", "email_id", mailID)
 
 	if rows, err := svc.repo.DeleteEMailFromUser(ctx, repo.DeleteEMailFromUserParams{
 		ID:     mailID,

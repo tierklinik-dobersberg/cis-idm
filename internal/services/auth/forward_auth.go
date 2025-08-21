@@ -23,7 +23,7 @@ func NewForwardAuthHandler(providers *app.Providers) http.Handler {
 
 		parsedForwardedUri, err := url.ParseRequestURI(r.Header.Get("x-forwarded-uri"))
 		if err != nil {
-			log.L(ctx).Errorf("failed to parse X-Forwarded-URI %q: %s", r.Header.Get("x-forwarded-uri"), err)
+			log.L(ctx).Error("failed to parse X-Forwarded-URI", "headerValue", r.Header.Get("x-forwarded-uri"), "error", err)
 		}
 
 		method := r.Header.Get("x-forwarded-method")
@@ -38,9 +38,9 @@ func NewForwardAuthHandler(providers *app.Providers) http.Handler {
 		requestURL := u.String()
 
 		l := log.L(ctx).
-			WithField("method", method).
-			WithField("host", u.Host).
-			WithField("path", u.Path)
+			With("method", method).
+			With("host", u.Host).
+			With("path", u.Path)
 
 		var redirectUrl = requestURL
 
@@ -59,7 +59,7 @@ func NewForwardAuthHandler(providers *app.Providers) http.Handler {
 			redirectUrl = r.Referer()
 
 			if _, err := url.Parse(redirectUrl); err != nil {
-				l.Errorf("failed to parse redirect URL: %s", redirectUrl)
+				l.Error("failed to parse redirect URL", "url", redirectUrl)
 				redirectUrl = ""
 			}
 
@@ -69,7 +69,7 @@ func NewForwardAuthHandler(providers *app.Providers) http.Handler {
 				}
 			}
 
-			l.Debugf("redirect URL is set to %q", redirectUrl)
+			l.Debug("redirect URL set", "url", redirectUrl)
 		}
 
 		// auhenticate the request
@@ -100,7 +100,7 @@ func NewForwardAuthHandler(providers *app.Providers) http.Handler {
 
 			input.Subject, err = policy.NewSubjectInput(ctx, providers.Datastore, providers.Config.PermissionTree(), claims.Subject, kind, claims.ID)
 			if err != nil {
-				l.Errorf("failed to resolve subject input: %s", err)
+				l.Error("failed to resolve subject input", "error", err)
 
 				// clear out the subject and let rego policies still evaluate the request.
 				input.Subject = nil
@@ -112,7 +112,7 @@ func NewForwardAuthHandler(providers *app.Providers) http.Handler {
 
 		query := providers.Config.ForwardAuth.RegoQuery
 		if err := providers.PolicyEngine.QueryOne(ctx, query, input, &result); err != nil {
-			l.Errorf("failed to evaluate rego policies: %s; request will be denied", err)
+			l.Error("failed to evaluate rego policies; request will be denied", "error", err)
 
 			handleRedirect(w, r, "", "")
 
@@ -129,7 +129,7 @@ func NewForwardAuthHandler(providers *app.Providers) http.Handler {
 			}
 		}
 
-		l = l.WithField("policyResult", result)
+		l = l.With("policyResult", result)
 
 		var isAllowed bool
 		if providers.Config.ForwardAuth.Default == "deny" {
@@ -143,10 +143,10 @@ func NewForwardAuthHandler(providers *app.Providers) http.Handler {
 			// The request has been denied by policy, now figure out how to reply:
 
 			if authErr != nil {
-				l = l.WithField("token_error", authErr)
+				l = l.With("token_error", authErr)
 			}
 
-			l.Infof("request has been denied by policy")
+			l.Info("request has been denied by policy")
 
 			switch {
 			// If a status code has been assigned than we directly reply with
@@ -155,7 +155,7 @@ func NewForwardAuthHandler(providers *app.Providers) http.Handler {
 			case result.StatusCode > 0:
 				w.WriteHeader(result.StatusCode)
 				if _, err := w.Write([]byte(result.ResponseBody)); err != nil {
-					l.Errorf("failed to write response body: %s", err)
+					l.Error("failed to write response body", "error", err)
 				}
 
 			// If there wasn't even a token or the token has been rejected,
@@ -184,13 +184,13 @@ func NewForwardAuthHandler(providers *app.Providers) http.Handler {
 			return
 		}
 
-		l.Infof("request has been allowed by policy")
+		l.Info("request has been allowed by policy")
 
 		if result.AssignSubject != "" {
-			l.Infof("loading subject overwrite")
+			l.Info("loading subject overwrite")
 			input.Subject, err = policy.NewSubjectInput(ctx, providers.Datastore, providers.Config.PermissionTree(), result.AssignSubject, "", "")
 			if err != nil {
-				l.Errorf("failed to overwrite request subject: %s", err)
+				l.Error("failed to overwrite request subject", "error", err)
 				handleRedirect(w, r, "", "")
 				return
 			}
@@ -237,9 +237,9 @@ func NewForwardAuthHandler(providers *app.Providers) http.Handler {
 				}
 			}
 
-			l.Infof("request by user %s (name=%q) is allowed", sub.ID, sub.Username)
+			l.Info("request is allowed", "userId", sub.ID, "username", sub.Username)
 		} else {
-			l.Infof("anonymous request is allowed")
+			l.Info("anonymous request is allowed")
 		}
 
 		w.WriteHeader(http.StatusOK)

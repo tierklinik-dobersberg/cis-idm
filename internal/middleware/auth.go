@@ -53,7 +53,7 @@ func NewAuthInterceptor(registry *protoregistry.Files) connect.UnaryInterceptorF
 				return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to find method descriptor for %s", req.Spec().Procedure))
 			}
 
-			l := log.L(ctx).WithField("method", methodDesc.FullName())
+			l := log.L(ctx).With("method", methodDesc.FullName())
 
 			claims := ClaimsFromContext(ctx)
 
@@ -62,7 +62,7 @@ func NewAuthInterceptor(registry *protoregistry.Files) connect.UnaryInterceptorF
 			if ok && opts != nil {
 				switch opts.Require {
 				case commonv1.AuthRequirement_AUTH_REQ_REQUIRED:
-					l.Debugf("service method requires authentication")
+					l.Debug("service method requires authentication")
 					if claims == nil {
 						return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("no access token provided"))
 					}
@@ -86,7 +86,7 @@ func NewAuthInterceptor(registry *protoregistry.Files) connect.UnaryInterceptorF
 				case commonv1.AuthRequirement_AUTH_REQ_UNSPECIFIED:
 					// nothing to do
 				default:
-					l.WithField("requirement", opts.String()).Infof("unhandeled authentication requirement")
+					l.With("requirement", opts.String()).Info("unhandeled authentication requirement")
 				}
 			} else {
 				l.Debug("no authentication requirement specified for service method")

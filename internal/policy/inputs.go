@@ -96,7 +96,7 @@ func NewSubjectInput(ctx context.Context, ds Store, permissionResolver permissio
 		mail = primary.Address
 	} else {
 		if !errors.Is(err, sql.ErrNoRows) {
-			log.L(ctx).Errorf("failed to get primary email address for user %q: %s", userID, err)
+			log.L(ctx).Error("failed to get primary email address", "user", userID, "error", err)
 		}
 	}
 
@@ -113,7 +113,7 @@ func NewSubjectInput(ctx context.Context, ds Store, permissionResolver permissio
 
 	if len(user.Extra) > 0 {
 		if err := json.Unmarshal([]byte(user.Extra), &input.Fields); err != nil {
-			log.L(ctx).Errorf("failed to parse additional user fields for user %q: %s", input.ID, err)
+			log.L(ctx).Error("failed to parse additional user fields", "user", input.ID, "error", err)
 		}
 	}
 

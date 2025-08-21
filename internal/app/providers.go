@@ -156,17 +156,17 @@ func (p *Providers) GetUserProfileProto(ctx context.Context, usr repo.User) (*id
 func GetUserProfileProto(ctx context.Context, tx *repo.Queries, cfg config.Config, usr repo.User) (*idmv1.Profile, error) {
 	addresses, err := tx.GetUserAddresses(ctx, usr.ID)
 	if err != nil {
-		log.L(ctx).Errorf("failed to get user addresses: %s", err)
+		log.L(ctx).Error("failed to get user addresses", "error", err)
 	}
 
 	phones, err := tx.GetPhoneNumbersByUserID(ctx, usr.ID)
 	if err != nil {
-		log.L(ctx).Errorf("failed to get user phone numbers: %s", err)
+		log.L(ctx).Error("failed to get user phone numbers", "error", err)
 	}
 
 	roles, err := tx.GetRolesForUser(ctx, usr.ID)
 	if err != nil {
-		log.L(ctx).Errorf("failed to get user roles: %s", err)
+		log.L(ctx).Error("failed to get user roles", "error", err)
 	}
 
 	emails, err := tx.GetEmailsForUserByID(ctx, usr.ID)

@@ -54,7 +54,7 @@ func RunInTransaction[R any](ctx context.Context, q *Queries, fn func(tx *Querie
 	ds := q.WithTx(tx)
 	defer func() {
 		if err := tx.Rollback(); err != nil && !errors.Is(err, sql.ErrTxDone) {
-			log.L(ctx).Errorf("failed to rollback transaction: %s", err)
+			log.L(ctx).Error("failed to rollback transaction", "error", err)
 		}
 	}()
 

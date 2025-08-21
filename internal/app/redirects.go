@@ -33,7 +33,7 @@ func (p *Providers) HandleRequestedRedirect(ctx context.Context, requestedRedire
 			}
 		}
 
-		log.L(ctx).Warnf("requested redirect to %s is not allowed (%v)", string(decoded), p.Config.Server.AllowedDomainRedirects)
+		log.L(ctx).Warn("requested redirect denied by config", "requested_redirect", string(decoded), "config", p.Config.Server.AllowedDomainRedirects)
 	}
 
 	return "", nil

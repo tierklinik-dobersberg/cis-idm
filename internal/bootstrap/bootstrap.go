@@ -97,12 +97,7 @@ func bootstrapRole(ctx context.Context, ds *repo.Queries, role config.Role) erro
 			return fmt.Errorf("failed to assign permission %q", perm)
 		}
 	}
-
-	log.L(ctx).
-		WithField("id", role.ID).
-		WithField("name", role.Name).
-		WithField("permissions", role.Permissions).
-		Debug("bootstrap: successfully created or updated system role")
+	log.L(ctx).Debug("bootstrap: successfully created or  updated system role", "id", role.ID, "name", role.Name, "permissions", role.Permissions)
 
 	return nil
 }

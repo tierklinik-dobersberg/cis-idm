@@ -20,10 +20,10 @@ func UserProtoFromUser(ctx context.Context, user repo.User) *idmv1.User {
 		if err := json.Unmarshal([]byte(user.Extra), &m); err == nil {
 			extra, err = structpb.NewStruct(m)
 			if err != nil {
-				log.L(ctx).Errorf("failed to encode user extra data: %s", err)
+				log.L(ctx).Error("failed to encode user extra data", "error", err)
 			}
 		} else {
-			log.L(ctx).Errorf("failed to decode user extra data: %s", err)
+			log.L(ctx).Error("failed to decode user extra data", "error", err)
 		}
 	}
 
