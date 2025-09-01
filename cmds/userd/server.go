@@ -224,11 +224,7 @@ func setupPublicServer(providers *app.Providers) (*http.Server, error) {
 		return nil, err
 	}
 
-	authMux := http.NewServeMux()
-	authMux.Handle("/webauthn/", http.StripPrefix("/webauthn", webauthnHandler))
-
-	// Setup the forward auth handler
-	serveMux.Handle("/validate", auth.NewForwardAuthHandler(providers))
+	serveMux.Handle("/webauthn/", http.StripPrefix("/webauthn", webauthnHandler))
 
 	// If we're in debug mode, add some debug endpoints
 	if os.Getenv("DEBUG") != "" {
@@ -244,7 +240,10 @@ func setupPublicServer(providers *app.Providers) (*http.Server, error) {
 	// TODO(ppacher): re-consolidate the allow_cors_preflight setting
 	// in forward auth as it might impact how we setup the serve-mux
 	// nesting here.
-	mux.Handle("/", authMux)
+
+	// Setup the forward auth handler
+	mux.Handle("/validate", auth.NewForwardAuthHandler(providers))
+
 	mux.Handle("/", cors.Wrap(
 		corsOpts,
 		serveMux,
