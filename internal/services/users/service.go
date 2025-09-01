@@ -66,7 +66,7 @@ func (svc *Service) Impersonate(ctx context.Context, req *connect.Request[idmv1.
 
 	authUser := middleware.ClaimsFromContext(ctx)
 
-	log.L(ctx).Infof("user %s (%q) impersonated %s (%q)", authUser.Subject, authUser.Name, user.ID, user.Username)
+	log.L(ctx).Info("user impersonated", "userId", authUser.Subject, "userName", authUser.Name, "impersonatedUserId", user.ID, "impersonatedUserName", user.Username)
 
 	tokenMessage.AccessToken = token
 
@@ -88,7 +88,7 @@ func (svc *Service) ListUsers(ctx context.Context, req *connect.Request[idmv1.Li
 
 		profileProto, err := svc.GetUserProfileProto(ctx, usr)
 		if err != nil {
-			log.L(ctx).Errorf("failed to get user profile for user %s: %s", usr.ID, err)
+			log.L(ctx).Error("failed to get user profile", "userId", usr.ID, "error", err)
 		}
 
 		if len(req.Msg.FilterByRoles) > 0 {
@@ -543,7 +543,7 @@ func (svc *Service) InviteUser(ctx context.Context, req *connect.Request[idmv1.I
 		}
 
 		if dr := svc.Providers.Config.DryRun; dr != nil && dr.MailTarget != "" {
-			log.L(ctx).Infof("dry-run enabled, redirecting mails from %s to %s", userInvite.Email, dr.MailTarget)
+			log.L(ctx).Info("dry-run enabled, redirecting mail", "originalTarget", userInvite.Email, "dryrunTarget", dr.MailTarget)
 
 			msg.To = []string{dr.MailTarget}
 		}
@@ -702,7 +702,7 @@ func (svc *Service) SendAccountCreationNotice(ctx context.Context, req *connect.
 
 			merr.Errors = append(merr.Errors, fmt.Errorf("failed to send account creation notice to user %q: %w", userId, err))
 
-			log.L(ctx).Errorf("failed to send account creation notice to user %q: %s", userId, err)
+			log.L(ctx).Error("failed to send account creation notice", "userId", userId, "userName", target.Username, "error", err)
 		}
 	}
 

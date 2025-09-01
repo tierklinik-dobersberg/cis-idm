@@ -20,7 +20,7 @@ func (svc *Service) BeginRegistrationHandler(w http.ResponseWriter, r *http.Requ
 	ctx := r.Context()
 	l := log.L(ctx)
 
-	l.Infof("received request to begin webauthn registration")
+	l.Info("received request to begin webauthn registration")
 
 	var user repo.User
 	claims := middleware.ClaimsFromContext(ctx)
@@ -46,7 +46,7 @@ func (svc *Service) BeginRegistrationHandler(w http.ResponseWriter, r *http.Requ
 		userCount, err := svc.Datastore.WithTx(tx).CountUsers(ctx)
 		if err != nil {
 			if err := tx.Rollback(); err != nil {
-				log.L(ctx).Errorf("failed to rollback transaction: %s", err)
+				log.L(ctx).Error("failed to rollback transaction", "error", err)
 			}
 
 			http.Error(w, "internal server error", http.StatusInternalServerError)
@@ -82,7 +82,7 @@ func (svc *Service) BeginRegistrationHandler(w http.ResponseWriter, r *http.Requ
 
 		if err != nil {
 			if err := tx.Rollback(); err != nil {
-				log.L(ctx).Errorf("failed to rollback transaction: %s", err)
+				log.L(ctx).Error("failed to rollback transaction", "error", err)
 			}
 
 			http.Error(w, "internal server error", http.StatusInternalServerError)
@@ -91,7 +91,7 @@ func (svc *Service) BeginRegistrationHandler(w http.ResponseWriter, r *http.Requ
 		}
 
 		if err := tx.Commit(); err != nil {
-			log.L(ctx).Errorf("failed to commit transaction: %s", err)
+			log.L(ctx).Error("failed to commit transaction", "error", err)
 
 			http.Error(w, "internal server error", http.StatusInternalServerError)
 
@@ -168,8 +168,6 @@ func (svc *Service) FinishRegistrationHandler(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	log.L(ctx).Infof("%+v", response)
-
 	cookie := middleware.FindCookie("registration_session", r.Header)
 	if cookie == nil {
 		http.Error(w, "cookie not found", http.StatusBadRequest)
@@ -178,7 +176,7 @@ func (svc *Service) FinishRegistrationHandler(w http.ResponseWriter, r *http.Req
 
 	var session webauthn.SessionData
 	if err := svc.Cache.GetAndDeleteKey(ctx, cookie.Value, &session); err != nil {
-		log.L(ctx).Errorf("failed to find webauthn registration session: %s", err)
+		log.L(ctx).Error("failed to find webauthn registration session", "sessionKey", cookie.Value, "error", err)
 		http.Error(w, "session not found: "+err.Error(), http.StatusNotFound)
 
 		return

@@ -3,24 +3,24 @@ package repo
 import (
 	"context"
 	"encoding/json"
+	"log/slog"
 
 	"github.com/go-webauthn/webauthn/webauthn"
-	"github.com/sirupsen/logrus"
 )
 
 type WebauthnUser struct {
 	User
 	repo *Queries
 	ctx  context.Context
-	log  *logrus.Entry
+	log  *slog.Logger
 }
 
-func NewWebAuthnUser(ctx context.Context, log *logrus.Entry, repo *Queries, usr User) webauthn.User {
+func NewWebAuthnUser(ctx context.Context, log *slog.Logger, repo *Queries, usr User) webauthn.User {
 	return &WebauthnUser{
 		User: usr,
 		repo: repo,
 		ctx:  ctx,
-		log:  log.WithField("username", usr.Username).WithField("user_id", usr.ID),
+		log:  log.With("username", usr.Username, "user_id", usr.ID),
 	}
 }
 
@@ -41,17 +41,17 @@ func (usr *WebauthnUser) WebAuthnDisplayName() string {
 }
 
 func (usr *WebauthnUser) WebAuthnCredentials() []webauthn.Credential {
-	usr.log.Infof("searching for webauthn credentials")
+	usr.log.Info("searching for webauthn credentials")
 
 	res, err := usr.repo.GetWebauthnCreds(usr.ctx, usr.ID)
 	if err != nil {
-		usr.log.Errorf("failed to fetch webauthn credentials: %s", err)
+		usr.log.Error("failed to fetch webauthn credentials", "error", err)
 
 		return nil
 	}
 
 	if len(res) == 0 {
-		usr.log.Errorf("user does not have any webauthn credentials yet.")
+		usr.log.Error("user does not have any webauthn credentials yet.")
 	}
 
 	result := make([]webauthn.Credential, 0, len(res))

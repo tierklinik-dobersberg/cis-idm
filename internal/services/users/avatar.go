@@ -47,7 +47,7 @@ func NewAvatarHandler(providers *app.Providers) http.Handler {
 		w.WriteHeader(http.StatusOK)
 
 		if _, err := io.Copy(w, bytes.NewReader(du.Data)); err != nil {
-			log.L(r.Context()).WithError(err).Errorf("failed to send avatar data to connection")
+			log.L(r.Context()).With("error", err).Error("failed to send avatar data to connection")
 		}
 	})
 }

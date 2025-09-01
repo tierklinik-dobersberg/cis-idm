@@ -53,7 +53,7 @@ func New(acc Account) (Sender, error) {
 func SendTemplate[T tmpl.Context](ctx context.Context, cfg config.Config, sender Sender, engine *tmpl.Engine, to []string, t tmpl.Known[T], args T) error {
 	// In dry-run mode, we replace the target address by fixed one
 	if cfg.DryRun != nil && cfg.DryRun.SMSTarget != "" {
-		log.L(ctx).Infof("replacing SMS receipients %v with %s in dry-run mode", to, cfg.DryRun.SMSTarget)
+		log.L(ctx).Info("dry-run enabled, replacing SMS receipient", "originalTarget", to, "dryrunTargets", cfg.DryRun.SMSTarget)
 
 		to = []string{cfg.DryRun.SMSTarget}
 	}

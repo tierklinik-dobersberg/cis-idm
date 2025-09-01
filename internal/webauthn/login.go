@@ -123,7 +123,7 @@ func (svc *Service) FinishLoginHandler(w http.ResponseWriter, r *http.Request) {
 
 	var session webauthn.SessionData
 	if err := svc.Cache.GetAndDeleteKey(ctx, cookie.Value, &session); err != nil {
-		log.L(ctx).Errorf("failed to get webauthn login session for key %s: %s", cookie.Value, err)
+		log.L(ctx).Error("failed to get webauthn login session", "sessionKey", cookie.Value, "error", err)
 		http.Error(w, "session not found: "+err.Error(), http.StatusNotFound)
 
 		return
