@@ -338,7 +338,7 @@ func setupAdminServer(providers *app.Providers) (*http.Server, error) {
 			providers.Datastore,
 			http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if r.URL.Path != "/validate" && middleware.ClaimsFromContext(r.Context()) == nil {
-					log.L(r.Context()).Infof("adding fake admin claims to request: %s", r.URL.Path)
+					log.L(r.Context()).Info("adding fake admin claims to request", "path", r.URL.Path)
 
 					clientIP := r.RemoteAddr
 

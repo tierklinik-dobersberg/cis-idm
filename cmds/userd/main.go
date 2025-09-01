@@ -74,7 +74,7 @@ func main() {
 	}
 
 	if err := discovery.Register(ctx, catalog, &discovery.ServiceInstance{
-		Name:    wellknown.IdmV1ServiceScope,
+		Name:    string(wellknown.IdmV1ServiceScope),
 		Address: cfg.Server.AdminListenAddr,
 	}); err != nil {
 		logrus.Errorf("failed to register service at catalog: %s", err)
@@ -97,7 +97,7 @@ func setupAppProviders(ctx context.Context, cfg config.Config) (*app.Providers, 
 
 	// Try to create/migrate the users tables.
 	if n, err := repo.Migrate(ctx, db); err == nil {
-		log.L(ctx).Infof("successfully applied %d migrations", n)
+		log.L(ctx).Info("successfully applied migrations", "count", n)
 	} else {
 		return nil, fmt.Errorf("failed to migrate database: %w", err)
 	}

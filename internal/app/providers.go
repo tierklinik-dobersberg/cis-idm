@@ -36,7 +36,7 @@ type Providers struct {
 	Config         config.Config
 	Common         *common.Service
 	ProtoRegistry  *protoregistry.Files
-	Validator      *protovalidate.Validator
+	Validator      protovalidate.Validator
 	Cache          cache.Cache
 	PolicyEngine   *policy.Engine
 }
