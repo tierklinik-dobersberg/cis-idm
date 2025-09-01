@@ -30,7 +30,7 @@ require (
 	github.com/spf13/cobra v1.9.1
 	github.com/stretchr/testify v1.10.0
 	github.com/tidwall/sjson v1.2.5
-	github.com/tierklinik-dobersberg/apis v0.38.2
+	github.com/tierklinik-dobersberg/apis v0.51.2
 	github.com/vincent-petithory/dataurl v1.0.0
 	golang.org/x/crypto v0.33.0
 	golang.org/x/exp v0.0.0-20250215185904-eff6e970281f
